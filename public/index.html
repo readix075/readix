@@ -788,7 +788,7 @@ function renderAccount(){
     const p=PLANS.find(x=>x.id===APP.plan)||PLANS[0];
     const badge=el("span","plan-badge "+p.id,L("pl_"+p.id,p.name));a.appendChild(badge);
     const av=el("div","avatar",(APP.user.name||APP.user.email)[0].toUpperCase());av.title=APP.user.email+L("acc_logout_h"," — se déconnecter");
-    av.onclick=()=>{if(confirm(L("logout_q","Se déconnecter ?"))){APP.user=null;APP.plan="free";APP.ops=0;renderAccount();}};a.appendChild(av);
+    av.onclick=()=>{if(confirm(L("logout_q","Se déconnecter ?"))){clearToken();APP.user=null;APP.plan="free";APP.ops=0;renderAccount();}};a.appendChild(av);
   }else{
     const login=el("button","btn ghost sm",L("acc_login","Se connecter"));login.onclick=()=>openAuth("login");
     const signup=el("button","btn sm",L("acc_signup","S'inscrire"));signup.onclick=()=>openAuth("signup");a.append(login,signup);
@@ -807,12 +807,47 @@ function closeAuth(){$("#authOverlay").classList.remove("open");$("#auErr").text
 function switchAuth(mode){authMode=mode;$("#tabSignup").classList.toggle("on",mode==="signup");$("#tabLogin").classList.toggle("on",mode==="login");
   $("#nameField").style.display=mode==="signup"?"flex":"none";$("#authTitle").textContent=mode==="signup"?L("auth_signup_title","Créer un compte"):L("auth_login_title","Content de vous revoir");
   $("#auSubmit").textContent=mode==="signup"?L("btn_create","Créer mon compte"):L("btn_login","Se connecter");$("#auErr").textContent="";}
-function submitAuth(){const name=$("#auName").value.trim(),email=$("#auEmail").value.trim().toLowerCase(),pass=$("#auPass").value;const err=$("#auErr");
+/* ---------- API & session (back-end réel) ---------- */
+const API_BASE="";
+function getToken(){try{return localStorage.getItem("readix_token");}catch(e){return null;}}
+function setToken(t){try{localStorage.setItem("readix_token",t);}catch(e){}}
+function clearToken(){try{localStorage.removeItem("readix_token");}catch(e){}}
+async function api(path,body,method){
+  const opt={method:method||(body?"POST":"GET"),headers:{"content-type":"application/json"}};
+  const t=getToken();if(t)opt.headers["authorization"]="Bearer "+t;
+  if(body)opt.body=JSON.stringify(body);
+  const r=await fetch(API_BASE+path,opt);
+  let data={};try{data=await r.json();}catch(e){}
+  if(!r.ok)throw new Error((data&&data.error)||("Erreur "+r.status));
+  return data;
+}
+function mapAuthError(m){
+  if(/existe déjà/i.test(m))return L("err_exists","Ce compte existe déjà — connectez-vous.");
+  if(/incorrects/i.test(m))return L("err_creds","Identifiants incorrects.");
+  if(/manquants|requis/i.test(m))return L("err_fields","E-mail et mot de passe requis.");
+  if(/données non configurée|503/i.test(m))return L("err_srv","Service comptes momentanément indisponible.");
+  return m||"Erreur.";
+}
+async function restoreSession(){
+  const t=getToken();if(!t)return;
+  try{const data=await api("/api/me");if(data&&data.user){APP.user={name:data.user.name,email:data.user.email};APP.plan=data.user.plan||"free";renderAccount();}}
+  catch(e){clearToken();}
+}
+
+function submitAuth(){
+  const name=$("#auName").value.trim(),email=$("#auEmail").value.trim().toLowerCase(),pass=$("#auPass").value;const err=$("#auErr");
+  err.textContent="";
   if(!email||!pass){err.textContent=L("err_fields","E-mail et mot de passe requis.");return;}
-  if(authMode==="signup"){if(!name){err.textContent=L("err_name","Indiquez votre nom.");return;}if(_users[email]){err.textContent=L("err_exists","Ce compte existe déjà — connectez-vous.");return;}
-    _users[email]={name,pass};APP.user={name,email};}
-  else{const u=_users[email];if(!u||u.pass!==pass){err.textContent=L("err_creds","Identifiants incorrects.");return;}APP.user={name:u.name,email};}
-  APP.plan="free";APP.ops=0;closeAuth();renderAccount();
+  if(authMode==="signup"&&!name){err.textContent=L("err_name","Indiquez votre nom.");return;}
+  const btn=$("#auSubmit");const old=btn.textContent;btn.disabled=true;btn.textContent="…";
+  const path=authMode==="signup"?"/api/signup":"/api/login";
+  const body=authMode==="signup"?{name,email,password:pass}:{email,password:pass};
+  api(path,body).then(data=>{
+    setToken(data.token);
+    APP.user={name:data.user.name,email:data.user.email};APP.plan=data.user.plan||"free";APP.ops=0;
+    closeAuth();renderAccount();
+  }).catch(e=>{err.textContent=mapAuthError(e.message);})
+    .finally(()=>{btn.disabled=false;btn.textContent=old;});
 }
 /* ---------- pricing ---------- */
 function openPricing(){renderPricing();$("#priceOverlay").classList.add("open");}
@@ -1386,6 +1421,7 @@ document.addEventListener("click",e=>{const c=$("#cmd");if(c&&!c.contains(e.targ
 
 /* ---------- init ---------- */
 initLang();
+restoreSession();
 </script>
 </body>
 </html>
