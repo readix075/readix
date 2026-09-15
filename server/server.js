@@ -1,18 +1,20 @@
 // ============================================================
 //  Readix Reader — serveur back-end (Node.js / Express, ESM)
-//  Gère : comptes réels, abonnements Stripe, fonctions IA premium.
-//  Node 18+ requis (fetch global). Voir README.md pour le démarrage.
+//  Comptes réels (PostgreSQL/Supabase), 4 paliers, quota IA,
+//  abonnements Stripe, fonctions IA premium.
+//  Node 18+ requis. Voir README.md.
 // ============================================================
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import pg from "pg";
 
 dotenv.config();
+const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT || 8787;
@@ -20,27 +22,76 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- Stripe (optionnel : chargé seulement si la clé est présente) ----
+// ---- Paliers d'abonnement ----
+const PLAN_LEVEL = { free: 0, standard: 1, pro: 2, studio: 3 };
+const AI_QUOTA = { free: 0, standard: 0, pro: 50, studio: 200 }; // opérations IA / mois
+const levelOf = (plan) => PLAN_LEVEL[plan] ?? 0;
+const ym = () => new Date().toISOString().slice(0, 7); // "2026-09"
+
+// ---- Base de données PostgreSQL (Supabase) ----
+let pool = null;
+if (DATABASE_URL) {
+  pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 5 });
+}
+async function initDb() {
+  if (!pool) { console.log("⚠️  DATABASE_URL absente : les comptes sont désactivés."); return; }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      email      TEXT PRIMARY KEY,
+      name       TEXT NOT NULL,
+      pass_hash  TEXT NOT NULL,
+      plan       TEXT NOT NULL DEFAULT 'free',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS usage (
+      email    TEXT NOT NULL,
+      ym       TEXT NOT NULL,
+      ai_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (email, ym)
+    );`);
+  console.log("✅ Base de données prête (tables users, usage).");
+}
+async function getUser(email) {
+  const r = await pool.query("SELECT email, name, pass_hash, plan FROM users WHERE email=$1", [email]);
+  return r.rows[0] || null;
+}
+async function createUser(email, name, passHash) {
+  await pool.query("INSERT INTO users(email,name,pass_hash,plan) VALUES($1,$2,$3,'free')", [email, name, passHash]);
+}
+async function setPlan(email, plan) {
+  await pool.query("UPDATE users SET plan=$2 WHERE email=$1", [email, plan]);
+}
+async function getUsage(email) {
+  const r = await pool.query("SELECT ai_count FROM usage WHERE email=$1 AND ym=$2", [email, ym()]);
+  return r.rows[0] ? r.rows[0].ai_count : 0;
+}
+async function incUsage(email) {
+  await pool.query(
+    `INSERT INTO usage(email,ym,ai_count) VALUES($1,$2,1)
+     ON CONFLICT (email,ym) DO UPDATE SET ai_count = usage.ai_count + 1`,
+    [email, ym()]
+  );
+}
+function dbReady(res) {
+  if (!pool) { res.status(503).json({ error: "Base de données non configurée" }); return false; }
+  return true;
+}
+
+// ---- Stripe (optionnel) ----
 let stripe = null;
 if (process.env.STRIPE_SECRET_KEY) {
   const Stripe = (await import("stripe")).default;
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-// ---- Mini base de données sur fichier (à remplacer par Postgres/Supabase en prod) ----
-const DB_PATH = path.join(__dirname, "data", "db.json");
-function loadDB() {
-  try { return JSON.parse(fs.readFileSync(DB_PATH, "utf8")); }
-  catch { return { users: {} }; }
-}
-function saveDB(db) { fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2)); }
-
 const app = express();
 app.use(cors({ origin: true, credentials: false }));
 
-// Le webhook Stripe a besoin du corps BRUT : on le déclare AVANT express.json().
-app.post("/api/billing/webhook", express.raw({ type: "application/json" }), (req, res) => {
+// Le webhook Stripe a besoin du corps BRUT : déclaré AVANT express.json().
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(400).send("Stripe non configuré");
   let event;
   try {
@@ -49,70 +100,88 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), (req
     return res.status(400).send(`Webhook invalide : ${err.message}`);
   }
   if (event.type === "checkout.session.completed") {
-    const email = event.data.object.client_reference_id || event.data.object.customer_email;
-    const db = loadDB();
-    if (email && db.users[email]) { db.users[email].plan = "pro"; saveDB(db); }
+    const s = event.data.object;
+    const email = s.client_reference_id || s.customer_email;
+    const plan = (s.metadata && s.metadata.plan) || "pro";
+    if (email && pool) { try { await setPlan(email, plan); } catch (e) { console.error(e); } }
   }
   res.json({ received: true });
 });
 
 app.use(express.json({ limit: "12mb" }));
 
-// ---- Auth : middleware ----
+// ---- Auth ----
 function sign(user) { return jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "30d" }); }
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const h = req.headers.authorization || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Non authentifié" });
+  if (!dbReady(res)) return;
   try {
     const { email } = jwt.verify(token, JWT_SECRET);
-    const db = loadDB();
-    const u = db.users[email];
+    const u = await getUser(email);
     if (!u) return res.status(401).json({ error: "Compte introuvable" });
-    req.user = { email, name: u.name, plan: u.plan };
+    req.user = { email: u.email, name: u.name, plan: u.plan };
     next();
   } catch { return res.status(401).json({ error: "Session expirée" }); }
 }
-function requirePremium(req, res, next) {
-  if (req.user.plan !== "pro") return res.status(402).json({ error: "Fonction réservée à Premium" });
-  next();
+function requireLevel(min) {
+  return (req, res, next) => {
+    if (levelOf(req.user.plan) < min) return res.status(402).json({ error: "Plan supérieur requis" });
+    next();
+  };
 }
 
 // ---- Comptes ----
 app.post("/api/signup", async (req, res) => {
+  if (!dbReady(res)) return;
   const { name, email, password } = req.body || {};
   if (!name || !email || !password) return res.status(400).json({ error: "Champs manquants" });
-  const db = loadDB();
   const key = email.toLowerCase();
-  if (db.users[key]) return res.status(409).json({ error: "Ce compte existe déjà" });
-  db.users[key] = { name, passHash: await bcrypt.hash(password, 10), plan: "free" };
-  saveDB(db);
-  const user = { email: key, name, plan: "free" };
-  res.json({ token: sign(user), user });
+  try {
+    if (await getUser(key)) return res.status(409).json({ error: "Ce compte existe déjà" });
+    await createUser(key, name, await bcrypt.hash(password, 10));
+    const user = { email: key, name, plan: "free" };
+    res.json({ token: sign(user), user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/login", async (req, res) => {
+  if (!dbReady(res)) return;
   const { email, password } = req.body || {};
-  const db = loadDB();
   const key = (email || "").toLowerCase();
-  const u = db.users[key];
-  if (!u || !(await bcrypt.compare(password || "", u.passHash)))
-    return res.status(401).json({ error: "Identifiants incorrects" });
-  const user = { email: key, name: u.name, plan: u.plan };
-  res.json({ token: sign(user), user });
+  try {
+    const u = await getUser(key);
+    if (!u || !(await bcrypt.compare(password || "", u.pass_hash)))
+      return res.status(401).json({ error: "Identifiants incorrects" });
+    const user = { email: key, name: u.name, plan: u.plan };
+    res.json({ token: sign(user), user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/api/me", auth, (req, res) => res.json({ user: req.user }));
 
+// Quota IA de l'utilisateur (pour l'affichage du compteur côté site)
+app.get("/api/usage", auth, async (req, res) => {
+  try {
+    const used = await getUsage(req.user.email);
+    res.json({ plan: req.user.plan, used, quota: AI_QUOTA[req.user.plan] ?? 0 });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ---- Abonnement Stripe ----
 app.post("/api/billing/checkout", auth, async (req, res) => {
-  if (!stripe || !process.env.STRIPE_PRICE_ID)
-    return res.status(500).json({ error: "Stripe non configuré (voir .env)" });
+  if (!stripe) return res.status(500).json({ error: "Stripe non configuré (voir .env)" });
+  const plan = (req.body && req.body.plan) || "pro";
+  const period = (req.body && req.body.period) === "year" ? "YEAR" : "MONTH";
+  const priceId = process.env[`STRIPE_PRICE_${plan.toUpperCase()}_${period}`] || process.env.STRIPE_PRICE_ID;
+  if (!priceId) return res.status(500).json({ error: "Aucun prix Stripe configuré pour ce plan" });
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: req.user.email,
     customer_email: req.user.email,
+    metadata: { plan },
     success_url: `${CLIENT_URL}/?upgrade=success`,
     cancel_url: `${CLIENT_URL}/?upgrade=cancel`,
   });
@@ -120,67 +189,75 @@ app.post("/api/billing/checkout", auth, async (req, res) => {
 });
 
 // ---- Fonctions IA premium ----
-// Prompts système par fonction (le back-end appelle un modèle d'IA).
 const AI_PROMPTS = {
-  lens: "Tu es un assistant qui lit des documents. Résume le texte fourni et réponds à la question de l'utilisateur en citant les passages pertinents. Sois clair et concis, en français.",
-  dialogue: "Mets en scène un court débat entre deux experts — un sceptique et un défenseur — à propos du document fourni, pour révéler ses failles et ses points forts. En français.",
-  compareai: "Compare les deux versions de texte fournies et explique ce qui change dans le SENS (pas seulement les mots). Liste les changements importants en français.",
-  factcheck: "Identifie dans le texte les affirmations non sourcées, douteuses ou à vérifier, et explique pourquoi. En français.",
-  negociateur: "Analyse ce contrat clause par clause : note le risque (faible/moyen/élevé), explique en langage clair, et propose une contre-formulation plus sûre. En français.",
-  conformite: "Vérifie ce document au regard du RGPD et des bonnes pratiques, et liste les points non conformes avec une recommandation. En français.",
-  extract: "Extrais les données structurées du texte (tableaux, montants, dates, entités) et renvoie un JSON propre.",
-  study: "À partir de ce document, génère un quiz de 5 questions et 8 fiches de révision (question/réponse). En français.",
-  access: "Rédige des descriptions alternatives claires pour les éléments visuels décrits et propose un résumé simplifié adapté à la dyslexie. En français.",
-  podcast: "Écris un script de podcast à deux voix (Hôte A et Hôte B) qui explique ce document de façon vivante. En français.",
+  lens: "Tu es un assistant qui lit des documents. Résume le texte fourni et réponds à la question de l'utilisateur en citant les passages pertinents. Clair et concis, en français.",
+  dialogue: "Mets en scène un court débat entre deux experts — un sceptique et un défenseur — sur le document fourni, pour révéler ses failles et ses points forts. En français.",
+  compareai: "Compare les deux versions de texte fournies et explique ce qui change dans le SENS (pas seulement les mots). En français.",
+  factcheck: "Identifie les affirmations non sourcées ou douteuses et explique pourquoi. En français.",
+  negociateur: "Analyse ce contrat clause par clause : note le risque (faible/moyen/élevé), explique clairement, propose une contre-formulation plus sûre. En français.",
+  conformite: "Vérifie ce document au regard du RGPD et des bonnes pratiques ; liste les points non conformes avec une recommandation. En français.",
+  extract: "Extrais les données structurées (tableaux, montants, dates, entités) et renvoie un JSON propre.",
+  study: "Génère un quiz de 5 questions et 8 fiches de révision (question/réponse) à partir du document. En français.",
+  access: "Rédige des descriptions alternatives claires et un résumé simplifié adapté à la dyslexie. En français.",
+  podcast: "Écris un script de podcast à deux voix (Hôte A / Hôte B) qui explique ce document. En français.",
   generate: "Rédige le document demandé par l'utilisateur, prêt à l'emploi, en français.",
-  translate: "Traduis fidèlement le texte fourni dans la langue demandée en conservant le sens et le ton.",
+  translate: "Traduis fidèlement le texte fourni dans la langue demandée, en conservant le sens et le ton.",
+};
+const AI_MIN_LEVEL = { // niveau minimum requis par fonction
+  lens: 2, compareai: 2, factcheck: 2, extract: 2, study: 2, access: 2, translate: 2,
+  dialogue: 3, negociateur: 3, conformite: 3, podcast: 3, generate: 3,
 };
 
 async function callAnthropic(system, userContent) {
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquante");
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1500,
-      system,
-      messages: [{ role: "user", content: userContent }],
-    }),
+    headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 1500, system, messages: [{ role: "user", content: userContent }] }),
   });
   if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
   const data = await r.json();
   return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
 }
 
-app.post("/api/ai/:feature", auth, requirePremium, async (req, res) => {
+app.post("/api/ai/:feature", auth, async (req, res) => {
   const feature = req.params.feature;
   const system = AI_PROMPTS[feature];
-  if (!system) {
-    // Word / signature certifiée : nécessitent d'autres services (LibreOffice, prestataire eIDAS).
-    return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
-  }
+  if (!system) return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
+
+  // 1) niveau d'abonnement suffisant ?
+  const need = AI_MIN_LEVEL[feature] ?? 2;
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Plan supérieur requis pour cette fonction" });
+
+  // 2) quota mensuel non dépassé ?
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+
   try {
     const { text = "", question = "", target = "" } = req.body || {};
     let userContent = text;
     if (question) userContent += `\n\nQuestion : ${question}`;
     if (target) userContent += `\n\nLangue cible : ${target}`;
     const answer = await callAnthropic(system, userContent.slice(0, 60000));
-    res.json({ answer });
+    await incUsage(req.user.email); // on compte l'opération réussie
+    res.json({ answer, used: used + 1, quota });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ---- Sert le front-end (dossier ../public) en développement ----
+// ---- Sert le front-end (dossier ../public) ----
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-app.listen(PORT, () => {
-  console.log(`Readix serveur démarré sur ${CLIENT_URL}`);
-  if (!ANTHROPIC_API_KEY) console.log("⚠️  ANTHROPIC_API_KEY absente : les fonctions IA renverront une erreur.");
-  if (!stripe) console.log("⚠️  Stripe non configuré : le paiement est désactivé.");
-});
+// ---- Démarrage ----
+initDb()
+  .catch(e => console.error("⚠️  Init base de données échouée :", e.message))
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Readix serveur démarré sur ${CLIENT_URL} (port ${PORT})`);
+      if (!DATABASE_URL) console.log("⚠️  DATABASE_URL absente : comptes désactivés.");
+      if (!ANTHROPIC_API_KEY) console.log("⚠️  ANTHROPIC_API_KEY absente : fonctions IA indisponibles.");
+      if (!stripe) console.log("⚠️  Stripe non configuré : paiement désactivé.");
+    });
+  });
