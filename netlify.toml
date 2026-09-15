@@ -1,0 +1,9 @@
+# Déploiement du front-end statique sur Netlify.
+# Le dossier "public" contient index.html (aucune étape de build nécessaire).
+[build]
+  publish = "public"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
