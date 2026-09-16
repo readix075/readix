@@ -451,7 +451,6 @@
       <div class="err-msg" id="auErr"></div>
       <button class="btn" id="auSubmit" onclick="submitAuth()">Créer mon compte</button>
     </div>
-    <p class="demo-flag">Démonstration : les comptes sont gérés dans le navigateur. La version en ligne utilisera un serveur sécurisé.</p>
   </div>
 </div>
 
@@ -633,7 +632,6 @@ function applyStatic(){
   if(labels[1])labels[1].textContent=L("lbl_email","E-mail");
   if(labels[2])labels[2].textContent=L("lbl_pass","Mot de passe");
   ph("#auName",L("ph_name","Votre nom"));ph("#auEmail",L("ph_email","vous@exemple.com"));
-  set("#authOverlay .demo-flag",L("demo_auth","Démonstration : les comptes sont gérés dans le navigateur. La version en ligne utilisera un serveur sécurisé."));
   if(typeof switchAuth==="function")switchAuth(authMode);
   set("#priceOverlay h2",L("price_title","Passez à un plan supérieur"));
   set("#priceOverlay .msub",L("price_sub","Choisissez la formule adaptée à vos besoins."));
@@ -1170,7 +1168,7 @@ function fillsignTool(){
     if(!buf)return;if(!consumeOp(st))return;
     setStatus(st,L("st_processing","Traitement…"),"",true);
     try{
-      const doc=await PDFDocument.load(buf);const font=await doc.embedFont(StandardFonts.Helvetica);const pages=doc.getPages();const sigCache={};
+      const doc=await PDFDocument.load(buf,{ignoreEncryption:true});const font=await doc.embedFont(StandardFonts.Helvetica);const pages=doc.getPages();const sigCache={};
       for(const o of items){
         const meta=pagesMeta[o.page],pg=pages[o.page];if(!meta||!pg)continue;const S=meta.scale;const pb=meta.pageEl.getBoundingClientRect();
         if(o.type==="text"){
@@ -1235,7 +1233,7 @@ BUILDERS.merge=function(){
   const lst=fileListUI(listWrap,files,check,{reorder:true});
   dz._onfiles=fs=>{files.push(...fs.filter(f=>f.type==="application/pdf"||f.name.toLowerCase().endsWith(".pdf")));lst.refresh();check();};
   btn.onclick=async()=>{if(!consumeOp(st))return;setStatus(st,L("st_merging","Fusion…"),"",true);btn.disabled=true;
-    try{const out=await PDFDocument.create();for(const f of files){const src=await PDFDocument.load(await readAsArrayBuffer(f));(await out.copyPages(src,src.getPageIndices())).forEach(pg=>out.addPage(pg));}
+    try{const out=await PDFDocument.create();for(const f of files){const src=await PDFDocument.load(await readAsArrayBuffer(f),{ignoreEncryption:true});(await out.copyPages(src,src.getPageIndices())).forEach(pg=>out.addPage(pg));}
       download(await out.save(),"fusion.pdf");setStatus(st,"Terminé — fusion.pdf téléchargé.","ok");}catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}check();};
   return ws;
 };
@@ -1244,10 +1242,10 @@ BUILDERS.split=function(){
   ctr.innerHTML=`<div class="field"><label>Pages à extraire</label><input type="text" data-range placeholder="ex. 1-3, 5, 8-10"><span class="hint">Vide = tout</span></div>
     <div class="field"><label>Mode</label><select data-mode><option value="one">Un seul PDF avec ces pages</option><option value="each">Un PDF par page (.zip)</option></select></div>`;
   const btn=el("button","btn");btn.textContent=L("b_extract","Extraire");btn.disabled=true;ctr.appendChild(btn);const st=statusLine();p.append(dz,info,ctr,st);let buf=null,total=0;
-  dz._onfiles=async fs=>{if(!fs[0])return;buf=await readAsArrayBuffer(fs[0]);total=(await PDFDocument.load(buf)).getPageCount();info.textContent=fs[0].name+" — "+total+" page(s).";btn.disabled=false;dz.querySelector("strong").textContent=fs[0].name;};
+  dz._onfiles=async fs=>{if(!fs[0])return;buf=await readAsArrayBuffer(fs[0]);total=(await PDFDocument.load(buf,{ignoreEncryption:true})).getPageCount();info.textContent=fs[0].name+" — "+total+" page(s).";btn.disabled=false;dz.querySelector("strong").textContent=fs[0].name;};
   btn.onclick=async()=>{if(!consumeOp(st))return;setStatus(st,L("st_processing","Traitement…"),"",true);btn.disabled=true;
     try{const rs=ctr.querySelector("[data-range]").value.trim();const pages=rs?parseRanges(rs,total):[...Array(total)].map((_,i)=>i+1);
-      if(!pages.length){setStatus(st,"Aucune page valide.","err");btn.disabled=false;return;}const src=await PDFDocument.load(buf);
+      if(!pages.length){setStatus(st,"Aucune page valide.","err");btn.disabled=false;return;}const src=await PDFDocument.load(buf,{ignoreEncryption:true});
       if(ctr.querySelector("[data-mode]").value==="one"){const out=await PDFDocument.create();(await out.copyPages(src,pages.map(n=>n-1))).forEach(pg=>out.addPage(pg));download(await out.save(),"extrait.pdf");setStatus(st,"Terminé — "+pages.length+" page(s).","ok");}
       else{const zip=new JSZip();for(const n of pages){const out=await PDFDocument.create();const[pg]=await out.copyPages(src,[n-1]);out.addPage(pg);zip.file("page-"+String(n).padStart(3,"0")+".pdf",await out.save());}download(await zip.generateAsync({type:"blob"}),"pages.zip","application/zip");setStatus(st,"Terminé — "+pages.length+" fichiers.","ok");}}
     catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}btn.disabled=false;};
@@ -1268,7 +1266,7 @@ BUILDERS.organize=function(){
     setStatus(st,"Glissez pour réordonner. Icônes : pivoter / supprimer.");};
   function rot(cell,d){const c=cell.querySelector("canvas");cell._rot=((cell._rot||0)+d+360)%360;c.style.transform="rotate("+cell._rot+"deg)";}
   btn.onclick=async()=>{if(!consumeOp(st))return;setStatus(st,L("st_saving","Enregistrement…"),"",true);btn.disabled=true;
-    try{const src=await PDFDocument.load(buf);const out=await PDFDocument.create();const cells=[...thumbs.children].filter(c=>!c._removed);
+    try{const src=await PDFDocument.load(buf,{ignoreEncryption:true});const out=await PDFDocument.create();const cells=[...thumbs.children].filter(c=>!c._removed);
       const copied=await out.copyPages(src,cells.map(c=>+c.dataset.idx));copied.forEach((pg,i)=>{const ex=cells[i]._rot||0;if(ex)pg.setRotation(degrees((pg.getRotation().angle+ex)%360));out.addPage(pg);});
       if(out.getPageCount()===0){setStatus(st,"Toutes les pages supprimées.","err");btn.disabled=false;return;}download(await out.save(),"organise.pdf");setStatus(st,"Terminé — organise.pdf ("+out.getPageCount()+" pages).","ok");}
     catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}btn.disabled=false;};
@@ -1281,7 +1279,7 @@ BUILDERS.numbers=function(){
   const btn=el("button","btn");btn.textContent=L("b_add_numbers","Ajouter la numérotation");btn.disabled=true;ctr.appendChild(btn);const st=statusLine();p.append(dz,ctr,st);let buf=null;
   dz._onfiles=async fs=>{if(!fs[0])return;buf=await readAsArrayBuffer(fs[0]);btn.disabled=false;dz.querySelector("strong").textContent=fs[0].name;setStatus(st,L("ready","Prêt."));};
   btn.onclick=async()=>{if(!consumeOp(st))return;setStatus(st,L("st_adding","Ajout…"),"",true);btn.disabled=true;
-    try{const doc=await PDFDocument.load(buf);const font=await doc.embedFont(StandardFonts.Helvetica);const pos=ctr.querySelector("[data-pos]").value,start=parseInt(ctr.querySelector("[data-start]").value,10)||1,fs=parseInt(ctr.querySelector("[data-fs]").value,10)||11;
+    try{const doc=await PDFDocument.load(buf,{ignoreEncryption:true});const font=await doc.embedFont(StandardFonts.Helvetica);const pos=ctr.querySelector("[data-pos]").value,start=parseInt(ctr.querySelector("[data-start]").value,10)||1,fs=parseInt(ctr.querySelector("[data-fs]").value,10)||11;
       doc.getPages().forEach((pg,i)=>{const{width,height}=pg.getSize();const label=String(start+i);const tw=font.widthOfTextAtSize(label,fs);const m=24;let x,y;if(pos[0]==="b")y=m;else y=height-m-fs;if(pos[1]==="c")x=(width-tw)/2;else if(pos[1]==="r")x=width-m-tw;else x=m;pg.drawText(label,{x,y,size:fs,font,color:rgb(.15,.18,.22)});});
       download(await doc.save(),"numerote.pdf");setStatus(st,"Terminé — numerote.pdf.","ok");}catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}btn.disabled=false;};
   return ws;
@@ -1293,7 +1291,7 @@ BUILDERS.watermark=function(){
   const btn=el("button","btn");btn.textContent=L("b_apply_wm","Appliquer le filigrane");btn.disabled=true;ctr.appendChild(btn);const st=statusLine();p.append(dz,ctr,st);let buf=null;
   dz._onfiles=async fs=>{if(!fs[0])return;buf=await readAsArrayBuffer(fs[0]);btn.disabled=false;dz.querySelector("strong").textContent=fs[0].name;setStatus(st,L("ready","Prêt."));};
   btn.onclick=async()=>{if(!consumeOp(st))return;setStatus(st,L("st_applying","Application…"),"",true);btn.disabled=true;
-    try{const doc=await PDFDocument.load(buf);const font=await doc.embedFont(StandardFonts.HelveticaBold);const txt=ctr.querySelector("[data-txt]").value||"CONFIDENTIEL";const op=(parseInt(ctr.querySelector("[data-op]").value,10)||15)/100;const fs=parseInt(ctr.querySelector("[data-fs]").value,10)||52;
+    try{const doc=await PDFDocument.load(buf,{ignoreEncryption:true});const font=await doc.embedFont(StandardFonts.HelveticaBold);const txt=ctr.querySelector("[data-txt]").value||"CONFIDENTIEL";const op=(parseInt(ctr.querySelector("[data-op]").value,10)||15)/100;const fs=parseInt(ctr.querySelector("[data-fs]").value,10)||52;
       doc.getPages().forEach(pg=>{const{width,height}=pg.getSize();const tw=font.widthOfTextAtSize(txt,fs);pg.drawText(txt,{x:width/2-tw/2*Math.cos(Math.PI/6),y:height/2-tw/2*Math.sin(Math.PI/6),size:fs,font,color:rgb(.55,.15,.15),opacity:op,rotate:degrees(30)});});
       download(await doc.save(),"filigrane.pdf");setStatus(st,"Terminé — filigrane.pdf.","ok");}catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}btn.disabled=false;};
   return ws;
@@ -1377,7 +1375,7 @@ BUILDERS.shield=function(){
       if(!any){const f=el("div","finding");f.innerHTML=`<div class="cnt" style="color:var(--ok)">✓</div><div><div class="t">Aucune donnée sensible détectée dans le texte.</div></div>`;box.appendChild(f);}findings.appendChild(box);ctr.style.display="flex";setStatus(st,"Scan terminé. Vous pouvez nettoyer les métadonnées cachées.");}
     catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}};
   clean.onclick=async()=>{setStatus(st,L("st_cleaning","Nettoyage…"),"",true);clean.disabled=true;
-    try{const doc=await PDFDocument.load(buf);doc.setTitle("");doc.setAuthor("");doc.setSubject("");doc.setKeywords([]);doc.setProducer("");doc.setCreator("");try{doc.setCreationDate(new Date(0));doc.setModificationDate(new Date(0));}catch(_){}
+    try{const doc=await PDFDocument.load(buf,{ignoreEncryption:true});doc.setTitle("");doc.setAuthor("");doc.setSubject("");doc.setKeywords([]);doc.setProducer("");doc.setCreator("");try{doc.setCreationDate(new Date(0));doc.setModificationDate(new Date(0));}catch(_){}
       download(await doc.save(),"nettoye.pdf");setStatus(st,"Terminé — nettoye.pdf (métadonnées retirées).","ok");}catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}clean.disabled=false;};
   return ws;
 };
