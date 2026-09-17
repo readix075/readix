@@ -230,6 +230,17 @@
   .ai-out{margin-top:16px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;white-space:pre-wrap;line-height:1.65;font-size:14.5px;color:var(--ink);max-height:62vh;overflow:auto}
   .lens-q{width:100%;margin-top:12px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:11px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface-2)}
   .lens-q:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-glow)}
+  .usermenu{position:relative}
+  .usermenu .avatar{border:none;cursor:pointer;padding:0}
+  .umenu{position:absolute;right:0;top:calc(100% + 10px);min-width:236px;background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;box-shadow:var(--shadow-lg);padding:8px;display:none;z-index:70}
+  .usermenu.open .umenu{display:block;animation:cmdIn .16s var(--ease-out)}
+  .um-head{padding:10px 12px 8px}
+  .um-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;color:var(--ink)}
+  .um-email{font-size:12px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .um-plan{padding:4px 12px 10px;font-size:12.5px;color:var(--ink-soft);border-bottom:1px solid var(--line);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .um-item{display:block;width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13.5px;color:var(--ink);padding:9px 12px;border-radius:9px;cursor:pointer}
+  .um-item:hover{background:var(--surface-2)}
+  .um-item.danger{color:#C0392B} .um-item.danger:hover{background:#FDECEA}
 
   /* Modals */
   .overlay{position:fixed;inset:0;background:rgba(24,27,39,.42);backdrop-filter:blur(4px);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
@@ -532,7 +543,8 @@ const I18N={
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
   wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
-  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",
+  um_plan:"Plan:",um_pricing:"Plans & pricing",um_upgrade:"Upgrade my plan",um_upgrade_free:"Go Premium",um_logout:"Sign out",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
   pfree_name:"Free",ppro_name:"Premium",price_zero:"0 €",per_month:" / month",
@@ -794,17 +806,33 @@ function renderAccount(){
   const a=$("#account");a.innerHTML="";
   if(APP.user){
     const lvl=planLevel(APP.plan);
-    if(lvl===0){/* gratuit illimité au lancement — pas de compteur */}
     if(lvl<3){const up=el("button","btn gold sm");up.textContent=lvl===0?L("acc_premium","Premium"):L("acc_upgrade","Améliorer");up.onclick=openPricing;a.appendChild(up);}
     const p=PLANS.find(x=>x.id===APP.plan)||PLANS[0];
-    const badge=el("span","plan-badge "+p.id,L("pl_"+p.id,p.name));a.appendChild(badge);
-    const av=el("div","avatar",(APP.user.name||APP.user.email)[0].toUpperCase());av.title=APP.user.email+L("acc_logout_h"," — se déconnecter");
-    av.onclick=()=>{if(confirm(L("logout_q","Se déconnecter ?"))){clearToken();APP.user=null;APP.plan="free";APP.ops=0;renderAccount();}};a.appendChild(av);
+    const name=APP.user.name||APP.user.email;
+    const wrap=el("div","usermenu");
+    const av=el("button","avatar");av.textContent=(name[0]||"U").toUpperCase();av.title=name;
+    const menu=el("div","umenu");
+    const head=el("div","um-head");
+    head.appendChild(el("div","um-name",name));
+    head.appendChild(el("div","um-email",APP.user.email));
+    menu.appendChild(head);
+    const pl=el("div","um-plan");pl.appendChild(el("span",null,L("um_plan","Plan :")));
+    pl.appendChild(el("span","plan-badge "+p.id,L("pl_"+p.id,p.name)));
+    menu.appendChild(pl);
+    const acct=el("button","um-item",L("um_pricing","Voir les plans & tarifs"));acct.onclick=()=>{wrap.classList.remove("open");openPricing();};
+    menu.appendChild(acct);
+    if(lvl<3){const upg=el("button","um-item",lvl===0?L("um_upgrade_free","Passer à Premium"):L("um_upgrade","Améliorer mon plan"));upg.onclick=()=>{wrap.classList.remove("open");openPricing();};menu.appendChild(upg);}
+    const out=el("button","um-item danger",L("um_logout","Se déconnecter"));
+    out.onclick=()=>{wrap.classList.remove("open");clearToken();APP.user=null;APP.plan="free";APP.ops=0;renderAccount();};
+    menu.appendChild(out);
+    av.onclick=(e)=>{e.stopPropagation();document.querySelectorAll(".usermenu.open").forEach(w=>{if(w!==wrap)w.classList.remove("open");});wrap.classList.toggle("open");};
+    wrap.append(av,menu);a.appendChild(wrap);
   }else{
     const login=el("button","btn ghost sm",L("acc_login","Se connecter"));login.onclick=()=>openAuth("login");
     const signup=el("button","btn sm",L("acc_signup","S'inscrire"));signup.onclick=()=>openAuth("signup");a.append(login,signup);
   }
 }
+if(!window.__umClose){window.__umClose=true;document.addEventListener("click",()=>{document.querySelectorAll(".usermenu.open").forEach(w=>w.classList.remove("open"));});}
 function consumeOp(statusNode){
   // Plan payant : illimité.
   if(APP.user && planLevel(APP.plan)>=1) return true;
