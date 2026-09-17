@@ -27,6 +27,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 // ---- Paliers d'abonnement ----
 const PLAN_LEVEL = { free: 0, standard: 1, pro: 2, studio: 3 };
 const AI_QUOTA = { free: 0, standard: 0, pro: 50, studio: 200 }; // opérations IA / mois
+const FREE_OP_LIMIT = 15; // opérations incluses sur un compte gratuit avant l'invitation à passer à un plan payant (compteur caché, géré en arrière-plan)
 const levelOf = (plan) => PLAN_LEVEL[plan] ?? 0;
 const ym = () => new Date().toISOString().slice(0, 7); // "2026-09"
 
@@ -50,8 +51,10 @@ async function initDb() {
       email    TEXT NOT NULL,
       ym       TEXT NOT NULL,
       ai_count INTEGER NOT NULL DEFAULT 0,
+      op_count INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (email, ym)
     );`);
+  await pool.query(`ALTER TABLE usage ADD COLUMN IF NOT EXISTS op_count INTEGER NOT NULL DEFAULT 0;`);
   console.log("✅ Base de données prête (tables users, usage).");
 }
 async function getUser(email) {
@@ -72,6 +75,17 @@ async function incUsage(email) {
   await pool.query(
     `INSERT INTO usage(email,ym,ai_count) VALUES($1,$2,1)
      ON CONFLICT (email,ym) DO UPDATE SET ai_count = usage.ai_count + 1`,
+    [email, ym()]
+  );
+}
+async function getOps(email) {
+  const r = await pool.query("SELECT op_count FROM usage WHERE email=$1 AND ym=$2", [email, ym()]);
+  return r.rows[0] ? r.rows[0].op_count : 0;
+}
+async function incOps(email) {
+  await pool.query(
+    `INSERT INTO usage(email,ym,op_count) VALUES($1,$2,1)
+     ON CONFLICT (email,ym) DO UPDATE SET op_count = usage.op_count + 1`,
     [email, ym()]
   );
 }
@@ -167,6 +181,27 @@ app.get("/api/usage", auth, async (req, res) => {
     const used = await getUsage(req.user.email);
     res.json({ plan: req.user.plan, used, quota: AI_QUOTA[req.user.plan] ?? 0 });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Compteur d'opérations gratuites — GÉRÉ EN ARRIÈRE-PLAN, jamais affiché à l'utilisateur.
+// Sert uniquement à savoir quand rediriger vers un plan payant.
+app.get("/api/op", auth, async (req, res) => {
+  try {
+    const lvl = levelOf(req.user.plan);
+    if (lvl >= 1) return res.json({ used: 0, limit: null, over: false });
+    const used = await getOps(req.user.email);
+    res.json({ used, limit: FREE_OP_LIMIT, over: used >= FREE_OP_LIMIT });
+  } catch (e) { res.json({ used: 0, limit: FREE_OP_LIMIT, over: false }); }
+});
+app.post("/api/op", auth, async (req, res) => {
+  try {
+    const lvl = levelOf(req.user.plan);
+    if (lvl >= 1) return res.json({ used: 0, over: false }); // payant : illimité
+    const used = await getOps(req.user.email);
+    if (used >= FREE_OP_LIMIT) return res.json({ used, over: true });
+    await incOps(req.user.email);
+    res.json({ used: used + 1, over: (used + 1) >= FREE_OP_LIMIT });
+  } catch (e) { res.json({ used: 0, over: false }); }
 });
 
 // ---- Abonnement Stripe ----
