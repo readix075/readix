@@ -227,6 +227,9 @@
   .lock-incl ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
   .lock-incl li{font-size:12.5px;color:var(--ink-soft);display:flex;gap:8px;align-items:flex-start;text-align:left}
   .lock-incl li svg{width:14px;height:14px;color:var(--ok);flex:none;margin-top:2px}
+  .ai-out{margin-top:16px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;white-space:pre-wrap;line-height:1.65;font-size:14.5px;color:var(--ink);max-height:62vh;overflow:auto}
+  .lens-q{width:100%;margin-top:12px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:11px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface-2)}
+  .lens-q:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-glow)}
 
   /* Modals */
   .overlay{position:fixed;inset:0;background:rgba(24,27,39,.42);backdrop-filter:blur(4px);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
@@ -528,7 +531,8 @@ const I18N={
   pf_all_std:"Everything in Standard",pf_ai_core:"AI: summary, extract, Word, translation",pf_quota50:"50 AI operations / month",
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
-  wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
+  wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
   pfree_name:"Free",ppro_name:"Premium",price_zero:"0 €",per_month:" / month",
@@ -1081,6 +1085,43 @@ const BUILDERS={};
 Object.keys(PREMIUM_INFO).forEach(id=>{const t=TOOLS.find(x=>x.id===id);BUILDERS[id]=()=>unlocked(t)?premiumReady(id):lockedPanel(id);});
 
 BUILDERS.fillsign=()=>unlocked(TOOLS.find(x=>x.id==="fillsign"))?fillsignTool():lockedPanel("fillsign");
+BUILDERS.lens=()=>unlocked(TOOLS.find(x=>x.id==="lens"))?lensTool():lockedPanel("lens");
+function mapAiError(m){
+  m=m||"";
+  if(/authenti|session/i.test(m))return L("ai_login","Connectez-vous pour utiliser l'IA.");
+  if(/supérieur|réservé|402/i.test(m))return L("ai_plan","Cette fonction IA nécessite un plan Pro ou Studio.");
+  if(/quota|429/i.test(m))return L("ai_quota","Quota IA mensuel atteint. Il se réinitialise le mois prochain.");
+  if(/clé|api key|ANTHROPIC/i.test(m))return L("ai_srv","Service IA momentanément indisponible.");
+  return L("error_p","Erreur : ")+m;
+}
+function lensTool(){
+  const ws=shell("lens");const p=ws._panel;
+  const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
+  const q=el("input");q.type="text";q.className="lens-q";q.placeholder=L("lens_q_ph","Votre question (facultatif) — sinon, résumé du document");q.style.display="none";
+  const btn=el("button","btn");btn.textContent=L("lens_go","Résumer / Répondre");btn.style.marginTop="12px";btn.style.display="none";btn.disabled=true;
+  const out=el("div","ai-out");out.style.display="none";
+  const st=statusLine();
+  p.append(dz,q,btn,out,st);
+  let buf=null;
+  dz._onfiles=async fs=>{ if(!fs[0])return;
+    try{ buf=await readAsArrayBuffer(fs[0]); dz.style.display="none"; q.style.display="block"; btn.style.display="inline-flex"; btn.disabled=false;
+      setStatus(st,L("lens_ready","Document chargé. Posez une question, ou lancez le résumé.")); }
+    catch(e){ setStatus(st,L("error_p","Erreur : ")+e.message,"err"); } };
+  btn.onclick=async()=>{
+    if(!buf)return;
+    btn.disabled=true;out.style.display="none";setStatus(st,L("st_analyzing","Analyse…"),"",true);
+    try{
+      const {full}=await extractText(buf);
+      const text=(full||"").slice(0,60000);
+      if(!text.trim()){ setStatus(st,L("lens_empty","Aucun texte détecté (PDF probablement scanné)."),"err"); btn.disabled=false; return; }
+      const data=await api("/api/ai/lens",{text,question:q.value.trim()});
+      out.textContent=data.answer||"—"; out.style.display="block";
+      setStatus(st,L("done","Terminé."),"ok");
+    }catch(e){ setStatus(st,mapAiError(e.message),"err"); }
+    finally{ btn.disabled=false; }
+  };
+  return ws;
+}
 function fillsignTool(){
   const ws=shell("fillsign");const p=ws._panel;
   const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
