@@ -129,7 +129,7 @@ function sign(user) { return jwt.sign({ email: user.email }, JWT_SECRET, { expir
 async function auth(req, res, next) {
   const h = req.headers.authorization || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: "Non authentifié" });
+  if (!token) { console.log("[AUTH] requête sans jeton :", req.method, req.path); return res.status(401).json({ error: "Non authentifié" }); }
   if (!dbReady(res)) return;
   try {
     const { email } = jwt.verify(token, JWT_SECRET);
@@ -256,6 +256,7 @@ async function callAnthropic(system, userContent) {
 }
 
 app.post("/api/ai/:feature", auth, async (req, res) => {
+  console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!ANTHROPIC_API_KEY);
   const feature = req.params.feature;
   const system = AI_PROMPTS[feature];
   if (!system) return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
