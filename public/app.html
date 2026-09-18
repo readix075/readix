@@ -518,7 +518,7 @@ const LANGS=[
 const I18N={
  en:{
   nav_home:"Home",nav_ai:"AI features",nav_pricing:"Pricing",all_tools:"All tools",
-  cat_ess:"Essential tools",cat_sig:"Readix Signature",cat_pro:"Premium AI features",
+  cat_ess:"Essential tools",cat_sig:"Readix Signature",cat_pro:"AI features",
   badge_free:"FREE",badge_ai:"AI",badge_exclusive:"EXCLUSIVE",badge_premium:"PREMIUM",
   nav_heading:"Navigation",promo_title:"Readix Premium",
   promo_text:"Unlock 15 AI features: summaries, contract negotiation, data extraction…",promo_btn:"Discover",
@@ -543,7 +543,7 @@ const I18N={
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
   wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
-  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",lens_noans:"The AI returned no content. Try again, or the PDF may be scanned/empty.",
   um_plan:"Plan:",um_pricing:"Plans & pricing",um_upgrade:"Upgrade my plan",um_upgrade_free:"Go Premium",um_logout:"Sign out",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
@@ -797,7 +797,7 @@ TOOLS.forEach(t=>{t.lvl=TOOL_LVL[t.id]||0;});
 const CATS=[
   {key:"ess",label:"Outils essentiels",badge:null,ic:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>'},
   {key:"sig",label:"Signature Readix",badge:{cls:"sig",text:"GRATUIT"},ic:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>'},
-  {key:"pro",label:"Fonctions IA Premium",badge:{cls:"pro",text:"IA"},ic:'<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>'},
+  {key:"pro",label:"Fonctions IA",badge:{cls:"pro",text:"IA"},ic:'<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>'},
 ];
 const SUBS={comprendre:"Comprendre le document",metier:"Assistant métier",apprendre:"Apprentissage & accessibilité",creer:"Conversion & création"};
 
@@ -1002,9 +1002,8 @@ function setNavActive(key){[...$("#sidenav").children].forEach(b=>b.classList.to
 
 /* ---------- catalog ---------- */
 function toolCard(t){
-  const b=el("button","tool"+(t.premium?" pro":""));b.dataset.tool=t.id;b.dataset.name=(t.title+" "+t.desc).toLowerCase();
-  b.innerHTML=`${t.premium?'<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>':""}
-    <span class="icwrap"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">${IC[t.id]}</svg></span>
+  const b=el("button","tool");b.dataset.tool=t.id;b.dataset.name=(t.title+" "+t.desc).toLowerCase();
+  b.innerHTML=`<span class="icwrap"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">${IC[t.id]}</svg></span>
     <h3>${L("t_"+t.id,t.title)}</h3><p>${L("d_"+t.id,t.desc)}</p>`;
   b.onclick=()=>openTool(t.id);return b;
 }
@@ -1073,7 +1072,6 @@ function shell(id){
   cr.append(b1,el("span",null,"›"),b2,el("span",null,"›"),el("span",null,t.title));ws.appendChild(cr);
   const h=el("h2","ws-head");h.textContent=L("t_"+t.id,t.title);
   if(t.cat==="sig")h.appendChild(el("span","cat-badge sig",L("badge_exclusive","EXCLUSIF")));
-  if(t.premium)h.appendChild(el("span","cat-badge pro",L("badge_premium","PREMIUM")));
   ws.appendChild(h);ws.appendChild(el("p","ws-sub",L("d_"+t.id,t.desc)));
   const panel=el("div","panel");ws.appendChild(panel);ws._panel=panel;return ws;
 }
@@ -1143,7 +1141,9 @@ function lensTool(){
       const text=(full||"").slice(0,60000);
       if(!text.trim()){ setStatus(st,L("lens_empty","Aucun texte détecté (PDF probablement scanné)."),"err"); btn.disabled=false; return; }
       const data=await api("/api/ai/lens",{text,question:q.value.trim()});
-      out.textContent=data.answer||"—"; out.style.display="block";
+      const ans=(data.answer||"").trim();
+      if(!ans){ setStatus(st,L("lens_noans","L'IA n'a pas renvoyé de contenu. Réessayez, ou le PDF est peut-être scanné/vide."),"err"); btn.disabled=false; return; }
+      out.textContent=ans; out.style.display="block";
       setStatus(st,L("done","Terminé."),"ok");
     }catch(e){ setStatus(st,mapAiError(e.message),"err"); }
     finally{ btn.disabled=false; }
@@ -1504,7 +1504,7 @@ function cmdRun(q){
   cmdList.forEach((o,i)=>{
     const it=el("div","cmd-item"+(o.t.premium?" pro":"")+(i===cmdIdx?" active":""));
     it.innerHTML='<span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">'+IC[o.t.id]+'</svg></span>'+
-      '<div style="min-width:0"><div class="ct">'+o.title+(o.t.premium?' <span class="tag">'+L("badge_premium","PREMIUM")+'</span>':'')+'</div><div class="cd">'+o.desc+'</div></div>';
+      '<div style="min-width:0"><div class="ct">'+o.title+'</div><div class="cd">'+o.desc+'</div></div>';
     it.onmousedown=e=>{e.preventDefault();cmdPick(i);};
     it.onmouseenter=()=>{cmdIdx=i;cmdHi();};
     box.appendChild(it);
