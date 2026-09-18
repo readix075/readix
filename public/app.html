@@ -543,7 +543,7 @@ const I18N={
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
   wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
-  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",
   um_plan:"Plan:",um_pricing:"Plans & pricing",um_upgrade:"Upgrade my plan",um_upgrade_free:"Go Premium",um_logout:"Sign out",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
@@ -1116,10 +1116,10 @@ BUILDERS.fillsign=()=>unlocked(TOOLS.find(x=>x.id==="fillsign"))?fillsignTool():
 BUILDERS.lens=()=>unlocked(TOOLS.find(x=>x.id==="lens"))?lensTool():lockedPanel("lens");
 function mapAiError(m){
   m=m||"";
-  if(/authenti|session/i.test(m))return L("ai_login","Connectez-vous pour utiliser l'IA.");
-  if(/supérieur|réservé|402/i.test(m))return L("ai_plan","Cette fonction IA nécessite un plan Pro ou Studio.");
-  if(/quota|429/i.test(m))return L("ai_quota","Quota IA mensuel atteint. Il se réinitialise le mois prochain.");
-  if(/clé|api key|ANTHROPIC/i.test(m))return L("ai_srv","Service IA momentanément indisponible.");
+  if(/Non authentifié|Session expirée/i.test(m))return L("ai_login","Session expirée — reconnectez-vous.");
+  if(/Plan supérieur|réservé/i.test(m))return L("ai_plan","Cette fonction IA nécessite un plan Pro ou Studio.");
+  if(/Quota IA|429/i.test(m))return L("ai_quota","Quota IA mensuel atteint. Il se réinitialise le mois prochain.");
+  if(/authentication|invalid x-api-key|api.?key|clé|ANTHROPIC|Erreur IA/i.test(m))return L("ai_key","Le service IA a refusé la requête — vérifiez la clé API dans Render.");
   return L("error_p","Erreur : ")+m;
 }
 function lensTool(){
