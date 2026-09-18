@@ -454,19 +454,86 @@
     .rrail{display:none}
     .doc-wrap>#catalogView,.doc-wrap>#workspaceView{padding:16px 12px 50px}
   }
+
+  /* ===== Espace de travail document (centre) ===== */
+  .doc-wrap>#catalogView{max-width:none;margin:0;padding:0;position:relative;min-height:100%}
+  .dw-ai{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:12px;margin:14px auto 0;max-width:820px;background:var(--surface);border:1px solid var(--violet-soft);border-radius:12px;padding:11px 14px;box-shadow:var(--shadow-sm)}
+  .dw-spark{width:26px;height:26px;border-radius:8px;background:linear-gradient(150deg,var(--violet-soft),#fff);display:grid;place-items:center;flex:none}
+  .dw-spark svg{width:16px;height:16px;color:var(--violet)}
+  .dw-ai p{font-size:13px;color:var(--ink);flex:1}
+  .dw-go{height:32px;padding:0 14px;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;border:none;border-radius:9px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .dw-x{border:none;background:none;color:var(--ink-faint);font-size:15px;padding:4px;cursor:pointer}
+  .dw-opener{position:absolute;inset:0;display:grid;place-items:center;padding:24px}
+  .dw-card{background:var(--surface);border:1.5px dashed var(--line-strong);border-radius:18px;padding:44px 40px;text-align:center;max-width:440px;cursor:pointer;transition:border-color .2s,background .2s}
+  .dw-card:hover{border-color:var(--violet);background:var(--violet-soft)}
+  .dw-card svg{width:46px;height:46px;color:var(--violet);margin-bottom:14px}
+  .dw-card h3{font-family:'Space Grotesk',sans-serif;font-size:19px;margin-bottom:6px}
+  .dw-card p{font-size:14px;color:var(--ink-soft);margin-bottom:18px}
+  .dw-btn{display:inline-flex;height:42px;padding:0 22px;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;border-radius:11px;font-weight:600;font-size:14px;align-items:center;box-shadow:0 6px 16px var(--violet-glow)}
+  .dw-pages{display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 22px 64px}
+  .dw-pages .dwpg{background:#fff;box-shadow:var(--shadow);border-radius:3px}
+  .dw-pages canvas{display:block;border-radius:3px}
+  .dw-floatbar{position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:7;display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;padding:6px;box-shadow:var(--shadow)}
+  .dw-fb{width:40px;height:40px;border:none;background:none;border-radius:10px;display:grid;place-items:center;color:var(--ink-soft);cursor:pointer}
+  .dw-fb:hover{background:var(--surface-2);color:var(--ink)} .dw-fb.on{background:var(--violet-soft);color:var(--violet)} .dw-fb svg{width:19px;height:19px}
+  .rzval{font-size:10.5px;color:var(--ink-faint);font-weight:600;padding:2px 0;text-align:center}
+  .rpage{margin-top:8px;font-size:11px;color:var(--ink-soft);text-align:center;font-weight:600}
+  .rpage b{color:var(--ink);font-family:'Space Grotesk',sans-serif}
+  @media(max-width:900px){.dw-floatbar{left:8px}}
+
+  /* ===== Chatbot ===== */
+  .cbot-fab{position:fixed;right:22px;bottom:22px;width:58px;height:58px;border-radius:18px;border:none;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;display:grid;place-items:center;box-shadow:0 10px 26px var(--violet-glow);cursor:pointer;z-index:200;transition:transform .16s var(--ease)}
+  .cbot-fab:hover{transform:translateY(-2px) scale(1.03)} .cbot-fab svg{width:28px;height:28px}
+  .cbot{position:fixed;right:22px;bottom:90px;width:min(360px,92vw);height:min(520px,72vh);background:var(--surface);border:1px solid var(--line-strong);border-radius:18px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;z-index:200}
+  .cbot.open{display:flex;animation:cmdIn .2s var(--ease-out)}
+  .cbot-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff}
+  .cbot-ic{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:grid;place-items:center} .cbot-ic svg{width:20px;height:20px}
+  .cbot-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px} .cbot-sub{font-size:11.5px;opacity:.85}
+  .cbot-close{margin-left:auto;border:none;background:none;color:#fff;font-size:16px;cursor:pointer;opacity:.9}
+  .cbot-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .cbot-msg{max-width:85%;font-size:13.5px;line-height:1.5;padding:10px 13px;border-radius:13px}
+  .cbot-msg.bot{background:var(--surface-2);color:var(--ink);border-bottom-left-radius:4px;align-self:flex-start}
+  .cbot-msg.me{background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+  .cbot-chips{display:flex;flex-wrap:wrap;gap:7px}
+  .cbot-chips button{font-family:inherit;font-size:12px;font-weight:600;color:var(--violet);background:var(--violet-soft);border:1px solid #DBD3FF;border-radius:999px;padding:6px 11px;cursor:pointer}
+  .cbot-chips button:hover{background:#E3DCFF}
+  .cbot-foot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+  .cbot-foot input{flex:1;height:38px;padding:0 12px;border:1px solid var(--line-strong);border-radius:10px;font-family:inherit;font-size:13px;background:var(--surface-2)}
+  .cbot-foot input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-glow)}
+  .cbot-foot button{width:38px;height:38px;border:none;border-radius:10px;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;display:grid;place-items:center;cursor:pointer}
+
+  .wt-create{display:flex;align-items:center;gap:6px;height:34px;padding:0 13px;background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;box-shadow:var(--shadow-sm)}
+  .wt-create:hover{border-color:var(--violet-soft)}
+  .wt-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .wt-right #langWrap{margin-left:0}
+  .wnav button{display:flex;align-items:center;gap:7px}.wnav button svg{width:16px;height:16px}
+  .wm-actions{display:flex;align-items:center;gap:2px}
+  .wm-ico{width:34px;height:34px;border:none;background:none;border-radius:9px;display:grid;place-items:center;color:var(--ink-soft);cursor:pointer}
+  .wm-ico:hover{background:var(--surface-2);color:var(--ink)}.wm-ico svg{width:18px;height:18px}
+  .wm-share{height:34px;padding:0 15px;background:linear-gradient(150deg,var(--violet-bright),var(--violet-2));color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;box-shadow:0 4px 12px var(--violet-glow);display:flex;align-items:center;gap:7px;cursor:pointer}
+  .wm-share:hover{filter:brightness(1.05)}.wm-share svg{width:15px;height:15px}
+  .ai-input{width:100%;padding:12px 14px;border:1px solid var(--line-strong);border-radius:11px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface-2);resize:vertical;min-height:90px}
+  .ai-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-glow)}
+  @media(max-width:900px){.wt-create,.wm-actions,.wm-share{display:none}.wnav button span,.wnav button{font-size:0}.wnav button svg{width:20px;height:20px}}
 </style>
 </head>
 <body>
 <header class="wtop">
   <button class="wt-ico menu-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
-  <div class="wt-brand" onclick="goHome()"><span class="logo"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rxLogo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B6DFF"/><stop offset="1" stop-color="#5A38F0"/></linearGradient></defs><rect x="1" y="1" width="30" height="30" rx="8.5" fill="url(#rxLogo)"/><rect x="1" y="1" width="30" height="14" rx="8.5" fill="#ffffff" opacity="0.14"/><path d="M11 23V9h6.2c2.7 0 4.3 1.5 4.3 3.9 0 1.8-.9 3.1-2.5 3.6l2.9 6.5h-3.1l-2.5-5.9h-2.5V23H11zm2.8-8.2h3c1.2 0 1.9-.6 1.9-1.7s-.7-1.7-1.9-1.7h-3v3.4z" fill="#ffffff"/></svg></span>Readix <span class="thin">Reader</span></div>
-  <div id="langWrap"></div><div class="account" id="account"></div>
+  <div class="wt-brand" onclick="goHome()"><span class="logo"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rxLogo2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B6DFF"/><stop offset="1" stop-color="#5A38F0"/></linearGradient></defs><rect x="1" y="1" width="30" height="30" rx="8.5" fill="url(#rxLogo2)"/><rect x="1" y="1" width="30" height="14" rx="8.5" fill="#ffffff" opacity="0.14"/><path d="M11 23V9h6.2c2.7 0 4.3 1.5 4.3 3.9 0 1.8-.9 3.1-2.5 3.6l2.9 6.5h-3.1l-2.5-5.9h-2.5V23H11zm2.8-8.2h3c1.2 0 1.9-.6 1.9-1.7s-.7-1.7-1.9-1.7h-3v3.4z" fill="#ffffff"/></svg></span>Readix <span class="thin">Reader</span></div>
+  <button class="wt-ico" onclick="goHome()" title="Accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
+  <button class="wt-create" onclick="openTool('tolpdf')"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Créer</button>
+  <div class="wt-right">
+    <button class="wt-ico" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 21a2 2 0 004 0"/></svg></button>
+    <div id="langWrap"></div><div class="account" id="account"></div>
+  </div>
 </header>
 <div class="wmenu">
   <nav class="wnav">
-    <button id="navHome" class="on" onclick="goHome()">Accueil</button>
-    <button id="navAI" onclick="filterCat('pro')">Fonctions IA</button>
-    <button id="navPricing" onclick="openPricing()">Tarifs</button>
+    <button id="navHome" class="on" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Tous les outils</button>
+    <button onclick="openTool('organize')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4z"/></svg>Modifier</button>
+    <button onclick="openTool('fillsign')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h16v16H4z"/><path d="M8 12h8M8 16h5"/></svg>Remplir &amp; Signer</button>
+    <button id="navAI" onclick="filterCat('pro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>Fonctions IA</button>
   </nav>
   <div class="cmd" id="cmd">
     <svg class="cmd-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -474,6 +541,11 @@
     <span class="cmd-kbd" id="cmdKbd">⌘K</span>
     <div class="cmd-results" id="cmdResults"></div>
   </div>
+  <div class="wm-actions">
+    <button class="wm-ico" title="Enregistrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg></button>
+    <button class="wm-ico" onclick="window.print()" title="Imprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg></button>
+  </div>
+  <button class="wm-share" onclick="try{navigator.share?navigator.share({title:'Readix Reader',url:location.href}):(navigator.clipboard&&navigator.clipboard.writeText(location.href));}catch(e){}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Partager</button>
 </div>
 <div class="backdrop" id="backdrop" onclick="toggleSidebar()"></div>
 <div class="wbody">
@@ -489,12 +561,28 @@
   </aside>
   <main class="doc-wrap" id="docWrap">
     <section id="catalogView">
-      <div class="hero">
-        <span class="eyebrow">Plateforme PDF intelligente</span>
-        <h1>Lisez, transformez et <span class="hl">comprenez</span> vos documents.</h1>
-        <p>Tous vos outils PDF, avec le document au centre. Les fonctions IA vous font gagner un temps précieux.</p>
+      <div class="dw-ai" id="dwAi">
+        <span class="dw-spark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg></span>
+        <p>Obtenez un <b>résumé instantané par l'IA</b> à l'ouverture de ce document.</p>
+        <button class="dw-go" onclick="openTool('lens')">Activer le résumé</button>
+        <button class="dw-x" onclick="document.getElementById('dwAi').style.display='none'">✕</button>
       </div>
-      <div id="catalog"></div>
+      <div class="dw-floatbar" id="dwFloat" style="display:none">
+        <button class="dw-fb on" title="Sélection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M5 3l7 17 2.5-7 7-2.5z"/></svg></button>
+        <button class="dw-fb" title="Commentaire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.5A8 8 0 1121 12z"/></svg></button>
+        <button class="dw-fb" title="Surligner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20h16M6 16l8-8 4 4-8 8H6z"/></svg></button>
+        <button class="dw-fb" title="Signer" onclick="openTool('fillsign')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 17c3 0 4-8 7-8s3 6 5 6 3-3 6-3"/><path d="M3 21h18"/></svg></button>
+      </div>
+      <div class="dw-opener" id="dwOpener">
+        <label class="dw-card">
+          <input type="file" accept="application/pdf" id="dwFile" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/><path d="M12 12v6M9 15h6"/></svg>
+          <h3>Ouvrez un document</h3>
+          <p>Glissez un PDF ici, ou cliquez pour le choisir. Tout se passe dans votre navigateur.</p>
+          <span class="dw-btn">Ouvrir un PDF</span>
+        </label>
+      </div>
+      <div class="dw-pages" id="dwPages"></div>
     </section>
     <section id="workspaceView"></section>
   </main>
@@ -503,7 +591,8 @@
     <button class="wt-ico" title="Vignettes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
     <button class="wt-ico" title="Signets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
     <div class="spacer"></div>
-    <div class="rzoom"><button title="Zoom avant">+</button><button title="Zoom arrière">−</button></div>
+    <div class="rzoom"><button title="Zoom avant" onclick="dwZoom(0.15)">+</button><div class="rzval" id="rzval">100%</div><button title="Zoom arrière" onclick="dwZoom(-0.15)">−</button></div>
+    <div class="rpage" id="rpage" style="visibility:hidden"><b id="rcur">1</b><br>/<span id="rtot">1</span></div>
   </aside>
 </div>
 
@@ -592,7 +681,7 @@ const I18N={
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
   wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
-  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",lens_noans:"The AI returned no content. Try again, or the PDF may be scanned/empty.",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",lens_noans:"The AI returned no content. Try again, or the PDF may be scanned/empty.",gen_ph:"Describe the document to generate (e.g. \u201Ccover letter for an accountant role\u201D)\u2026",gen_go:"Generate",gen_empty:"Describe what you want to generate first.",tr_ph:"Target language (e.g. English, Spanish, Arabic)\u2026",ai_run:"Run AI",ai_loaded:"Document loaded. Run the analysis.",
   um_plan:"Plan:",um_pricing:"Plans & pricing",um_upgrade:"Upgrade my plan",um_upgrade_free:"Go Premium",um_logout:"Sign out",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
@@ -1160,7 +1249,6 @@ const BUILDERS={};
 Object.keys(PREMIUM_INFO).forEach(id=>{const t=TOOLS.find(x=>x.id===id);BUILDERS[id]=()=>unlocked(t)?premiumReady(id):lockedPanel(id);});
 
 BUILDERS.fillsign=()=>unlocked(TOOLS.find(x=>x.id==="fillsign"))?fillsignTool():lockedPanel("fillsign");
-BUILDERS.lens=()=>unlocked(TOOLS.find(x=>x.id==="lens"))?lensTool():lockedPanel("lens");
 function mapAiError(m){
   m=m||"";
   if(/Non authentifié|Session expirée/i.test(m))return L("ai_login","Session expirée — reconnectez-vous.");
@@ -1169,36 +1257,42 @@ function mapAiError(m){
   if(/authentication|invalid x-api-key|api.?key|clé|ANTHROPIC|Erreur IA/i.test(m))return L("ai_key","Le service IA a refusé la requête — vérifiez la clé API dans Render.");
   return L("error_p","Erreur : ")+m;
 }
-function lensTool(){
-  const ws=shell("lens");const p=ws._panel;
-  const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
-  const q=el("input");q.type="text";q.className="lens-q";q.placeholder=L("lens_q_ph","Votre question (facultatif) — sinon, résumé du document");q.style.display="none";
-  const btn=el("button","btn");btn.textContent=L("lens_go","Résumer / Répondre");btn.style.marginTop="12px";btn.style.display="none";btn.disabled=true;
+const AI_TOOLS={lens:{q:1},dialogue:{},factcheck:{},negociateur:{},conformite:{},extract:{},study:{},access:{},podcast:{},compareai:{two:1},translate:{target:1},generate:{prompt:1}};
+function aiTool(id){
+  const cfg=AI_TOOLS[id]||{};const ws=shell(id);const p=ws._panel;const st=statusLine();
+  let bufA=null,bufB=null,dzA,dzB,q,target,promptBox;
+  const btn=el("button","btn");btn.style.marginTop="12px";
   const out=el("div","ai-out");out.style.display="none";
-  const st=statusLine();
-  p.append(dz,q,btn,out,st);
-  let buf=null;
-  dz._onfiles=async fs=>{ if(!fs[0])return;
-    try{ buf=await readAsArrayBuffer(fs[0]); dz.style.display="none"; q.style.display="block"; btn.style.display="inline-flex"; btn.disabled=false;
-      setStatus(st,L("lens_ready","Document chargé. Posez une question, ou lancez le résumé.")); }
-    catch(e){ setStatus(st,L("error_p","Erreur : ")+e.message,"err"); } };
+  if(cfg.prompt){
+    promptBox=el("textarea");promptBox.className="ai-input";promptBox.placeholder=L("gen_ph","Décrivez le document à générer (ex. « lettre de motivation pour un poste de comptable »)…");p.appendChild(promptBox);
+    btn.textContent=L("gen_go","Générer");btn.disabled=false;
+  } else {
+    dzA=dropzone(cfg.two?L("dz_verA","Version A (originale)"):L("open_pdf","Ouvrir un PDF"),".pdf",false);p.appendChild(dzA);
+    dzA._onfiles=async fs=>{if(!fs[0])return;try{bufA=await readAsArrayBuffer(fs[0]);dzA.style.display="none";if(cfg.two&&dzB)dzB.style.display="block";if(q)q.style.display="block";if(target)target.style.display="block";btn.style.display="inline-flex";btn.disabled=false;setStatus(st,L("ai_loaded","Document chargé. Lancez l'analyse."));}catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}};
+    if(cfg.two){dzB=dropzone(L("dz_verB","Version B (nouvelle)"),".pdf",false);dzB.style.display="none";p.appendChild(dzB);dzB._onfiles=async fs=>{if(fs[0])bufB=await readAsArrayBuffer(fs[0]);};}
+    if(cfg.q){q=el("input");q.className="lens-q";q.placeholder=L("lens_q_ph","Votre question (facultatif)…");q.style.display="none";p.appendChild(q);}
+    if(cfg.target){target=el("input");target.className="lens-q";target.placeholder=L("tr_ph","Langue cible (ex. anglais, espagnol, arabe)…");target.style.display="none";p.appendChild(target);}
+    btn.textContent=L("ai_run","Lancer l'IA");btn.disabled=true;btn.style.display="none";
+  }
+  p.append(btn,out,st);
   btn.onclick=async()=>{
-    if(!buf)return;
     btn.disabled=true;out.style.display="none";setStatus(st,L("st_analyzing","Analyse…"),"",true);
     try{
-      const {full}=await extractText(buf);
-      const text=(full||"").slice(0,60000);
-      if(!text.trim()){ setStatus(st,L("lens_empty","Aucun texte détecté (PDF probablement scanné)."),"err"); btn.disabled=false; return; }
-      const data=await api("/api/ai/lens",{text,question:q.value.trim()});
+      let body={};
+      if(cfg.prompt){const t=(promptBox.value||"").trim();if(!t){setStatus(st,L("gen_empty","Décrivez d'abord ce que vous voulez générer."),"err");btn.disabled=false;return;}body.text=t;}
+      else{const r=await extractText(bufA);let text=(r.full||"").slice(0,60000);if(!text.trim()){setStatus(st,L("lens_empty","Aucun texte détecté (PDF scanné ?)."),"err");btn.disabled=false;return;}
+        if(cfg.two&&bufB){const rb=await extractText(bufB);text=text.slice(0,30000)+"\n\n===== VERSION B =====\n\n"+(rb.full||"").slice(0,30000);}
+        body.text=text; if(q&&q.value.trim())body.question=q.value.trim(); if(target&&target.value.trim())body.target=target.value.trim();}
+      const data=await api("/api/ai/"+id,body);
       const ans=(data.answer||"").trim();
-      if(!ans){ setStatus(st,L("lens_noans","L'IA n'a pas renvoyé de contenu. Réessayez, ou le PDF est peut-être scanné/vide."),"err"); btn.disabled=false; return; }
-      out.textContent=ans; out.style.display="block";
-      setStatus(st,L("done","Terminé."),"ok");
-    }catch(e){ setStatus(st,mapAiError(e.message),"err"); }
-    finally{ btn.disabled=false; }
+      if(!ans){setStatus(st,L("lens_noans","L'IA n'a pas renvoyé de contenu."),"err");btn.disabled=false;return;}
+      out.textContent=ans;out.style.display="block";setStatus(st,L("done","Terminé."),"ok");
+    }catch(e){setStatus(st,mapAiError(e.message),"err");}
+    finally{btn.disabled=false;}
   };
   return ws;
 }
+Object.keys(AI_TOOLS).forEach(id=>{const t=TOOLS.find(x=>x.id===id);if(t)BUILDERS[id]=()=>unlocked(t)?aiTool(id):lockedPanel(id);});
 function fillsignTool(){
   const ws=shell("fillsign");const p=ws._panel;
   const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
@@ -1600,10 +1694,86 @@ function buildSidenav(){
 function setNavActive(k){const h=$("#navHome");if(h)h.classList.toggle("on",!k||k==="all"||k==="home");
   const ai=$("#navAI");if(ai)ai.classList.toggle("on",k==="pro");}
 
+
+/* ===== Espace de travail document (centre) ===== */
+let dwPdf=null, dwScale=1.0;
+(function(){
+  const fi=document.getElementById("dwFile"); if(fi) fi.onchange=e=>{const f=e.target.files[0];if(f)dwOpen(f);};
+  const cv=document.getElementById("catalogView");
+  if(cv){["dragover","drop"].forEach(ev=>cv.addEventListener(ev,e=>e.preventDefault()));
+    cv.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f&&f.type==="application/pdf")dwOpen(f);});}
+})();
+async function dwOpen(file){
+  try{
+    const buf=await file.arrayBuffer();
+    dwPdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const op=document.getElementById("dwOpener");if(op)op.style.display="none";
+    const fl=document.getElementById("dwFloat");if(fl)fl.style.display="flex";
+    const rp=document.getElementById("rpage");if(rp)rp.style.visibility="visible";
+    const rt=document.getElementById("rtot");if(rt)rt.textContent=dwPdf.numPages;
+    await dwRender();
+  }catch(e){}
+}
+async function dwRender(){
+  if(!dwPdf)return;
+  const host=document.getElementById("dwPages");if(!host)return;host.innerHTML="";
+  const wrap=document.getElementById("docWrap");
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const targetW=Math.min(860,(wrap?wrap.clientWidth:900)-140)*dwScale;
+  for(let i=1;i<=dwPdf.numPages;i++){
+    const pg=await dwPdf.getPage(i);const vp1=pg.getViewport({scale:1});
+    const sc=Math.max(.4,targetW/vp1.width);const vp=pg.getViewport({scale:sc});
+    const div=document.createElement("div");div.className="dwpg";div.dataset.p=i;
+    const cvs=document.createElement("canvas");cvs.width=Math.floor(vp.width*dpr);cvs.height=Math.floor(vp.height*dpr);
+    cvs.style.width=vp.width+"px";cvs.style.height=vp.height+"px";
+    const cx=cvs.getContext("2d");cx.scale(dpr,dpr);
+    await pg.render({canvasContext:cx,viewport:vp}).promise;
+    div.appendChild(cvs);host.appendChild(div);
+  }
+}
+function dwZoom(d){dwScale=Math.max(0.5,Math.min(2.2,dwScale+d));const z=document.getElementById("rzval");if(z)z.textContent=Math.round(dwScale*100)+"%";if(dwPdf)dwRender();}
+(function(){const w=document.getElementById("docWrap");if(!w)return;w.addEventListener("scroll",()=>{if(!dwPdf)return;let cur=1;document.querySelectorAll(".dwpg").forEach(p=>{const r=p.getBoundingClientRect();if(r.top<window.innerHeight*0.5)cur=+p.dataset.p;});const rc=document.getElementById("rcur");if(rc)rc.textContent=cur;});})();
+
+/* Le catalogue central n'est plus utilisé (outils dans le rail) : on neutralise proprement */
+function buildCatalog(){}
+function filterCat(k){const nav=$("#sidenav");if(nav){const grp=[...nav.querySelectorAll(".rail-grp")].find(g=>/IA|AI/i.test(g.textContent));if(grp&&grp.scrollIntoView)grp.scrollIntoView({behavior:"smooth",block:"start"});}}
+
+/* ===== Chatbot ===== */
+function cbotToggle(){document.getElementById("cbot").classList.toggle("open");}
+const CBOT_ANSWERS={
+  fusionner:"Pour fusionner : ouvrez « Fonctions / Outils essentiels → Fusionner » dans le rail de gauche, ajoutez vos PDF, glissez pour les ordonner, puis « Fusionner et télécharger ».",
+  signer:"« Remplir & Signer » (rail de gauche) : ouvrez votre PDF, cliquez où ajouter du texte, une date ou votre signature, puis téléchargez. Cet outil nécessite un plan Standard ou plus.",
+  resume:"Ouvrez « Readix Lens » (Fonctions IA) : chargez un PDF, posez une question ou lancez le résumé. L'IA vous répond en quelques secondes (plan Pro).",
+  compresser:"L'outil « Compresser un PDF » réduit la taille de votre fichier — je peux vous y amener. (Nouvel outil en cours d'ajout.)"
+};
+function cbotPush(text,who){const b=document.getElementById("cbotBody");const m=document.createElement("div");m.className="cbot-msg "+(who||"bot");m.textContent=text;b.appendChild(m);b.scrollTop=b.scrollHeight;}
+function cbotAsk(key){cbotPush({fusionner:"Comment fusionner des PDF ?",signer:"Comment remplir et signer ?",resume:"Comment résumer avec l'IA ?",compresser:"Comment compresser un PDF ?"}[key]||key,"me");setTimeout(()=>cbotPush(CBOT_ANSWERS[key]||"Je vous guide : choisissez un outil dans le rail de gauche.","bot"),250);}
+function cbotSend(){const i=document.getElementById("cbotInput");const t=(i.value||"").trim();if(!t)return;i.value="";cbotPush(t,"me");
+  const low=t.toLowerCase();let key=null;if(/fusion|combin|merge/.test(low))key="fusionner";else if(/sign|rempli/.test(low))key="signer";else if(/résum|resume|ia|résum/.test(low))key="resume";else if(/compress|réduir|taille/.test(low))key="compresser";
+  setTimeout(()=>cbotPush(key?CBOT_ANSWERS[key]:"Bonne question ! Parcourez le rail de gauche : chaque outil s'ouvre au centre. Pour l'IA, voyez « Fonctions IA » en haut du rail. Je pourrai bientôt répondre plus précisément.","bot"),250);}
+
 /* ---------- init ---------- */
 initLang();
 restoreSession();
 try{const _q=new URLSearchParams(location.search);if(_q.get("pricing")==="1"||location.hash==="#tarifs")setTimeout(()=>openPricing(),150);}catch(e){}
 </script>
+
+<!-- Chatbot d'aide -->
+<button class="cbot-fab" id="cbotFab" title="Assistant Readix" onclick="cbotToggle()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/><path d="M8 19v2M16 19v2"/></svg>
+</button>
+<div class="cbot" id="cbot">
+  <div class="cbot-head"><span class="cbot-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg></span><div><div class="cbot-name">Assistant Readix</div><div class="cbot-sub">Là pour vous aider</div></div><button class="cbot-close" onclick="cbotToggle()">✕</button></div>
+  <div class="cbot-body" id="cbotBody">
+    <div class="cbot-msg bot">Bonjour ! 👋 Je peux vous guider dans Readix. Que voulez-vous faire ?</div>
+    <div class="cbot-chips">
+      <button onclick="cbotAsk('fusionner')">Fusionner des PDF</button>
+      <button onclick="cbotAsk('signer')">Remplir &amp; signer</button>
+      <button onclick="cbotAsk('resume')">Résumer avec l'IA</button>
+      <button onclick="cbotAsk('compresser')">Compresser un PDF</button>
+    </div>
+  </div>
+  <div class="cbot-foot"><input id="cbotInput" placeholder="Posez votre question…" onkeydown="if(event.key==='Enter')cbotSend()"><button onclick="cbotSend()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+</div>
 </body>
 </html>
