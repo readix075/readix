@@ -279,6 +279,7 @@ app.post("/api/ai/:feature", auth, async (req, res) => {
     await incUsage(req.user.email); // on compte l'opération réussie
     res.json({ answer, used: used + 1, quota });
   } catch (e) {
+    console.log("[AI] échec:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
