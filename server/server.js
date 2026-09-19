@@ -1,7 +1,7 @@
 // ============================================================
 //  Readix Reader — serveur back-end (Node.js / Express, ESM)
 //  Comptes réels (PostgreSQL/Supabase), 4 paliers, quota IA,
-//  abonnements Stripe, fonctions IA premium.
+//  abonnements Stripe, fonctions IA premium + chatbot assistant.
 //  Node 18+ requis. Voir README.md.
 // ============================================================
 import express from "express";
@@ -255,9 +255,54 @@ async function callAnthropic(system, userContent) {
   return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
 }
 
+// Variante multi-tours (pour le chatbot) : accepte un tableau de messages {role, content}
+async function callAnthropicChat(system, messages, maxTokens = 1024) {
+  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquante");
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: maxTokens, system, messages }),
+  });
+  if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
+  const data = await r.json();
+  return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+}
+
 app.post("/api/ai/:feature", auth, async (req, res) => {
   console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!ANTHROPIC_API_KEY);
   const feature = req.params.feature;
+
+  // ---- Cas spécial : le chatbot assistant (route dédiée, PAS de quota IA) ----
+  if (feature === "chatbot") {
+    const { text = "", history = [] } = req.body || {};
+    if (!text || !String(text).trim()) {
+      return res.status(400).json({ error: "Message manquant." });
+    }
+    try {
+      // Normalise l'historique client → messages Anthropic
+      const safeHistory = Array.isArray(history)
+        ? history
+            .filter(h => h && typeof h.content === "string" && h.content.trim())
+            .slice(-12) // borne raisonnable
+            .map(h => ({
+              role: h.role === "assistant" ? "assistant" : "user",
+              content: String(h.content).slice(0, 4000),
+            }))
+        : [];
+
+      const messages = [...safeHistory, { role: "user", content: String(text).slice(0, 4000) }];
+      const answer = await callAnthropicChat(CHATBOT_SYSTEM_PROMPT, messages, 1024);
+      if (!answer || !answer.trim()) {
+        return res.status(502).json({ error: "Réponse IA vide." });
+      }
+      return res.json({ answer: answer.trim() });
+    } catch (e) {
+      console.log("[CHATBOT] échec:", e.message);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ---- Fonctions IA premium classiques (quota + palier) ----
   const system = AI_PROMPTS[feature];
   if (!system) return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
 
@@ -283,6 +328,67 @@ app.post("/api/ai/:feature", auth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ---- System prompt du chatbot (manuel complet Readix) ----
+const CHATBOT_SYSTEM_PROMPT = `Tu es l'assistant intelligent intégré à Readix Reader, une plateforme web de traitement de PDF.
+Tu réponds en français, de manière claire, structurée et bienveillante. Tu guides l'utilisateur pas à pas.
+Tu ne dois JAMAIS inventer de fonctionnalité inexistante : si l'utilisateur demande quelque chose qui n'existe pas, propose l'outil le plus proche ou explique que ce n'est pas encore disponible.
+
+=== OUTILS DISPONIBLES DANS READIX ===
+Essentiels (plan Gratuit, usage limité) :
+- Lecteur : ouvrir, feuilleter, zoomer, rechercher dans un PDF.
+- Fusionner : combiner plusieurs PDF en un seul (vignettes réordonnables).
+- Diviser / extraire : extraire des pages ou éclater en plusieurs fichiers.
+- Organiser : pivoter, supprimer, réordonner les pages.
+- Numéros de page : ajouter une numérotation automatique.
+- Filigrane : apposer un texte en filigrane sur chaque page.
+- PDF → images : exporter chaque page en PNG ou JPG.
+- Images → PDF : assembler des images JPG/PNG en un PDF.
+- Extraire le texte : récupérer tout le texte d'un PDF.
+
+Signature Readix (gratuit) :
+- Voice : écouter un PDF lu à voix haute.
+- Compare : repérer les différences entre deux versions d'un document.
+- Pulse : analyse statistique (temps de lecture, mots-clés).
+- Shield : détecter les données sensibles et nettoyer les métadonnées.
+
+IA Premium :
+- Readix Lens (Pro) : résumé et questions-réponses sur un document.
+- Compare IA (Pro) : comparaison sémantique de deux versions.
+- Fact-check (Pro) : repérer les affirmations douteuses.
+- Extract (Pro) : extraire des données structurées vers Excel/JSON.
+- Study (Pro) : quiz et fiches de révision depuis un document.
+- Access (Pro) : accessibilité et lecture adaptée (dyslexie).
+- PDF → Word (Pro) : conversion fidèle en .docx éditable.
+- Traduction (Pro) : traduire un PDF en 30+ langues.
+- Dialogue (Studio) : deux IA débattent du document.
+- Négociateur (Studio) : analyse les clauses risquées d'un contrat.
+- Conformité (Studio) : vérification RGPD / règles internes.
+- Podcast (Studio) : transformer un document en podcast à deux voix.
+- Generate (Studio) : générer un document depuis une consigne.
+- Signature certifiée (Studio) : signature électronique à valeur légale.
+- Remplir & Signer (Standard+) : remplir les champs d'un formulaire PDF et apposer une signature, puis télécharger.
+
+=== PLANS ET TARIFS ===
+- Gratuit (0 €) : outils essentiels (usage limité) + Signatures Readix.
+- Standard (7,99 €/mois) : outils essentiels illimités + Remplir & Signer.
+- Pro (14,99 €/mois, le plus populaire) : + IA (Lens, Compare IA, Fact-check, Extract, Study, Access, Word, Traduction) — 50 opérations IA / mois.
+- Studio (19,99 €/mois) : + IA avancée (Dialogue, Négociateur, Conformité, Podcast, Generate, Signature certifiée) — 200 opérations IA / mois.
+
+=== ÉTAPES CLÉS POUR LES TÂCHES COURANTES ===
+- Fusionner des PDF : rail de gauche → Fusionner → ajouter les PDF → glisser les vignettes pour réordonner → « Fusionner et télécharger ».
+- Remplir & Signer : rail → Remplir & Signer → ouvrir le PDF → saisir directement dans les champs bleus → cliquer « Signature » pour dessiner/taper → « Enregistrer le PDF rempli ».
+- Résumer avec l'IA : rail → Readix Lens → ouvrir un PDF → poser une question ou laisser vide pour un résumé → « Résumer / Répondre ».
+- Créer un PDF : bouton « + Créer » en haut → Images → PDF, Page blanche (A4), ou Document IA.
+- Changer de plan : menu utilisateur (avatar) → « Voir les plans & tarifs ».
+- Ouvrir un PDF : zone centrale « Ouvrez un document » → glisser-déposer ou cliquer.
+
+=== COMPORTEMENT ===
+- Si l'utilisateur décrit un besoin, indique l'outil précis et les étapes numérotées.
+- Si un outil nécessite un plan payant, précise lequel et le tarif.
+- Reste concis (5-8 lignes max), sauf si l'utilisateur demande un tutoriel détaillé.
+- Utilise des listes à puces ou numérotées pour les étapes.
+`;
 
 // ---- Sert le front-end (dossier ../public) ----
 app.use(express.static(path.join(__dirname, "..", "public")));
