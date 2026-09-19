@@ -515,6 +515,20 @@
   .ai-input{width:100%;padding:12px 14px;border:1px solid var(--line-strong);border-radius:11px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface-2);resize:vertical;min-height:90px}
   .ai-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-glow)}
   @media(max-width:900px){.wt-create,.wm-actions,.wm-share{display:none}.wnav button span,.wnav button{font-size:0}.wnav button svg{width:20px;height:20px}}
+
+  .fs-toolbar{position:sticky;top:0;z-index:9;display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+  .fs-toolbar .info{font-size:12.5px;color:var(--ink-soft);font-weight:500}
+  .fs-toolbar .sp{flex:1}
+  .fs-doc{display:flex;flex-direction:column;align-items:center;gap:20px;padding:2px 0 40px}
+  .fs-page{position:relative;background:#fff;box-shadow:var(--shadow);border-radius:2px}
+  .fs-page canvas{display:block;border-radius:2px}
+  .fs-layer{position:absolute;inset:0}
+  .fs-field{position:absolute;box-sizing:border-box;border:1px solid #5AA0F0;background:rgba(90,165,255,.16);border-radius:2px;font-family:inherit;color:#0A2540;padding:0 3px;line-height:1.1}
+  .fs-field:hover{background:rgba(90,165,255,.24)}
+  .fs-field:focus{outline:none;background:#fff;border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-glow)}
+  textarea.fs-field{resize:none;overflow:hidden;padding-top:2px}
+  select.fs-field{font-size:12px}
+  .fs-check{position:absolute;box-sizing:border-box;cursor:pointer;margin:0;accent-color:var(--violet);z-index:2}
 </style>
 </head>
 <body>
@@ -542,7 +556,7 @@
     <div class="cmd-results" id="cmdResults"></div>
   </div>
   <div class="wm-actions">
-    <button class="wm-ico" title="Enregistrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg></button>
+    <button class="wm-ico" title="Enregistrer" onclick="if(window.__fsSave)window.__fsSave()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg></button>
     <button class="wm-ico" onclick="window.print()" title="Imprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg></button>
   </div>
   <button class="wm-share" onclick="try{navigator.share?navigator.share({title:'Readix Reader',url:location.href}):(navigator.clipboard&&navigator.clipboard.writeText(location.href));}catch(e){}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Partager</button>
@@ -681,7 +695,7 @@ const I18N={
   pf_all_pro:"Everything in Pro",pf_ai_adv:"Advanced AI + Generate + certified signature",pf_quota200:"200 AI operations / month",
   f_ess_lim:"Essential tools (limited use): reader, merge, split…",f_ess:"All essential tools: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_ops5:"Free plan to get you started, no credit card",
   wall_msg:"You\u2019ve made the most of the free plan. Pick a plan to keep going without limits.",wall_cta:"See plans",nudge_msg:"Create a free account to save your preferences and keep going.",nudge_cta:"Create a free account",
-  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",lens_noans:"The AI returned no content. Try again, or the PDF may be scanned/empty.",gen_ph:"Describe the document to generate (e.g. \u201Ccover letter for an accountant role\u201D)\u2026",gen_go:"Generate",gen_empty:"Describe what you want to generate first.",tr_ph:"Target language (e.g. English, Spanish, Arabic)\u2026",ai_run:"Run AI",ai_loaded:"Document loaded. Run the analysis.",
+  lens_q_ph:"Your question (optional) — otherwise, a summary of the document",lens_go:"Summarize / Answer",lens_ready:"Document loaded. Ask a question, or run the summary.",lens_empty:"No text detected (the PDF is probably scanned).",ai_login:"Log in to use AI.",ai_plan:"This AI feature requires a Pro or Studio plan.",ai_quota:"Monthly AI quota reached. It resets next month.",ai_srv:"AI service temporarily unavailable.",ai_key:"The AI service rejected the request — check the API key in Render.",lens_noans:"The AI returned no content. Try again, or the PDF may be scanned/empty.",gen_ph:"Describe the document to generate (e.g. \u201Ccover letter for an accountant role\u201D)\u2026",gen_go:"Generate",gen_empty:"Describe what you want to generate first.",tr_ph:"Target language (e.g. English, Spanish, Arabic)\u2026",ai_run:"Run AI",ai_loaded:"Document loaded. Run the analysis.",fs_loading:"Loading the form\u2026",fs_save:"Save the filled PDF",fs_saving:"Saving\u2026",fs_saved:"Filled PDF saved \u2713",fs_fields:"Fields detected: ",fs_nofields:"No form fields detected in this PDF.",
   um_plan:"Plan:",um_pricing:"Plans & pricing",um_upgrade:"Upgrade my plan",um_upgrade_free:"Go Premium",um_logout:"Sign out",f_ess_unl:"All essential tools, unlimited: reader, merge, split, organize, page numbers, watermark, conversions, text extraction",f_sig:"Readix signatures: Voice, Compare, Pulse, Shield",f_fill:"Fill & Sign",f_ai:"AI: summary & Q&A, data extraction, PDF → Word, translation",f_ai_adv:"Advanced AI: debate, negotiator, compliance, podcast, Generate",f_esign:"Certified signature",
   lock_included:"Included in plan",lock_seeall:"See all plans",
   mr_ess:"Essential tools",m_limited:"Limited",m_unlim:"Unlimited",mr_sig:"Readix signatures",mr_fill:"Fill & Sign",mr_ai:"AI: summary, extract, Word, translation",mr_aiadv:"Advanced AI + Generate",mr_esign:"Certified signature",mr_quota:"AI quota / month",
@@ -1295,149 +1309,81 @@ function aiTool(id){
 Object.keys(AI_TOOLS).forEach(id=>{const t=TOOLS.find(x=>x.id===id);if(t)BUILDERS[id]=()=>unlocked(t)?aiTool(id):lockedPanel(id);});
 function fillsignTool(){
   const ws=shell("fillsign");const p=ws._panel;
-  const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
-  const bar=el("div","fs-bar");bar.style.display="none";
-  bar.innerHTML=`<button class="fs-tool" data-m="text">${L("fs_text","Texte")}</button>
-    <button class="fs-tool" data-m="sign">${L("fs_signature","Signature")}</button>
-    <button class="fs-tool" data-m="date">${L("fs_date","Date")}</button>
-    <button class="fs-tool" data-m="check">${L("fs_check","Coche")}</button>
-    <select class="fs-size" data-size><option value="14">${L("fs_size_s","Petit")}</option><option value="18" selected>${L("fs_size_m","Moyen")}</option><option value="24">${L("fs_size_l","Grand")}</option></select>
-    <span style="flex:1"></span>
-    <button class="btn" data-a="finish">${L("fs_finish","Terminer & Télécharger")}</button>`;
-  const stage=el("div","fs-stage");stage.style.display="none";
   const st=statusLine();
-  p.append(dz,bar,stage,st);
-
-  let buf=null,pagesMeta=[],items=[],mode=null,sigData=null,textSize=18,lastText=null;
-
-  dz._onfiles=fs=>{if(fs[0])load(fs[0]);};
-  async function load(file){
-    setStatus(st,L("st_loading","Chargement…"),"",true);
-    try{
-      buf=await readAsArrayBuffer(file);
-      stage.innerHTML="";pagesMeta=[];items=[];
-      const pdf=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
-      const targetW=Math.min(820,(stage.clientWidth||820)-40);
-      const dpr=Math.min(2,window.devicePixelRatio||1);
-      for(let i=1;i<=pdf.numPages;i++){
-        const pg=await pdf.getPage(i);const vp1=pg.getViewport({scale:1});
-        const scale=Math.min(2,Math.max(.5,targetW/vp1.width));const vp=pg.getViewport({scale});
-        const pageEl=el("div","fs-page");pageEl.style.width=vp.width+"px";pageEl.style.height=vp.height+"px";
-        const cv=el("canvas");cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
-        cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
-        const cx=cv.getContext("2d");cx.scale(dpr,dpr);
-        await pg.render({canvasContext:cx,viewport:vp}).promise;
-        pageEl.appendChild(cv);const idx=i-1;
-        pageEl.addEventListener("click",e=>onPageClick(e,idx,pageEl));
-        stage.appendChild(pageEl);
-        pagesMeta.push({wpt:vp1.width,hpt:vp1.height,scale,pageEl});
-      }
-      dz.style.display="none";bar.style.display="flex";stage.style.display="block";
-      setStatus(st,L("fs_hint","Choisissez un outil, puis cliquez sur le document pour le placer."));
-    }catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}
-  }
-
-  bar.querySelectorAll(".fs-tool").forEach(b=>b.onclick=()=>setMode(b.dataset.m,b));
-  const sizeSel=bar.querySelector(".fs-size");
-  sizeSel.onchange=()=>{textSize=parseInt(sizeSel.value,10)||18;if(lastText)lastText.style.fontSize=textSize+"px";};
-  bar.querySelector('[data-a="finish"]').onclick=exportPdf;
-
-  function setMode(m,btn){mode=(mode===m?null:m);bar.querySelectorAll(".fs-tool").forEach(b=>b.classList.remove("on"));if(mode&&btn)btn.classList.add("on");stage.style.cursor=mode?"crosshair":"default";}
-
-  function onPageClick(e,idx,pageEl){
-    if(!mode)return;if(e.target.closest(".fs-item"))return;
-    const r=pageEl.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
-    if(mode==="text")addText(pageEl,idx,x,y,"");
-    else if(mode==="date")addText(pageEl,idx,x,y,new Date().toLocaleDateString());
-    else if(mode==="check")addText(pageEl,idx,x,y,"X");
-    else if(mode==="sign"){if(!sigData)openSignPad(()=>placeSig(pageEl,idx,x,y));else placeSig(pageEl,idx,x,y);}
-  }
-
-  function mkItem(pageEl,x,y){
-    const it=el("div","fs-item");it.style.left=x+"px";it.style.top=y+"px";
-    const mv=el("button","fs-move","≡");mv.onclick=e=>e.stopPropagation();
-    const del=el("button","fs-del","×");del.onmousedown=e=>e.stopPropagation();del.onclick=e=>{e.stopPropagation();it.remove();items=items.filter(o=>o.el!==it);};
-    it.append(mv,del);enableDrag(it,mv,pageEl);pageEl.appendChild(it);return it;
-  }
-  function addText(pageEl,idx,x,y,initial){
-    const it=mkItem(pageEl,x,y);
-    const inp=el("div","fs-text");inp.contentEditable="true";inp.textContent=initial;inp.style.fontSize=textSize+"px";
-    inp.addEventListener("focus",()=>lastText=inp);
-    it.insertBefore(inp,it.firstChild);
-    items.push({type:"text",page:idx,el:it,node:inp});
-    setTimeout(()=>{inp.focus();const rng=document.createRange();rng.selectNodeContents(inp);rng.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(rng);},0);
-  }
-  function placeSig(pageEl,idx,x,y){
-    const it=mkItem(pageEl,x,y);const img=el("img","fs-img");img.src=sigData.url;
-    const w=Math.min(190,sigData.w);it.style.width=w+"px";
-    it.insertBefore(img,it.firstChild);
-    const rz=el("span","fs-resize");it.appendChild(rz);enableResize(it,rz);
-    items.push({type:"sig",page:idx,el:it,url:sigData.url});
-  }
-
-  function enableDrag(it,handle,pageEl){
-    let sx,sy,ox,oy,drag=false;
-    const mv=e=>{if(!drag)return;e.preventDefault();const t=e.touches?e.touches[0]:e;let nx=ox+(t.clientX-sx),ny=oy+(t.clientY-sy);nx=Math.max(0,Math.min(nx,pageEl.clientWidth-it.offsetWidth));ny=Math.max(0,Math.min(ny,pageEl.clientHeight-it.offsetHeight));it.style.left=nx+"px";it.style.top=ny+"px";};
-    const up=()=>{drag=false;window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);};
-    const dn=e=>{e.preventDefault();e.stopPropagation();drag=true;const t=e.touches?e.touches[0]:e;sx=t.clientX;sy=t.clientY;ox=it.offsetLeft;oy=it.offsetTop;window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);};
-    handle.addEventListener("mousedown",dn);handle.addEventListener("touchstart",dn,{passive:false});
-  }
-  function enableResize(it,rz){
-    let sx,sw,rs=false;
-    const mv=e=>{if(!rs)return;e.preventDefault();const t=e.touches?e.touches[0]:e;it.style.width=Math.max(46,sw+(t.clientX-sx))+"px";};
-    const up=()=>{rs=false;window.removeEventListener("mousemove",mv);window.removeEventListener("mouseup",up);window.removeEventListener("touchmove",mv);window.removeEventListener("touchend",up);};
-    const dn=e=>{e.preventDefault();e.stopPropagation();rs=true;const t=e.touches?e.touches[0]:e;sx=t.clientX;sw=it.offsetWidth;window.addEventListener("mousemove",mv);window.addEventListener("mouseup",up);window.addEventListener("touchmove",mv,{passive:false});window.addEventListener("touchend",up);};
-    rz.addEventListener("mousedown",dn);rz.addEventListener("touchstart",dn,{passive:false});
-  }
-
-  function openSignPad(onDone){
-    const ov=el("div","fs-ov");const card=el("div","fs-card");
-    card.innerHTML=`<h3>${L("fs_sign_title","Votre signature")}</h3>
-      <div class="fs-tabs"><button class="on" data-t="draw">${L("fs_draw","Dessiner")}</button><button data-t="type">${L("fs_type","Taper")}</button></div>
-      <div class="fs-pad"><canvas width="460" height="180"></canvas><input class="fs-typed" type="text" placeholder="${L("fs_your_name","Votre nom")}" style="display:none"></div>
-      <div class="fs-actions"><button class="btn ghost" data-a="clear">${L("fs_clear","Effacer")}</button><span style="flex:1"></span><button class="btn ghost" data-a="cancel">${L("fs_cancel","Annuler")}</button><button class="btn" data-a="ok">${L("fs_validate","Valider")}</button></div>`;
-    ov.appendChild(card);document.body.appendChild(ov);
-    const cv=card.querySelector("canvas"),cx=cv.getContext("2d");cx.lineWidth=2.6;cx.lineCap="round";cx.lineJoin="round";cx.strokeStyle="#12141c";
-    const typed=card.querySelector(".fs-typed");let drawing=false,has=false,last=null,tab="draw";
-    const pos=e=>{const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(cv.width/r.width),y:(t.clientY-r.top)*(cv.height/r.height)};};
-    const down=e=>{if(tab!=="draw")return;e.preventDefault();drawing=true;has=true;last=pos(e);};
-    const move=e=>{if(!drawing)return;e.preventDefault();const p2=pos(e);cx.beginPath();cx.moveTo(last.x,last.y);cx.lineTo(p2.x,p2.y);cx.stroke();last=p2;};
-    const up=()=>{drawing=false;};
-    cv.addEventListener("mousedown",down);cv.addEventListener("mousemove",move);window.addEventListener("mouseup",up);
-    cv.addEventListener("touchstart",down,{passive:false});cv.addEventListener("touchmove",move,{passive:false});cv.addEventListener("touchend",up);
-    function renderTyped(){cx.clearRect(0,0,cv.width,cv.height);const v=typed.value.trim();has=!!v;if(!v)return;cx.fillStyle="#12141c";cx.font="46px 'Segoe Script','Brush Script MT',cursive";cx.textBaseline="middle";cx.fillText(v,14,cv.height/2);}
-    typed.oninput=renderTyped;
-    card.querySelectorAll(".fs-tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;card.querySelectorAll(".fs-tabs button").forEach(x=>x.classList.toggle("on",x===b));if(tab==="type"){cv.style.display="none";typed.style.display="";typed.focus();}else{cv.style.display="";typed.style.display="none";}});
-    const close=()=>{ov.remove();window.removeEventListener("mouseup",up);};
-    card.querySelector('[data-a="clear"]').onclick=()=>{cx.clearRect(0,0,cv.width,cv.height);has=false;typed.value="";};
-    card.querySelector('[data-a="cancel"]').onclick=close;
-    ov.addEventListener("mousedown",e=>{if(e.target===ov)close();});
-    card.querySelector('[data-a="ok"]').onclick=()=>{if(tab==="type")renderTyped();if(!has){setStatus(st,L("fs_empty_sig","Signature vide."),"err");return;}sigData={url:cv.toDataURL("image/png"),w:cv.width,h:cv.height};close();if(onDone)onDone();};
-  }
-
-  function dataURLToBytes(u){const b=atob(u.split(",")[1]);const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
-
-  async function exportPdf(){
-    if(!buf)return;if(!consumeOp(st))return;
-    setStatus(st,L("st_processing","Traitement…"),"",true);
-    try{
-      const doc=await PDFDocument.load(buf,{ignoreEncryption:true});const font=await doc.embedFont(StandardFonts.Helvetica);const pages=doc.getPages();const sigCache={};
-      for(const o of items){
-        const meta=pagesMeta[o.page],pg=pages[o.page];if(!meta||!pg)continue;const S=meta.scale;const pb=meta.pageEl.getBoundingClientRect();
-        if(o.type==="text"){
-          const txt=(o.node.innerText||"").replace(/\u00a0/g," ");if(!txt.trim())continue;
-          const fpx=parseFloat(getComputedStyle(o.node).fontSize)||18;const size=fpx/S;
-          const nb=o.node.getBoundingClientRect();const nx=(nb.left-pb.left)/S;const nyTop=(nb.top-pb.top)/S;const lh=size*1.25;
-          txt.split("\n").forEach((ln,li)=>{if(!ln)return;pg.drawText(ln,{x:nx+1/S,y:meta.hpt-nyTop-size-li*lh,size,font,color:rgb(.07,.09,.13)});});
-        }else if(o.type==="sig"){
-          const img=o.el.querySelector("img");const ib=img.getBoundingClientRect();
-          const w=ib.width/S,hh=ib.height/S,x=(ib.left-pb.left)/S,y=meta.hpt-((ib.top-pb.top)/S)-hh;
-          let emb=sigCache[o.url];if(!emb){emb=await doc.embedPng(dataURLToBytes(o.url));sigCache[o.url]=emb;}
-          pg.drawImage(emb,{x,y,width:w,height:hh});
+  const dz=dropzone(L("open_pdf","Ouvrir un PDF"),".pdf",false);
+  p.append(dz,st);
+  let srcBytes=null;const fields=[];
+  dz._onfiles=async fsx=>{
+    if(!fsx[0])return;
+    try{ setStatus(st,L("fs_loading","Chargement du formulaire\u2026"),"",true); srcBytes=await readAsArrayBuffer(fsx[0]); dz.style.display="none"; await renderEditor(); }
+    catch(e){ setStatus(st,L("error_p","Erreur : ")+e.message,"err"); }
+  };
+  async function renderEditor(){
+    const bar=el("div","fs-toolbar");
+    const info=el("span","info");const sp=el("span","sp");
+    const saveBtn=el("button","btn sm");saveBtn.textContent=L("fs_save","Enregistrer le PDF rempli");
+    bar.append(info,sp,saveBtn);
+    const doc=el("div","fs-doc");
+    p.insertBefore(bar,st);p.insertBefore(doc,st);
+    window.__fsSave=()=>saveBtn.click();
+    const pdf=await pdfjsLib.getDocument({data:srcBytes.slice(0)}).promise;
+    const dpr=Math.min(2,window.devicePixelRatio||1);let n=0;
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);const vp=page.getViewport({scale:1.4});
+      const pg=el("div","fs-page");pg.style.width=vp.width+"px";pg.style.height=vp.height+"px";
+      const cv=el("canvas");cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
+      const cx=cv.getContext("2d");cx.scale(dpr,dpr);pg.appendChild(cv);
+      const layer=el("div","fs-layer");pg.appendChild(layer);doc.appendChild(pg);
+      await page.render({canvasContext:cx,viewport:vp}).promise;
+      let anns=[];try{anns=await page.getAnnotations();}catch(e){}
+      anns.forEach(a=>{
+        if(a.subtype!=="Widget")return;
+        const r=vp.convertToViewportRectangle(a.rect);
+        const left=Math.min(r[0],r[2]),top=Math.min(r[1],r[3]),w=Math.abs(r[2]-r[0]),h=Math.abs(r[3]-r[1]);
+        if(a.fieldType==="Tx"){
+          const inp=a.multiLine?el("textarea","fs-field"):el("input","fs-field");if(!a.multiLine)inp.type="text";
+          inp.style.left=left+"px";inp.style.top=top+"px";inp.style.width=w+"px";inp.style.height=h+"px";
+          inp.style.fontSize=Math.max(9,Math.min(16,h*0.62))+"px";
+          if(a.fieldValue)inp.value=a.fieldValue;if(a.readOnly)inp.disabled=true;
+          layer.appendChild(inp);fields.push({name:a.fieldName,type:"text",el:inp});n++;
+        } else if(a.fieldType==="Btn"){
+          const ev=a.exportValue||a.buttonValue||"Yes";const sz=Math.min(w,h);
+          if(a.radioButton){
+            const rb=el("input","fs-check");rb.type="radio";rb.name="rg_"+a.fieldName;
+            rb.style.left=left+"px";rb.style.top=top+"px";rb.style.width=sz+"px";rb.style.height=sz+"px";
+            if(a.fieldValue&&a.fieldValue===ev)rb.checked=true;
+            layer.appendChild(rb);fields.push({name:a.fieldName,type:"radio",el:rb,exportValue:ev});n++;
+          } else if(!a.pushButton){
+            const cb=el("input","fs-check");cb.type="checkbox";
+            cb.style.left=left+"px";cb.style.top=top+"px";cb.style.width=sz+"px";cb.style.height=sz+"px";
+            if(a.fieldValue&&a.fieldValue!=="Off")cb.checked=true;
+            layer.appendChild(cb);fields.push({name:a.fieldName,type:"checkbox",el:cb});n++;
+          }
+        } else if(a.fieldType==="Ch"){
+          const selc=el("select","fs-field");
+          selc.style.left=left+"px";selc.style.top=top+"px";selc.style.width=w+"px";selc.style.height=h+"px";
+          (a.options||[]).forEach(o=>{const op=el("option");op.value=(o.exportValue!=null?o.exportValue:o.displayValue);op.textContent=o.displayValue;selc.appendChild(op);});
+          if(a.fieldValue)selc.value=Array.isArray(a.fieldValue)?a.fieldValue[0]:a.fieldValue;
+          layer.appendChild(selc);fields.push({name:a.fieldName,type:"choice",el:selc});n++;
         }
-      }
-      download(await doc.save(),"rempli.pdf");setStatus(st,L("fs_done","Terminé — rempli.pdf téléchargé."),"ok");
-    }catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}
+      });
+    }
+    info.textContent=n>0?(L("fs_fields","Champs d\u00e9tect\u00e9s : ")+n):L("fs_nofields","Aucun champ de formulaire d\u00e9tect\u00e9 dans ce PDF.");
+    setStatus(st,"");
+    saveBtn.onclick=async()=>{
+      try{
+        setStatus(st,L("fs_saving","Enregistrement\u2026"),"",true);
+        const {PDFDocument}=PDFLib;const pdfDoc=await PDFDocument.load(srcBytes.slice(0));const form=pdfDoc.getForm();
+        fields.forEach(f=>{try{
+          if(f.type==="text"){form.getTextField(f.name).setText(f.el.value||"");}
+          else if(f.type==="checkbox"){const cb=form.getCheckBox(f.name);f.el.checked?cb.check():cb.uncheck();}
+          else if(f.type==="radio"){if(f.el.checked)form.getRadioGroup(f.name).select(f.exportValue);}
+          else if(f.type==="choice"){try{form.getDropdown(f.name).select(f.el.value);}catch(e){form.getOptionList(f.name).select(f.el.value);}}
+        }catch(e){}});
+        const bytes=await pdfDoc.save();download(bytes,"formulaire-rempli.pdf","application/pdf");
+        setStatus(st,L("fs_saved","PDF rempli enregistr\u00e9 \u2713"),"ok");
+      }catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}
+    };
   }
   return ws;
 };
