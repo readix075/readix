@@ -1,22 +1,12 @@
 {
-  "name": "readix-server",
-  "version": "1.0.0",
-  "description": "Back-end Readix Reader : comptes, abonnements Stripe, fonctions IA premium.",
-  "type": "module",
+  "name": "readix-reader-phase4",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Readix Reader — Phase 5, outils avancés PDF",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1",
-    "stripe": "^16.12.0"
   }
 }
