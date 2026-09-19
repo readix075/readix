@@ -191,6 +191,12 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 /* éléments déplaçables (signature, édition) */
 .movEl{position:absolute;box-sizing:border-box}
 .movEl.selEl{outline:2px solid var(--brand);outline-offset:1px}
+/* Phase 7/8 — assistant compact : ne recouvre pas le rail de zoom */
+.cbot-fab{position:fixed;right:64px;bottom:142px;width:34px;height:34px;border:none;border-radius:10px;background:linear-gradient(150deg,var(--brand-2),var(--brand));color:#fff;display:grid;place-items:center;box-shadow:0 4px 12px var(--brand-glow);z-index:180;cursor:pointer}
+.cbot-fab svg{width:18px;height:18px}.cbot{position:fixed;right:60px;bottom:184px;width:300px;max-width:calc(100vw - 80px);background:var(--elevated);border:1px solid var(--line-strong);border-radius:14px;box-shadow:var(--shadow-lg);z-index:190;display:none;overflow:hidden}.cbot.open{display:flex;flex-direction:column}.cbot-head{display:flex;align-items:center;gap:8px;padding:10px 11px;background:var(--surface-2);border-bottom:1px solid var(--line)}.cbot-name{font-weight:700;font-size:13px}.cbot-sub{font-size:10px;color:var(--ink-faint)}.cbot-close{margin-left:auto;border:0;background:none;color:var(--ink-soft);cursor:pointer}.cbot-body{max-height:300px;overflow:auto;padding:10px}.cbot-msg{font-size:12.5px;line-height:1.45;padding:8px 10px;border-radius:10px;margin-bottom:7px}.cbot-msg.bot{background:var(--surface-2);color:var(--ink)}.cbot-msg.user{background:var(--brand-soft);color:var(--ink);margin-left:20px}.cbot-inputrow{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}.cbot-input{flex:1;min-width:0;height:32px;border:1px solid var(--line-strong);border-radius:8px;padding:0 9px;background:var(--surface);color:var(--ink)}.cbot-send{height:32px;padding:0 10px;border:0;border-radius:8px;background:var(--brand);color:#fff;cursor:pointer}.cbot-chips{display:flex;flex-wrap:wrap;gap:5px}.cbot-chips button{font-size:10.5px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:999px;padding:5px 8px;cursor:pointer}
+.price-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0}.price-card{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--surface-2)}.price-card h4{font-size:14px;margin-bottom:4px}.price-card .price{font-size:22px;font-weight:800;font-family:'Space Grotesk',sans-serif}.price-card p{font-size:11.5px;color:var(--ink-soft);min-height:34px;margin:4px 0 10px}.price-card button{width:100%}
+@media(max-width:860px){.cbot-fab{right:64px;bottom:80px}.cbot{right:58px;bottom:120px}.price-grid{grid-template-columns:1fr 1fr}}
+
 .movH{position:absolute;width:12px;height:12px;background:var(--brand);border:2px solid #fff;border-radius:50%;pointer-events:auto;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,.3);display:none}
 .movEl.selEl .movH{display:block}
 .movDel{position:absolute;top:-11px;right:-11px;width:22px;height:22px;border:2px solid #fff;background:var(--danger);color:#fff;border-radius:50%;font-size:11px;display:none;place-items:center;pointer-events:auto;z-index:11}
@@ -246,6 +252,7 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
       <div class="um-head"><div class="um-name" id="umName">Invité</div><div class="um-email" id="umEmail">non connecté</div></div>
       <span class="plan-badge" id="umPlan">Gratuit</span>
       <div class="sep"></div>
+      <button id="umPricing">Abonnements et tarifs</button>
       <button id="umAuth">Se connecter</button>
       <button id="umLogout" style="color:var(--danger);display:none">Se déconnecter</button>
     </div>
@@ -285,6 +292,13 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
     <div class="spring"></div>
     <div class="rzoom"><button id="zIn">+</button><div class="z" id="zVal">100%</div><button id="zOut">−</button></div>
   </aside>
+</div>
+
+<button class="cbot-fab" id="cbotFab" title="Assistant Readix" aria-label="Ouvrir l'assistant Readix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/></svg></button>
+<div class="cbot" id="cbot" role="dialog" aria-label="Assistant Readix">
+  <div class="cbot-head"><div><div class="cbot-name">Assistant Readix</div><div class="cbot-sub">Aide sur les outils et les documents</div></div><button class="cbot-close" id="cbotClose">✕</button></div>
+  <div class="cbot-body" id="cbotBody"><div class="cbot-msg bot">Bonjour ! Je peux vous guider dans Readix : remplir, signer, modifier, organiser, fusionner, protéger ou utiliser les fonctions IA.</div><div class="cbot-chips"><button data-chat="Comment fusionner des PDF ?">Fusionner</button><button data-chat="Comment remplir et signer ?">Remplir & signer</button><button data-chat="Quels sont les outils IA ?">Outils IA</button></div></div>
+  <div class="cbot-inputrow"><input class="cbot-input" id="cbotInput" placeholder="Posez votre question…" autocomplete="off"><button class="cbot-send" id="cbotSend">Envoyer</button></div>
 </div>
 
 <div class="floatsig" id="floatsig">
@@ -714,6 +728,7 @@ function renderMerge(t,stage){
 /* ---------- déplacement + redimensionnement (partagé) ---------- */
 let _sel=null;
 function selectEl(item){if(_sel&&_sel!==item)_sel.classList.remove("selEl");_sel=item;item.classList.add("selEl");}
+document.addEventListener("pointerdown",e=>{if(!_sel)return;if(e.target.closest(".movEl"))return;if(e.target.closest(".rpanel,.floatsig,.actionbar,.edbar"))return;_sel.classList.remove("selEl");_sel=null;});
 function setGeo(it,g){it.style.left=g.left;it.style.top=g.top;if(g.width)it.style.width=g.width;if(g.height)it.style.height=g.height;}
 function makeMovable(item,page,onchange){
   item.classList.add("movEl");
@@ -1118,6 +1133,23 @@ function updateAccount(){
   if(APP.user){a.textContent=((APP.user.name||APP.user.email||"U")[0]||"U").toUpperCase();nm.textContent=APP.user.name||APP.user.email;em.textContent=APP.user.email;pl.textContent=PLAN_LABEL[APP.plan]||"Gratuit";au.style.display="none";lo.style.display="block";}
   else{a.textContent="?";nm.textContent="Invité";em.textContent="non connecté";pl.textContent="Gratuit";au.style.display="block";lo.style.display="none";}
 }
+function openPricing(){
+  const dl=dialog(`<h3>Abonnements Readix</h3><p>Choisissez un plan. Le tarif exact est celui configuré dans Stripe. Vous pourrez choisir la périodicité avant le paiement.</p>
+  <div style="display:flex;gap:7px;margin:8px 0 12px"><button class="btn ghost sm" id="priceMonth">Mensuel</button><button class="btn ghost sm" id="priceYear">Annuel</button></div>
+  <div class="price-grid">
+    <div class="price-card"><h4>Gratuit</h4><div class="price">0</div><p>Outils PDF locaux et compte de base.</p><button class="btn ghost sm" disabled>Plan actuel</button></div>
+    <div class="price-card"><h4>Standard</h4><div class="price">Selon Stripe</div><p>Fonctions avancées et usage étendu.</p><button class="btn sm" data-plan="standard">Choisir</button></div>
+    <div class="price-card"><h4>Pro</h4><div class="price">Selon Stripe</div><p>Fonctions IA avec quota mensuel.</p><button class="btn sm" data-plan="pro">Choisir</button></div>
+    <div class="price-card"><h4>Studio</h4><div class="price">Selon Stripe</div><p>Fonctions IA avancées et quota supérieur.</p><button class="btn sm" data-plan="studio">Choisir</button></div>
+  </div>`);
+  let period='month';
+  const setPeriod=p=>{period=p;$('#priceMonth',dl.root).classList.toggle('on',p==='month');$('#priceYear',dl.root).classList.toggle('on',p==='year');};
+  $('#priceMonth',dl.root).onclick=()=>setPeriod('month'); $('#priceYear',dl.root).onclick=()=>setPeriod('year'); setPeriod('month');
+  $$('.price-card button[data-plan]',dl.root).forEach(b=>b.onclick=async()=>{try{if(!APP.user){dl.close();openAuth('login');return;}b.disabled=true;b.textContent='Ouverture…';const d=await api('/api/billing/checkout',{plan:b.dataset.plan,period});if(d.url)location.href=d.url;else throw new Error(d.error||'Checkout indisponible');}catch(e){b.disabled=false;b.textContent='Choisir';toast(e.message,'err');}});
+}
+function appendChat(role,text){const body=$('#cbotBody');const m=el('div','cbot-msg '+role,text);body.appendChild(m);body.scrollTop=body.scrollHeight;}
+let CHAT_HISTORY=[];
+async function sendChat(text){text=(text||'').trim();if(!text)return;if(!APP.user){toast('Connectez-vous pour utiliser l’assistant.','warn');openAuth('login');return;}appendChat('user',text);CHAT_HISTORY.push({role:'user',content:text});$('#cbotInput').value='';const pending=el('div','cbot-msg bot','Réflexion…');$('#cbotBody').appendChild(pending);try{const d=await api('/api/ai/chatbot',{message:text,history:CHAT_HISTORY.slice(-10)});pending.textContent=d.answer||'Je n’ai pas de réponse pour le moment.';CHAT_HISTORY.push({role:'assistant',content:d.answer||''});}catch(e){pending.textContent='Erreur : '+e.message;}$('#cbotBody').scrollTop=$('#cbotBody').scrollHeight;}
 async function restoreSession(){const t=getToken();if(!t)return;try{const d=await api("/api/me");if(d&&d.user){APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();}}catch(e){clearToken();}}
 function openAuth(mode){
   mode=mode||"login";
@@ -1164,6 +1196,12 @@ window.addEventListener("resize",fixMob);fixMob();
 /* menus déroulants (Créer, Compte) */
 function bindMenu(btn,menu){btn.onclick=e=>{e.stopPropagation();const open=menu.classList.contains("open");$$(".menu.open").forEach(m=>m.classList.remove("open"));if(!open)menu.classList.add("open");};}
 bindMenu($("#createBtn"),$("#createMenu"));bindMenu($("#acctBtn"),$("#acctMenu"));
+$('#umPricing').onclick=()=>{openPricing();};
+$('#cbotFab').onclick=()=>$('#cbot').classList.toggle('open');
+$('#cbotClose').onclick=()=>$('#cbot').classList.remove('open');
+$('#cbotSend').onclick=()=>sendChat($('#cbotInput').value);
+$('#cbotInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat(e.target.value);});
+$$('#cbotBody [data-chat]').forEach(b=>b.onclick=()=>sendChat(b.dataset.chat));
 document.addEventListener("click",()=>$$(".menu.open").forEach(m=>m.classList.remove("open")));
 $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)return;const a=b.dataset.create;
   if(a==="tab"){createTab();openTool("view");}
@@ -1189,11 +1227,12 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- init ---------- */
-$("#rAi").onclick=()=>toast("Assistant IA : Phase 8.","warn");
+$("#rAi").onclick=()=>{$("#cbot").classList.add("open");$("#cbotInput").focus();};
 (async function init(){
   createTab();switchTab(APP.active,false);
   try{await restoreSession();}catch(e){}
   try{await offerResume();}catch(e){}
+  if(new URLSearchParams(location.search).get("pricing")==="1") setTimeout(openPricing,250);
   history.replaceState({tab:APP.active,tool:APP.tool},"","#view");
 })();
 </script>
