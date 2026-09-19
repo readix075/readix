@@ -646,6 +646,11 @@
   .ed-el.selected .ed-rs{display:block}
   /* Surligneur */
   .ed-hl{position:absolute;pointer-events:none;border-radius:2px}
+
+  /* Correctif : champs de formulaire cliquables */
+  .fs-page canvas{pointer-events:none!important}
+  .fs-layer{pointer-events:none}
+  .fs-field,.fs-check,.fs-item,.fs-layer input,.fs-layer textarea,.fs-layer select{pointer-events:auto}
 </style>
 </head>
 <body>
@@ -1887,12 +1892,18 @@ function openSignaturePad(onValidate){
    calque d'édition au rendu visuel. L'utilisateur ajoute du texte, des images, des
    formes, masque des zones existantes, et le tout est aplati dans le PDF final via
    pdf-lib (drawText, drawImage, drawRectangle). C'est un compromis assumé et expliqué. */
+/* ===================== PARTIE C — Modifier (RÉÉCRIT) ===================== */
 BUILDERS.editpdf=()=>unlocked(TOOLS.find(x=>x.id==="editpdf"))?editPdfTool():lockedPanel("editpdf");
 
 function editPdfTool(){
-  const ws=shell("editpdf");const p=ws._panel;const st=statusLine();
-  const dz=dropzone(L("open_pdf","Ouvrir un PDF à modifier"),".pdf",false);p.append(dz,st);
+  const ws=shell("editpdf");
+  const p=ws._panel;
+  const st=statusLine();
+  const dz=dropzone(L("open_pdf","Ouvrir un PDF à modifier"),".pdf",false);
+  p.append(dz,st);
+
   let srcBytes=null;
+  const SCALE=1.4;
 
   dz._onfiles=async fs=>{
     if(!fs[0])return;
@@ -1900,11 +1911,14 @@ function editPdfTool(){
       srcBytes=await readAsArrayBuffer(fs[0]);
       dz.style.display="none";
       await renderEditor();
-    }catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}
+    }catch(e){
+      console.error(e);
+      setStatus(st,L("error_p","Erreur : ")+e.message,"err");
+    }
   };
 
   async function renderEditor(){
-    // Barre d'outils d'édition
+    /* ---------- Barre d'outils d'édition ---------- */
     const bar=el("div","edit-bar");
     const tools=[
       {id:"select",label:"Sélection",icon:'<path d="M5 3l7 17 2.5-7 7-2.5z"/>'},
@@ -1913,261 +1927,474 @@ function editPdfTool(){
       {id:"rect",label:"Rectangle",icon:'<rect x="4" y="6" width="16" height="12" rx="1"/>'},
       {id:"line",label:"Ligne",icon:'<path d="M5 19L19 5"/>'},
       {id:"highlight",label:"Surligneur",icon:'<path d="M4 20h16M6 16l8-8 4 4-8 8H6z"/>'},
-      {id:"mask",label:"Masquer",icon:'<rect x="4" y="6" width="16" height="12" rx="1" fill="currentColor" opacity="0.3"/>'},
+      {id:"mask",label:"Masquer",icon:'<rect x="4" y="6" width="16" height="12" rx="1"/>'},
     ];
     tools.forEach(t=>{
-      const b=el("button","eb-btn");b.dataset.mode=t.id;
+      const b=el("button","eb-btn");
+      b.dataset.mode=t.id;
       b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg>${t.label}`;
-      b.onclick=()=>setMode(t.id,bar);
+      b.onclick=()=>setMode(t.id);
       bar.appendChild(b);
     });
-    // Couleur pour les formes et le surligneur
-    const colorWrap=el("div");colorWrap.style.display="flex";colorWrap.style.alignItems="center";colorWrap.style.gap="4px";
+
+    /* Couleur */
+    const colorWrap=el("div");
+    colorWrap.style.display="flex";
+    colorWrap.style.alignItems="center";
+    colorWrap.style.gap="4px";
     colorWrap.innerHTML=`<span style="font-size:11px;color:var(--ink-soft)">Couleur</span><input type="color" value="#FFD400" style="width:28px;height:28px;padding:0;border:1px solid var(--line-strong);border-radius:6px;cursor:pointer">`;
     bar.appendChild(colorWrap);
     const colorInput=colorWrap.querySelector("input");
-    const sp=el("span","sp");bar.appendChild(sp);
-    const saveBtn=el("button","btn sm");saveBtn.textContent="Enregistrer le PDF modifié";
+
+    const sp=el("span","sp");
+    bar.appendChild(sp);
+    const saveBtn=el("button","btn sm");
+    saveBtn.textContent="Enregistrer le PDF modifié";
     bar.appendChild(saveBtn);
     p.insertBefore(bar,st);
 
-    const doc=el("div","fs-doc");p.insertBefore(doc,st);
+    /* ---------- Barre de mise en forme contextuelle ---------- */
+    const fmtBar=document.createElement("div");
+    fmtBar.className="fmt-bar";
+    fmtBar.innerHTML=`
+      <select class="fmt-font" title="Police">
+        <option value="Helvetica">Helvetica</option>
+        <option value="Times">Times</option>
+        <option value="Courier">Courier</option>
+      </select>
+      <input type="number" class="fmt-size" value="16" min="6" max="96" style="width:52px" title="Taille">
+      <button class="fmt-b" data-cmd="bold" title="Gras"><b>G</b></button>
+      <button class="fmt-b" data-cmd="italic" title="Italique"><i>I</i></button>
+      <button class="fmt-b" data-cmd="underline" title="Souligné"><u>S</u></button>
+      <span class="fmt-sep"></span>
+      <div class="fmt-color" title="Couleur"><input type="color" value="#12141c"></div>`;
+    document.body.appendChild(fmtBar);
+
+    /* ---------- Conteneur du document ---------- */
+    const doc=el("div","fs-doc");
+    p.insertBefore(doc,st);
     window.__fsSave=()=>saveBtn.click();
 
     let mode="select";
-    const shapes=[];
-    function setMode(m,bar){
+    function setMode(m){
       mode=m;
       bar.querySelectorAll(".eb-btn").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
     }
-    setMode("select",bar);
+    setMode("select");
 
+    /* ---------- Gestion de la barre de mise en forme ---------- */
+    let activeEdEl=null;
+    function showFmtBar(field){
+      activeEdEl=field;
+      const r=field.getBoundingClientRect();
+      fmtBar.style.left=r.left+"px";
+      fmtBar.style.top=Math.max(8,r.top-48)+"px";
+      fmtBar.style.position="fixed";
+      fmtBar.classList.add("open");
+      fmtBar.querySelector(".fmt-font").value=field.dataset.font||"Helvetica";
+      fmtBar.querySelector(".fmt-size").value=parseInt(field.style.fontSize)||16;
+      fmtBar.querySelector(".fmt-color input").value=field.dataset.color||"#12141c";
+      fmtBar.querySelectorAll(".fmt-b").forEach(b=>{
+        const c=b.dataset.cmd;
+        b.classList.toggle("on",
+          (c==="bold"&&field.style.fontWeight==="bold")||
+          (c==="italic"&&field.style.fontStyle==="italic")||
+          (c==="underline"&&field.style.textDecoration==="underline"));
+      });
+    }
+    document.addEventListener("focusin",e=>{
+      if(e.target.classList.contains("ed-text"))showFmtBar(e.target);
+    });
+    document.addEventListener("focusout",()=>{
+      setTimeout(()=>{if(!fmtBar.contains(document.activeElement))fmtBar.classList.remove("open");},150);
+    });
+    fmtBar.addEventListener("mousedown",e=>e.preventDefault());
+    fmtBar.querySelector(".fmt-font").onchange=e=>{
+      if(!activeEdEl)return;
+      activeEdEl.dataset.font=e.target.value;
+      activeEdEl.style.fontFamily=FONT_MAP[e.target.value]||FONT_MAP.Helvetica;
+    };
+    fmtBar.querySelector(".fmt-size").oninput=e=>{
+      if(activeEdEl)activeEdEl.style.fontSize=e.target.value+"px";
+    };
+    fmtBar.querySelectorAll(".fmt-b").forEach(b=>{
+      b.onclick=()=>{
+        if(!activeEdEl)return;
+        const c=b.dataset.cmd;
+        if(c==="bold")activeEdEl.style.fontWeight=activeEdEl.style.fontWeight==="bold"?"normal":"bold";
+        if(c==="italic")activeEdEl.style.fontStyle=activeEdEl.style.fontStyle==="italic"?"normal":"italic";
+        if(c==="underline")activeEdEl.style.textDecoration=activeEdEl.style.textDecoration==="underline"?"none":"underline";
+        b.classList.toggle("on");
+      };
+    });
+    fmtBar.querySelector(".fmt-color input").oninput=e=>{
+      if(!activeEdEl)return;
+      activeEdEl.style.color=e.target.value;
+      activeEdEl.dataset.color=e.target.value;
+    };
+
+    /* ---------- Chargement du PDF ---------- */
     const pdf=await pdfjsLib.getDocument({data:srcBytes.slice(0)}).promise;
+    CURRENT_PDF=pdf;
     const dpr=Math.min(2,window.devicePixelRatio||1);
-    const pageCanvases=[];
+    const pages=[];
 
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i);
-      const vp=page.getViewport({scale:1.4});
-      const pg=el("div","edit-page");pg.dataset.pageIndex=i-1;
-      pg.style.width=vp.width+"px";pg.style.height=vp.height+"px";
+      const vp=page.getViewport({scale:SCALE});
+
+      const pg=el("div","edit-page");
+      pg.dataset.page=i;
+      pg.dataset.pageIndex=i-1;
+      pg.style.width=vp.width+"px";
+      pg.style.height=vp.height+"px";
+      pg.style.position="relative";
+
       const cv=el("canvas");
-      cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
-      cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
-      const cx=cv.getContext("2d");cx.scale(dpr,dpr);pg.appendChild(cv);
-      const layer=el("div","edit-layer");layer.dataset.pageIndex=i-1;pg.appendChild(layer);
+      cv.width=Math.floor(vp.width*dpr);
+      cv.height=Math.floor(vp.height*dpr);
+      cv.style.width=vp.width+"px";
+      cv.style.height=vp.height+"px";
+      cv.style.pointerEvents="none";
+      const cx=cv.getContext("2d");
+      cx.scale(dpr,dpr);
+      pg.appendChild(cv);
+
+      const layer=el("div","edit-layer");
+      layer.dataset.pageIndex=i-1;
+      layer.style.pointerEvents="auto";
+      layer.style.zIndex="2";
+      pg.appendChild(layer);
+
       doc.appendChild(pg);
       await page.render({canvasContext:cx,viewport:vp}).promise;
-      pageCanvases.push({pg,layer,vp});
-      // Zone de dessin pour les formes
-      layer.addEventListener("mousedown",e=>{
-        if(mode==="select")return;
+      pages.push({pg,layer,vp});
+      attachLayerEvents(layer);
+    }
+
+    /* ---------- Interactions sur le calque d'édition ---------- */
+    function attachLayerEvents(layer){
+      /* Clic simple : ajouter texte ou image selon le mode */
+      layer.addEventListener("click",e=>{
+        if(e.target!==layer)return;
         const rect=layer.getBoundingClientRect();
-        const startX=e.clientX-rect.left,startY=e.clientY-rect.top;
+        const x=e.clientX-rect.left;
+        const y=e.clientY-rect.top;
+        if(mode==="text"){
+          addTextBlock(layer,x,y);
+        }else if(mode==="image"){
+          pickImage(layer,x,y);
+        }
+      });
+
+      /* Drag pour dessiner rectangle / ligne / masque / surligneur */
+      layer.addEventListener("pointerdown",e=>{
+        if(mode==="select"||mode==="text"||mode==="image")return;
+        if(e.target!==layer)return;
+        e.preventDefault();
+        const rect=layer.getBoundingClientRect();
+        const startX=e.clientX-rect.left;
+        const startY=e.clientY-rect.top;
+        const color=colorInput.value;
         let preview=null;
+
         if(mode==="highlight"){
           preview=el("div","ed-hl");
-          preview.style.background=colorInput.value;
-          preview.style.opacity="0.4";
-          preview.style.left=startX+"px";preview.style.top=startY+"px";
-          preview.style.width="0px";preview.style.height="14px";
-          layer.appendChild(preview);
+          preview.style.background=color;
+          preview.style.left=startX+"px";
+          preview.style.top=startY+"px";
+          preview.style.width="0px";
+          preview.style.height="14px";
         }else if(mode==="rect"||mode==="mask"){
           preview=el("div","ed-el");
-          const inner=el("div",mode==="mask"?"ed-shape":"ed-shape");
-          inner.style.background=mode==="mask"?"#fff":colorInput.value;
-          inner.style.border=mode==="mask"?"none":"2px solid "+colorInput.value;
+          const inner=el("div","ed-shape");
+          if(mode==="mask"){
+            inner.style.background="#fff";
+          }else{
+            inner.style.background="transparent";
+            inner.style.border="2px solid "+color;
+          }
           preview.appendChild(inner);
-          preview.style.left=startX+"px";preview.style.top=startY+"px";
-          preview.style.width="0px";preview.style.height="0px";
-          layer.appendChild(preview);
+          preview.style.left=startX+"px";
+          preview.style.top=startY+"px";
+          preview.style.width="0px";
+          preview.style.height="0px";
         }else if(mode==="line"){
           preview=el("div","ed-el");
-          preview.innerHTML='<svg class="ed-shape" viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1="0" x2="100" y2="100" stroke="'+colorInput.value+'" stroke-width="2"/></svg>';
-          preview.style.left=startX+"px";preview.style.top=startY+"px";
-          preview.style.width="100px";preview.style.height="100px";
-          layer.appendChild(preview);
-        }else{
-          return;
+          preview.innerHTML='<svg class="ed-shape" viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1="0" x2="100" y2="100" stroke="'+color+'" stroke-width="2"/></svg>';
+          preview.style.left=startX+"px";
+          preview.style.top=startY+"px";
+          preview.style.width="100px";
+          preview.style.height="100px";
         }
-        const mm=ev=>{
-          const x=ev.clientX-rect.left,y=ev.clientY-rect.top;
-          const w=Math.abs(x-startX),h=Math.abs(y-startY);
+        if(!preview)return;
+        layer.appendChild(preview);
+
+        const mv=ev=>{
+          const x=ev.clientX-rect.left;
+          const y=ev.clientY-rect.top;
+          const w=Math.abs(x-startX);
+          const h=Math.abs(y-startY);
           preview.style.left=Math.min(x,startX)+"px";
           preview.style.top=Math.min(y,startY)+"px";
-          preview.style.width=w+"px";preview.style.height=(mode==="highlight"?"14px":(mode==="line"?Math.max(h,20):h))+"px";
+          if(mode==="highlight"){
+            preview.style.width=w+"px";
+          }else if(mode==="line"){
+            preview.style.width=Math.max(w,20)+"px";
+            preview.style.height=Math.max(h,20)+"px";
+          }else{
+            preview.style.width=w+"px";
+            preview.style.height=h+"px";
+          }
         };
         const up=()=>{
-          document.removeEventListener("mousemove",mm);document.removeEventListener("mouseup",up);
-          if(preview){
-            const w=parseFloat(preview.style.width)||0;
-            const h=parseFloat(preview.style.height)||0;
-            if(w<5||h<5){preview.remove();}
-            else{
-              preview.classList.add("ed-el");
-              if(mode==="highlight")preview.classList.add("ed-hl-static");
-              else preview.classList.remove("ed-el");
-              if(!preview.classList.contains("ed-el"))preview.classList.add("ed-el");
-              // Rendre déplaçable et supprimable
+          window.removeEventListener("pointermove",mv);
+          window.removeEventListener("pointerup",up);
+          const w=parseFloat(preview.style.width)||0;
+          const h=parseFloat(preview.style.height)||0;
+          if(w<5||h<5){
+            preview.remove();
+          }else{
+            if(mode==="highlight"){
+              preview.style.pointerEvents="none";
+              preview.dataset.static="1";
+            }else{
+              preview.dataset.kind=mode;
+              preview.dataset.color=color;
               makeEditable(preview,layer);
-              shapes.push({type:mode,el:preview,page:i-1,color:colorInput.value});
             }
           }
         };
-        document.addEventListener("mousemove",mm);document.addEventListener("mouseup",up);
-      });
-      // Clic pour ajouter texte/image selon le mode
-      layer.addEventListener("dblclick",e=>{
-        const rect=layer.getBoundingClientRect();
-        const x=e.clientX-rect.left,y=e.clientY-rect.top;
-        if(mode==="text"||mode==="select"){
-          addTextBlock(layer,x,y);
-        }
+        window.addEventListener("pointermove",mv);
+        window.addEventListener("pointerup",up);
       });
     }
 
-    // Ajout d'image via le bouton du mode
-    bar.querySelector('[data-mode="image"]').addEventListener("click",()=>{
-      const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+    /* ---------- Ajout d'un bloc texte ---------- */
+    function addTextBlock(layer,x,y){
+      const item=el("div","ed-el ed-text");
+      item.contentEditable="true";
+      item.style.left=x+"px";
+      item.style.top=y+"px";
+      item.style.minWidth="80px";
+      item.style.minHeight="24px";
+      item.dataset.font="Helvetica";
+      item.dataset.color="#12141c";
+      item.dataset.kind="text";
+      item.style.fontFamily=FONT_MAP.Helvetica;
+      item.innerText="Texte";
+      layer.appendChild(item);
+      makeEditable(item,layer);
+      setTimeout(()=>{
+        item.focus();
+        const range=document.createRange();
+        range.selectNodeContents(item);
+        const sel=window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      },30);
+    }
+
+    /* ---------- Ajout d'une image ---------- */
+    function pickImage(layer,x,y){
+      const inp=document.createElement("input");
+      inp.type="file";
+      inp.accept="image/*";
       inp.onchange=()=>{
-        const f=inp.files[0];if(!f)return;
+        const f=inp.files[0];
+        if(!f)return;
         const reader=new FileReader();
         reader.onload=e=>{
           const img=new Image();
           img.onload=()=>{
-            // Ajouter sur la première page
-            const page=pageCanvases[0];if(!page)return;
-            const item=el("div","ed-el");
-            const im=el("img","ed-img");im.src=e.target.result;
-            item.appendChild(im);
-            item.style.left="40px";item.style.top="60px";
-            item.style.width=Math.min(img.width,300)+"px";
-            item.style.height="auto";
+            const maxW=300;
             const ratio=img.height/img.width;
-            item.style.height=(Math.min(img.width,300)*ratio)+"px";
+            const w=Math.min(img.width,maxW);
+            const h=w*ratio;
+            const item=el("div","ed-el");
             item.dataset.imgData=e.target.result;
-            makeEditable(item,page.layer);
-            page.layer.appendChild(item);
-            shapes.push({type:"image",el:item,page:0});
+            item.dataset.kind="image";
+            item.style.left=x+"px";
+            item.style.top=y+"px";
+            item.style.width=w+"px";
+            item.style.height=h+"px";
+            const im=el("img","ed-img");
+            im.src=e.target.result;
+            im.draggable=false;
+            item.appendChild(im);
+            layer.appendChild(item);
+            makeEditable(item,layer);
           };
           img.src=e.target.result;
         };
         reader.readAsDataURL(f);
       };
       inp.click();
-    });
+    }
 
+    /* ---------- makeEditable : drag + resize + delete ---------- */
     function makeEditable(item,layer){
-      const del=el("button","ed-del");del.textContent="✕";del.onclick=(e)=>{e.stopPropagation();item.remove();};
+      const del=el("button","ed-del");
+      del.textContent="✕";
+      del.title="Supprimer";
+      del.onclick=e=>{e.stopPropagation();item.remove();};
       item.appendChild(del);
-      const rs=el("div","ed-rs");item.appendChild(rs);
-      // Sélection
-      item.addEventListener("mousedown",e=>{
+
+      const rs=el("div","ed-rs");
+      item.appendChild(rs);
+
+      /* Sélection + drag */
+      item.addEventListener("pointerdown",e=>{
         if(e.target===rs||e.target===del)return;
         document.querySelectorAll(".ed-el.selected").forEach(x=>x.classList.remove("selected"));
         item.classList.add("selected");
-        if(item.classList.contains("ed-text"))return; // le texte a son propre drag
+
+        /* Un texte en cours d'édition ne se déplace pas */
+        if(item.classList.contains("ed-text")&&document.activeElement===item)return;
+
         e.preventDefault();
         const rect=item.getBoundingClientRect();
-        const offX=e.clientX-rect.left,offY=e.clientY-rect.top;
+        const offX=e.clientX-rect.left;
+        const offY=e.clientY-rect.top;
         const pr=layer.getBoundingClientRect();
-        const mm=ev=>{
-          item.style.left=(ev.clientX-pr.left-offX)+"px";
-          item.style.top=(ev.clientY-pr.top-offY)+"px";
+
+        const mv=ev=>{
+          let nl=ev.clientX-pr.left-offX;
+          let nt=ev.clientY-pr.top-offY;
+          nl=Math.max(0,Math.min(pr.width-item.offsetWidth,nl));
+          nt=Math.max(0,Math.min(pr.height-item.offsetHeight,nt));
+          item.style.left=nl+"px";
+          item.style.top=nt+"px";
         };
-        const up=()=>{document.removeEventListener("mousemove",mm);document.removeEventListener("mouseup",up);};
-        document.addEventListener("mousemove",mm);document.addEventListener("mouseup",up);
+        const up=()=>{
+          window.removeEventListener("pointermove",mv);
+          window.removeEventListener("pointerup",up);
+        };
+        window.addEventListener("pointermove",mv);
+        window.addEventListener("pointerup",up);
       });
-      // Redimensionnement
-      rs.addEventListener("mousedown",e=>{
-        e.preventDefault();e.stopPropagation();
+
+      /* Resize */
+      rs.addEventListener("pointerdown",e=>{
+        e.preventDefault();
+        e.stopPropagation();
         const startX=e.clientX,startY=e.clientY;
         const startW=item.offsetWidth,startH=item.offsetHeight;
-        const mm=ev=>{
+        const mv=ev=>{
           item.style.width=Math.max(30,startW+(ev.clientX-startX))+"px";
           item.style.height=Math.max(20,startH+(ev.clientY-startY))+"px";
         };
-        const up=()=>{document.removeEventListener("mousemove",mm);document.removeEventListener("mouseup",up);};
-        document.addEventListener("mousemove",mm);document.addEventListener("mouseup",up);
+        const up=()=>{
+          window.removeEventListener("pointermove",mv);
+          window.removeEventListener("pointerup",up);
+        };
+        window.addEventListener("pointermove",mv);
+        window.addEventListener("pointerup",up);
       });
     }
 
-    function addTextBlock(layer,x,y){
-      const item=el("div","ed-el ed-text");
-      item.contentEditable="true";
-      item.style.left=x+"px";item.style.top=y+"px";
-      item.style.minWidth="80px";item.style.minHeight="24px";
-      item.dataset.font="Helvetica";
-      item.dataset.color="#12141c";
-      item.innerText="Double-cliquez pour éditer";
-      layer.appendChild(item);
-      makeEditable(item,layer);
-      // Focus pour édition immédiate
-      setTimeout(()=>{item.focus();item.select();},50);
-      shapes.push({type:"text",el:item,page:parseInt(layer.dataset.pageIndex)||0});
-    }
-
-    // Enregistrement : aplatir tous les éléments dans le PDF via pdf-lib
+    /* ---------- Enregistrement : aplatir tous les éléments ---------- */
     saveBtn.onclick=async()=>{
       try{
         setStatus(st,"Enregistrement en cours…","",true);
         const pdfDoc=await PDFLib.PDFDocument.load(srcBytes.slice(0));
-        const scale=1.4;
         const allPages=[...doc.querySelectorAll(".edit-page")];
+
         for(const pgEl of allPages){
           const pageIndex=parseInt(pgEl.dataset.pageIndex,10);
           const page=pdfDoc.getPage(pageIndex);
           const pr=pgEl.getBoundingClientRect();
-          const els=[...pgEl.querySelectorAll(".edit-layer > .ed-el, .edit-layer > .ed-hl, .edit-layer > .ed-hl-static")];
+          const els=[...pgEl.querySelectorAll(".edit-layer > .ed-el, .edit-layer > .ed-hl")];
+
           for(const item of els){
             const r=item.getBoundingClientRect();
-            const x=(r.left-pr.left)/scale;
-            const y=page.getHeight()-(r.top-pr.top)/scale-(r.height/scale);
-            const w=r.width/scale,h=r.height/scale;
+            const x=(r.left-pr.left)/SCALE;
+            const y=page.getHeight()-(r.top-pr.top)/SCALE-(r.height/SCALE);
+            const w=r.width/SCALE;
+            const h=r.height/SCALE;
+
+            /* Texte */
             if(item.classList.contains("ed-text")){
               const fontName=item.dataset.font||"Helvetica";
-              const font=await pdfDoc.embedFont(fontName==="Times"?StandardFonts.TimesRoman:fontName==="Courier"?StandardFonts.Courier:StandardFonts.Helvetica);
+              const font=await pdfDoc.embedFont(
+                fontName==="Times"?StandardFonts.TimesRoman:
+                fontName==="Courier"?StandardFonts.Courier:
+                StandardFonts.Helvetica);
               const size=parseInt(item.style.fontSize)||16;
               const colorHex=item.dataset.color||"#12141c";
               const c=hexToRgb(colorHex);
-              page.drawText(item.innerText,{x,y,size,font,color:rgb(c.r/255,c.g/255,c.b/255),lineHeight:size*1.3});
-            }else if(item.dataset.imgData){
+              const text=item.innerText||"";
+              if(text.trim()){
+                const lines=text.split("\n");
+                const lineHeight=size*1.3;
+                lines.forEach((line,idx)=>{
+                  page.drawText(line,{
+                    x,
+                    y:y-(idx*lineHeight)+ (lines.length-1)*lineHeight*0 + h - size,
+                    size,
+                    font,
+                    color:rgb(c.r/255,c.g/255,c.b/255),
+                    lineHeight
+                  });
+                });
+              }
+            }
+            /* Image */
+            else if(item.dataset.imgData){
               try{
                 const b64=item.dataset.imgData.split(",")[1];
-                const bin=atob(b64);const arr=new Uint8Array(bin.length);
+                const bin=atob(b64);
+                const arr=new Uint8Array(bin.length);
                 for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
-                let img;try{img=await pdfDoc.embedPng(arr);}catch(e){img=await pdfDoc.embedJpg(arr);}
+                let img=null;
+                try{img=await pdfDoc.embedPng(arr);}
+                catch(e){img=await pdfDoc.embedJpg(arr);}
                 page.drawImage(img,{x,y,width:w,height:h});
-              }catch(e){}
-            }else if(item.classList.contains("ed-hl")||item.classList.contains("ed-hl-static")){
-              const c=hexToRgb(item.style.background?rgbToHex(item.style.background):"#FFD400");
+              }catch(e){console.warn("Image ignorée",e);}
+            }
+            /* Surligneur */
+            else if(item.classList.contains("ed-hl")){
+              const c=hexToRgb(rgbToHex(item.style.background)||"#FFD400");
               page.drawRectangle({x,y,width:w,height:h,color:rgb(c.r/255,c.g/255,c.b/255),opacity:0.35});
-            }else if(item.querySelector("line")){
-              const c=hexToRgb(colorInput.value);
-              page.drawLine({start:{x,y:y+h},end:{x:x+w,y},thickness:2,color:rgb(c.r/255,c.g/255,c.b/255)});
-            }else if(item.querySelector("div[style*='background']")){
-              const bg=item.querySelector("div").style.background;
-              const isMask=bg==="rgb(255, 255, 255)"||bg==="#fff"||bg==="white";
-              const c=isMask?{r:255,g:255,b:255}:hexToRgb(bg.startsWith("#")?bg:"#000000");
+            }
+            /* Rectangle / ligne / masque */
+            else if(item.dataset.kind==="rect"||item.dataset.kind==="mask"){
+              const c=item.dataset.kind==="mask"?{r:255,g:255,b:255}:hexToRgb(item.dataset.color||"#FFD400");
               page.drawRectangle({x,y,width:w,height:h,color:rgb(c.r/255,c.g/255,c.b/255),opacity:1});
+            }
+            else if(item.dataset.kind==="line"){
+              const c=hexToRgb(item.dataset.color||"#FFD400");
+              page.drawLine({
+                start:{x,y:y+h},
+                end:{x:x+w,y},
+                thickness:2,
+                color:rgb(c.r/255,c.g/255,c.b/255)
+              });
             }
           }
         }
+
         const bytes=await pdfDoc.save();
         download(bytes,"document-modifie.pdf","application/pdf");
         setStatus(st,"PDF modifié enregistré ✓","ok");
-      }catch(e){setStatus(st,L("error_p","Erreur : ")+e.message,"err");}
+      }catch(e){
+        console.error(e);
+        setStatus(st,L("error_p","Erreur : ")+e.message,"err");
+      }
     };
 
     function rgbToHex(str){
-      const m=str.match(/\d+/g);if(!m)return "#FFD400";
+      const m=(str||"").match(/\d+/g);
+      if(!m||m.length<3)return "#FFD400";
       return "#"+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,"0")).join("");
     }
 
     setStatus(st,"Document chargé. Choisissez un outil puis cliquez ou dessinez sur la page.");
   }
+
   return ws;
 }
+/* ===================== FIN PARTIE C ===================== */
 
 /* ===================== FIN PARTIE C ===================== */
 
