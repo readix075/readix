@@ -153,8 +153,8 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .rzoom button:hover{background:var(--surface);color:var(--ink)}
 .rzoom .z{font-size:10px;color:var(--ink-faint);font-weight:600;padding:2px 0}
 /* panneau droit */
-.rpanel{position:absolute;right:52px;top:0;bottom:0;width:246px;background:var(--surface);border-left:1px solid var(--line);box-shadow:-10px 0 30px rgba(13,18,32,.06);z-index:40;transform:translateX(105%);transition:transform .22s var(--ease);display:flex;flex-direction:column}
-.rpanel.open{transform:none}
+.rpanel{position:absolute;right:52px;top:0;bottom:0;width:246px;background:var(--surface);border-left:1px solid var(--line);box-shadow:-10px 0 30px rgba(13,18,32,.06);z-index:40;display:none;flex-direction:column}
+.rpanel.open{display:flex;animation:pop .18s var(--ease-out)}
 .rpanel-head{display:flex;align-items:center;padding:14px 14px 8px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px}
 .rpanel-head .ico{margin-left:auto;width:28px;height:28px}
 .rpanel-body{flex:1;overflow-y:auto;padding:8px 12px 16px}
@@ -541,16 +541,16 @@ const TOOLS=[
   {id:"organize",name:"Organiser",grp:"Essentiels",ic:'<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'},
   {id:"merge",name:"Fusionner",grp:"Essentiels",ic:'<path d="M8 4h8l4 4v12H8z"/><path d="M4 8v12h8"/>'},
   {id:"split",name:"Diviser",grp:"Essentiels",ic:'<path d="M6 3v18M14 3h4v18h-4z"/><path d="M9 12H2"/>'},
+  {id:"watermark",name:"Filigrane",grp:"Conversion",ic:'<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7 15l10-6" stroke-dasharray="2 2"/>'},
+  {id:"numbers",name:"Numéros de page",grp:"Conversion",ic:'<rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M14 17h2"/>'},
+  {id:"topng",name:"PDF → images",grp:"Conversion",ic:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.5"/><path d="M5 18l4-4 3 3 3-4 4 5"/>'},
+  {id:"tolpdf",name:"Images → PDF",grp:"Conversion",ic:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M12 8v8M8 12h8"/>'},
   {id:"redact",name:"Caviarder",grp:"Sécurité & avancé",ic:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M7 10h10M7 14h6" stroke-width="3"/>'},
   {id:"compare",name:"Comparer",grp:"Sécurité & avancé",ic:'<path d="M6 3h5v18H6zM13 3h5v18h-5z"/>'},
   {id:"text",name:"Extraire le texte",grp:"Sécurité & avancé",ic:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>'},
   {id:"shield",name:"Readix Shield",grp:"Sécurité & avancé",ic:'<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/>'},
   {id:"meta",name:"Métadonnées",grp:"Sécurité & avancé",ic:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'},
   {id:"compress",name:"Compresser",grp:"Sécurité & avancé",ic:'<path d="M9 3v6M15 21v-6M4 9h5M15 15h5"/><path d="M9 9L6 6M9 9L6 12M15 15l3 3M15 15l3-3"/>'},
-  {id:"watermark",name:"Filigrane",grp:"Conversion",ic:'<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7 15l10-6" stroke-dasharray="2 2"/>'},
-  {id:"numbers",name:"Numéros de page",grp:"Conversion",ic:'<rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M14 17h2"/>'},
-  {id:"topng",name:"PDF → images",grp:"Conversion",ic:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.5"/><path d="M5 18l4-4 3 3 3-4 4 5"/>'},
-  {id:"tolpdf",name:"Images → PDF",grp:"Conversion",ic:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M12 8v8M8 12h8"/>'},
 ];
 function renderTools(){
   const box=$("#lrailScroll");box.innerHTML="";let g=null;
@@ -1099,6 +1099,55 @@ async function renderCompress(t,stage){
     await saveBytes(out,(t.name||"doc").replace(/\.pdf$/i,"")+"-compresse.pdf");toast("PDF compressé.","ok");
   }catch(e){toast("Erreur : "+e.message,"err");}finally{const btn=$("#cGo",w);btn.disabled=false;btn.textContent="Compresser et enregistrer";}};
 }
+/* ===================== PHASE 6 — COMPTES ===================== */
+const API_BASE="";
+function getToken(){try{return localStorage.getItem("readix_token");}catch(e){return null;}}
+function setToken(t){try{if(t&&t!=="undefined")localStorage.setItem("readix_token",t);}catch(e){}}
+function clearToken(){try{localStorage.removeItem("readix_token");}catch(e){}}
+async function api(path,body,method){
+  const opt={method:method||(body?"POST":"GET"),headers:{"content-type":"application/json"}};
+  const t=getToken();if(t)opt.headers.authorization="Bearer "+t;
+  if(body)opt.body=JSON.stringify(body);
+  const r=await fetch(API_BASE+path,opt);let data={};try{data=await r.json();}catch(e){}
+  if(!r.ok)throw new Error((data&&data.error)||("Erreur "+r.status));
+  return data;
+}
+const PLAN_LABEL={free:"Gratuit",standard:"Standard",pro:"Pro",studio:"Studio"};
+function updateAccount(){
+  const a=$("#acctBtn"),nm=$("#umName"),em=$("#umEmail"),pl=$("#umPlan"),au=$("#umAuth"),lo=$("#umLogout");
+  if(APP.user){a.textContent=((APP.user.name||APP.user.email||"U")[0]||"U").toUpperCase();nm.textContent=APP.user.name||APP.user.email;em.textContent=APP.user.email;pl.textContent=PLAN_LABEL[APP.plan]||"Gratuit";au.style.display="none";lo.style.display="block";}
+  else{a.textContent="?";nm.textContent="Invité";em.textContent="non connecté";pl.textContent="Gratuit";au.style.display="block";lo.style.display="none";}
+}
+async function restoreSession(){const t=getToken();if(!t)return;try{const d=await api("/api/me");if(d&&d.user){APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();}}catch(e){clearToken();}}
+function openAuth(mode){
+  mode=mode||"login";
+  const dl=dialog(`<h3>${mode==="signup"?"Créer un compte":"Se connecter"}</h3>
+    ${mode==="signup"?'<input id="auName" class="rp-input" placeholder="Nom complet" style="margin-bottom:10px">':''}
+    <input id="auEmail" class="rp-input" type="email" placeholder="Adresse e-mail" style="margin-bottom:10px">
+    <input id="auPass" class="rp-input" type="password" placeholder="Mot de passe" style="margin-bottom:6px">
+    <div id="auErr" style="color:var(--danger);font-size:12.5px;min-height:16px;margin-bottom:8px"></div>
+    <div class="row"><button class="btn ghost sm" data-a="switch">${mode==="signup"?"J'ai déjà un compte":"Créer un compte"}</button><button class="btn sm" data-a="go">${mode==="signup"?"Créer mon compte":"Se connecter"}</button></div>`);
+  const emailEl=$("#auEmail",dl.root);if(emailEl)setTimeout(()=>emailEl.focus(),50);
+  dl.root.addEventListener("keydown",e=>{if(e.key==="Enter"){const g=dl.root.querySelector('[data-a="go"]');if(g)g.click();}});
+  dl.root.onclick=async e=>{const b=e.target.closest("[data-a]");if(!b)return;
+    if(b.dataset.a==="switch"){dl.close();openAuth(mode==="signup"?"login":"signup");return;}
+    if(b.dataset.a==="go"){
+      const email=($("#auEmail",dl.root).value||"").trim();const pass=$("#auPass",dl.root).value||"";
+      const nameEl=$("#auName",dl.root);const name=nameEl?(nameEl.value||"").trim():"";
+      const err=$("#auErr",dl.root);
+      if(!email||!pass||(mode==="signup"&&!name)){err.textContent="Veuillez remplir tous les champs.";return;}
+      b.disabled=true;err.textContent="";
+      try{const path=mode==="signup"?"/api/signup":"/api/login";
+        const d=await api(path,mode==="signup"?{name,email,password:pass}:{email,password:pass});
+        setToken(d.token);APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();dl.close();
+        toast("Bienvenue "+(d.user.name||d.user.email)+" !","ok");
+      }catch(ex){err.textContent=ex.message;b.disabled=false;}
+    }
+  };
+}
+function logout(){clearToken();APP.user=null;APP.plan="free";updateAccount();toast("Vous êtes déconnecté.","ok");}
+$("#umAuth").onclick=()=>{$("#acctMenu").classList.remove("open");openAuth("login");};
+$("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 /* ---------- en-tête, thème, menus, init ---------- */
 function updateHeader(){const t=activeTab();$("#docName").textContent=t&&t.pdf?t.name:"";updateSaveDot();
   $("#floatsig").classList.toggle("show",!!(t&&t.tool==="fillsign"&&t.pdf));}
@@ -1124,7 +1173,7 @@ $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)ret
 async function makeBlank(){try{const {PDFDocument}=PDFLib;const d=await PDFDocument.create();d.addPage([595,842]);const bytes=await d.save();createTab("Nouveau document.pdf");await openPdfBytes(bytes,"Nouveau document.pdf");openTool("editpdf"in{}?"view":"view");}catch(e){}}
 
 /* compte (Phase 1 : local, le back-end arrive en Phase 6) */
-$("#umAuth").onclick=()=>toast("Comptes & connexion : Phase 6 (back-end).","warn");
+updateAccount();
 $("#langSel").onchange=e=>{APP.lang=e.target.value;};
 
 /* palette de commande */
@@ -1143,6 +1192,7 @@ document.addEventListener("keydown",e=>{
 $("#rAi").onclick=()=>toast("Assistant IA : Phase 8.","warn");
 (async function init(){
   createTab();switchTab(APP.active,false);
+  try{await restoreSession();}catch(e){}
   try{await offerResume();}catch(e){}
   history.replaceState({tab:APP.active,tool:APP.tool},"","#view");
 })();
