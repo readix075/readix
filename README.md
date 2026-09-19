@@ -1,114 +1,40 @@
-# Readix Reader — plateforme complète
+# Readix Reader — Phase 5
 
-Généré par `generer-readix.sh`. Deux parties :
+Cette version correspond à la Phase 5 du cahier des charges : **outils avancés**.
 
-```
-readix-platform/
-├── public/            → le SITE (front-end statique, déployable tel quel sur Netlify)
-│   └── index.html
-├── server/            → le SERVEUR (back-end : comptes, Stripe, fonctions IA)
-│   ├── server.js
-│   ├── package.json
-│   ├── .env.example
-│   └── data/db.json
-├── netlify.toml
-└── README.md
-```
+## Fonctionnalités ajoutées / corrigées
 
-Le front-end fonctionne **seul** (tous les outils gratuits et signature tournent dans le
-navigateur). Le serveur ajoute les **comptes réels**, les **paiements** et les **fonctions IA**.
+- **Modifier** : saisie de texte corrigée. Le texte saisi est maintenant forcé en noir, avec caret visible, sélection lisible et contraste stable sur les pages PDF.
+- **OCR local** : reconnaissance de texte avec Tesseract.js, directement dans le navigateur, avec sélection de page/langue et export TXT.
+- **Caviarder** : zones noires aplaties dans le PDF exporté.
+- **Protéger** : chiffrement AES-256-GCM local d'une copie du PDF dans un conteneur `.readixprot`. Ce format est propre à Readix et n'est pas présenté comme un PDF standard avec mot de passe.
+- **Comparer** : comparaison de texte entre deux PDF.
+- **Métadonnées** : lecture et modification du titre, auteur, sujet, mots-clés, créateur et producteur, puis ré-enregistrement du PDF.
+- Les fonctions des Phases 1 à 4 restent présentes : lecture, modification, remplissage/signature, organisation, fusion, division/extraction, rotation, etc.
 
----
-
-## 1. Déployer le front-end (immédiat, gratuit)
-
-1. Rendez-vous sur https://app.netlify.com/drop
-2. Glissez-déposez le dossier `public/`.
-3. En ligne. Tous les outils gratuits marchent aussitôt.
-
----
-
-## 2. Lancer le serveur en local
-
-Pré-requis : Node.js 18 ou plus.
+## Lancer en local
 
 ```bash
-cd server
-cp .env.example .env      # puis remplissez les valeurs
 npm install
-npm start                 # http://localhost:8787
+npm start
 ```
 
-En développement, le serveur sert aussi le front-end : ouvrez http://localhost:8787
-et vous avez le site + l'API au même endroit.
+Puis ouvrir l'adresse indiquée par le serveur, généralement `http://localhost:3000`.
 
-### Variables d'environnement (fichier .env)
-- `JWT_SECRET` : longue chaîne aléatoire pour sécuriser les connexions.
-- `ANTHROPIC_API_KEY` : clé de l'API d'IA (reste **sur le serveur**).
-- `ANTHROPIC_MODEL` : modèle utilisé (par défaut `claude-sonnet-5`).
-- `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` : pour l'abonnement.
+## Déploiement Render
 
----
+- Type : **Web Service**
+- Build Command : `npm install`
+- Start Command : `npm start`
+- Runtime : Node
+- Node : 18+
 
-## 3. Points d'entrée de l'API
+Le serveur utilise la variable `PORT` fournie par l'hébergeur.
 
-| Méthode | Route                    | Rôle                                   |
-|--------:|--------------------------|----------------------------------------|
-| POST    | `/api/signup`            | Créer un compte (renvoie un jeton)     |
-| POST    | `/api/login`             | Se connecter                           |
-| GET     | `/api/me`                | Profil de l'utilisateur connecté       |
-| POST    | `/api/billing/checkout`  | Ouvrir le paiement Stripe (Premium)    |
-| POST    | `/api/billing/webhook`   | Stripe confirme l'abonnement           |
-| POST    | `/api/ai/:feature`       | Fonctions IA (lens, dialogue, extract…)|
+## Dépendances externes du navigateur
 
-Les fonctions IA disponibles : `lens`, `dialogue`, `compareai`, `factcheck`,
-`negociateur`, `conformite`, `extract`, `study`, `access`, `podcast`, `generate`,
-`translate`. Les fonctions `word` (PDF→Word) et `esign` (signature certifiée)
-nécessitent des services dédiés (LibreOffice headless ; prestataire eIDAS type Yousign).
+PDF.js, pdf-lib, JSZip, Tesseract.js et les polices sont chargés depuis des CDN. Une connexion Internet est donc nécessaire pour charger ces moteurs dans cette version.
 
----
+## Limites volontairement conservées
 
-## 4. Relier le front-end au serveur
-
-Dans `public/index.html`, la partie comptes/paiement est aujourd'hui une **démonstration
-en mémoire**. Pour la brancher au vrai serveur, remplacez ces appels par des `fetch`.
-Exemple pour l'inscription :
-
-```js
-const API = "http://localhost:8787"; // en prod : l'URL de votre serveur
-
-async function submitAuth() {
-  const r = await fetch(API + "/api/signup", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, email, password: pass }),
-  });
-  const data = await r.json();
-  if (data.token) { localStorage.setItem("readix_token", data.token); /* … */ }
-}
-```
-
-Et pour appeler une fonction IA (ex. Readix Lens) :
-
-```js
-const r = await fetch(API + "/api/ai/lens", {
-  method: "POST",
-  headers: {
-    "content-type": "application/json",
-    "authorization": "Bearer " + localStorage.getItem("readix_token"),
-  },
-  body: JSON.stringify({ text: texteDuPDF, question: "Résume ce document." }),
-});
-const { answer } = await r.json();
-```
-
----
-
-## 5. Mettre le serveur en ligne
-
-Hébergeurs simples pour le back-end : **Railway** ou **Render** (gratuits pour démarrer),
-ou **Fly.io**. Poussez le dossier `server/` sur GitHub, connectez-le, ajoutez les mêmes
-variables d'environnement, et pointez le front-end vers l'URL publique du serveur.
-
-Pour la production, remplacez la mini-base `data/db.json` par **Supabase** ou une base
-PostgreSQL managée.
+Le backend, les comptes/JWT/PostgreSQL, Stripe et les modules IA connectés au serveur restent prévus pour les phases suivantes du cahier des charges. Aucun faux backend ou faux paiement n'a été ajouté dans cette phase.
