@@ -266,6 +266,14 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .ai9-result{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);padding:14px;font-size:13px;line-height:1.6;color:var(--ink);max-height:430px;overflow:auto}
 .ai9-page{border:1px solid var(--brand);background:var(--brand-soft);color:var(--brand-ink);border-radius:7px;padding:1px 6px;font-size:11px;font-weight:700;cursor:pointer}
 .ai9-status{line-height:1.5}
+.ai9-source{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 12px;margin:4px 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ai9-source .source-status{font-size:11px;color:var(--ink-soft);min-width:180px;flex:1}
+.ai9-source .source-status strong{color:var(--ink)}
+.ai9-source .source-dot{width:7px;height:7px;border-radius:50%;background:#b5bac8;display:inline-block;margin-right:5px}
+.ai9-source.ready .source-dot{background:#24a56a}.ai9-source.warn .source-dot{background:#e09a27}.ai9-source.error .source-dot{background:#d9534f}
+.ai9-upload{display:none}
+.ai9-file-name{font-size:10.5px;color:var(--ink-faint);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* Phase 10 — compositeur Copilot type moteur IA */
 .ai10-copilot{min-height:420px;display:flex;flex-direction:column}
 .ai10-feed{flex:1;min-height:180px;max-height:380px;overflow:auto;padding:4px 2px 18px;display:flex;flex-direction:column;gap:10px}
@@ -800,11 +808,109 @@ function renderCopilotPanel(body){
 }
 function aiFeatureCardHTML(f){return `<div class="ai9-icon">${f.icon}</div><b>${f.name}</b><span>${f.desc}</span><small>${f.plan} · IA premium</small>`;}
 async function buildAI9ToolPanel(feature,t,panel){
-  const f=AI9_FEATURES.find(x=>x.id===feature);panel.innerHTML="";const head=el("div","ai9-panel-head");head.innerHTML=`<div><h3>${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan} · IA premium</span>`;panel.appendChild(head);
-  if(feature==="compareai"){panel.appendChild(el("p","ai9-status","PDF A : document ouvert. PDF B : choisissez une seconde version à comparer."));const file=el("input","ai9-file");file.type="file";file.accept="application/pdf";panel.appendChild(file);const q=el("textarea","ai9-input");q.placeholder="Question facultative : ex. Quels changements ont le plus d’impact ?";panel.appendChild(q);const run=el("button","btn sm","Comparer les documents");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!t.pdf){toast("Ouvrez d’abord un PDF dans l’onglet actif.","warn");return;}if(!file.files[0]){toast("Choisissez le PDF B.","warn");return;}try{const a=await extractPdfText(t);const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await file.files[0].arrayBuffer())}).promise;const b=await extractPdfText({pdf:bdoc});await runAI9(run,res,"compareai",`DOCUMENT A:\n${a}\n\nDOCUMENT B:\n${b}`,q.value,"");}catch(e){showAI9Error(res,e)} };return;}
-  if(feature==="workspace"){const ta=el("textarea","ai9-input");ta.placeholder="Le texte du PDF sera chargé automatiquement…";panel.appendChild(ta);const q=el("textarea","ai9-input");q.placeholder="Posez une question : ex. Quelles sont les dates importantes ?";panel.appendChild(q);const row=el("div","ai9-row");const load=el("button","btn ghost sm","Charger le document");const run=el("button","btn sm","Analyser");row.append(load,run);panel.appendChild(row);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);load.onclick=async()=>{try{ta.value=await ai9TextFallback();if(!ta.value)toast("Aucun texte extractible trouvé.","warn")}catch(e){toast(e.message,"err")}};run.onclick=async()=>{const text=ta.value.trim();if(!text){toast("Chargez d’abord le document.","warn");return}await runAI9(run,res,"workspace",text,q.value,"")};return;}
-  if(feature==="smartsearch"){const q=el("input","rp-input");q.placeholder="Ex. où parle-t-on des conditions de résiliation ?";panel.appendChild(q);panel.appendChild(el("p","ai9-status","La recherche comprend le sens de votre demande et renvoie les pages pertinentes."));const run=el("button","btn sm","Rechercher dans le document");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!q.value.trim())return toast("Saisissez une recherche.","warn");try{await runAI9(run,res,"smartsearch",await ai9TextFallback(),q.value,"")}catch(e){showAI9Error(res,e)}};return;}
-  if(feature==="extractdata"){const q=el("input","rp-input");q.placeholder="Ex. extraire noms, dates, montants et numéros de facture";panel.appendChild(q);panel.appendChild(el("p","ai9-status","Le résultat est structuré pour pouvoir être réutilisé ou exporté."));const run=el("button","btn sm","Extraire les données");panel.appendChild(run);const res=el("div","ai9-result ai9-json");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!t.pdf)return toast("Ouvrez un PDF.","warn");try{await runAI9(run,res,"extractdata",await ai9TextFallback(),q.value,"");const dl=el("button","btn ghost sm","Télécharger JSON");dl.onclick=()=>{const blob=new Blob([res.dataset.raw||"{}"],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="readix-donnees.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};res.after(dl)}catch(e){showAI9Error(res,e)}};return;}
+  const f=AI9_FEATURES.find(x=>x.id===feature);panel.innerHTML="";
+  const head=el("div","ai9-panel-head");
+  head.innerHTML=`<div><h3>${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan} · IA premium</span>`;panel.appendChild(head);
+
+  // Phase 18 — source documentaire explicite pour les modules IA avancés.
+  // Le document ouvert peut être utilisé, ou l'utilisateur peut téléverser un PDF directement ici.
+  const source={text:"",name:"",pages:0,doc:null};
+  const sourceBox=el("div","ai9-source");
+  const dot=el("span","source-dot");
+  const status=el("span","source-status");
+  status.innerHTML="<strong>Document source :</strong> aucun document chargé";
+  const useOpen=el("button","btn ghost sm","Utiliser le PDF ouvert");
+  const upload=el("button","btn ghost sm","Téléverser un PDF");
+  const input=el("input","ai9-upload");input.type="file";input.accept="application/pdf";input.hidden=true;
+  const nameEl=el("span","ai9-file-name");
+  sourceBox.append(dot,status,useOpen,upload,input,nameEl);panel.appendChild(sourceBox);
+
+  function setSource(text,name,pages,doc){
+    source.text=String(text||"");source.name=name||"Document PDF";source.pages=pages||0;source.doc=doc||null;
+    if(source.text.trim()){
+      sourceBox.classList.add("ready");sourceBox.classList.remove("warn","error");
+      status.innerHTML=`<strong>Document source :</strong> ${source.pages?source.pages+" page(s) · ":""} prêt pour l'IA`;
+      nameEl.textContent=source.name;
+    }else{
+      sourceBox.classList.remove("ready");sourceBox.classList.add("warn");
+      status.innerHTML="<strong>Document source :</strong> aucun texte extractible";nameEl.textContent=source.name||"";
+    }
+  }
+  async function useCurrent(){
+    const cur=activeTab();
+    if(!cur||!cur.pdf){toast("Ouvrez d’abord un PDF dans l’onglet actif ou téléversez-en un.","warn");return false;}
+    try{const text=await extractPdfText(cur);setSource(text,cur.name||"Document.pdf",cur.pdf.numPages,cur.pdf);return !!text.trim();}
+    catch(e){sourceBox.classList.add("error");status.innerHTML="<strong>Erreur :</strong> impossible de lire le PDF";toast(e.message,"err");return false;}
+  }
+  useOpen.onclick=useCurrent;
+  upload.onclick=()=>input.click();
+  input.onchange=async()=>{
+    const file=input.files&&input.files[0];if(!file)return;
+    try{
+      upload.disabled=true;upload.textContent="Lecture…";
+      const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+      const text=await extractPdfText({pdf:doc});
+      setSource(text,file.name||"Document.pdf",doc.numPages,doc);
+      if(!text.trim())toast("Ce PDF ne contient pas de texte extractible. Utilisez OCR pour un document scanné.","warn");
+    }catch(e){sourceBox.classList.add("error");status.innerHTML="<strong>Erreur :</strong> PDF impossible à lire";toast(e.message,"err");}
+    finally{upload.disabled=false;upload.textContent="Téléverser un PDF";input.value="";}
+  };
+
+  async function aiStatus(){
+    try{return await api('/api/ai/status');}
+    catch(e){return {ok:false,error:e.message};}
+  }
+  async function checkAIReady(){
+    const st=await aiStatus();
+    if(st.ok)return true;
+    const msg=st.error||"Le service IA n'est pas prêt.";
+    sourceBox.classList.add("error");
+    status.innerHTML=`<strong>IA :</strong> ${String(msg).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]))}`;
+    toast(msg,"err");return false;
+  }
+
+  if(feature==="compareai"){
+    if(t&&t.pdf)await useCurrent();
+    panel.appendChild(el("p","ai9-status","PDF A : document source. PDF B : choisissez une seconde version à comparer."));
+    const file=el("input","ai9-file");file.type="file";file.accept="application/pdf";panel.appendChild(file);
+    const q=el("textarea","ai9-input");q.placeholder="Question facultative : ex. Quels changements ont le plus d’impact ?";panel.appendChild(q);
+    const run=el("button","btn sm","Comparer les documents");panel.appendChild(run);
+    const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
+    run.onclick=async()=>{
+      if(!source.text){await useCurrent();}
+      if(!source.text){toast("Chargez ou utilisez un PDF source.","warn");return;}
+      if(!file.files[0]){toast("Téléversez le PDF B à comparer.","warn");return;}
+      if(!(await checkAIReady()))return;
+      try{const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await file.files[0].arrayBuffer())}).promise;const b=await extractPdfText({pdf:bdoc});await runAI9(run,res,"compareai",`DOCUMENT A (${source.name}):\n${source.text}\n\nDOCUMENT B (${file.files[0].name}):\n${b}`,q.value,"");}
+      catch(e){showAI9Error(res,e)}
+    };return;
+  }
+
+  if(feature==="workspace"){
+    const ta=el("textarea","ai9-input");ta.placeholder="Le texte du PDF apparaîtra ici après chargement. Vous pouvez aussi le vérifier/modifier.";panel.appendChild(ta);
+    const q=el("textarea","ai9-input");q.placeholder="Posez une question : ex. Quelles sont les dates importantes ?";panel.appendChild(q);
+    const row=el("div","ai9-row");const load=el("button","btn ghost sm","Charger le document");const run=el("button","btn sm","Analyser");row.append(load,run);panel.appendChild(row);
+    const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
+    load.onclick=async()=>{const ok=await useCurrent();ta.value=source.text;if(!ok&&!source.text)toast("Aucun texte extractible. Téléversez un autre PDF ou passez-le par OCR.","warn");};
+    input.addEventListener("change",()=>setTimeout(()=>{ta.value=source.text;},0));
+    run.onclick=async()=>{const text=(ta.value.trim()||source.text.trim());if(!text){toast("Téléversez un PDF ou chargez le document ouvert.","warn");return;}if(!(await checkAIReady()))return;await runAI9(run,res,"workspace",text,q.value,"")};return;
+  }
+
+  if(feature==="smartsearch"){
+    if(t&&t.pdf)await useCurrent();
+    const q=el("input","rp-input");q.placeholder="Ex. où parle-t-on des conditions de résiliation ?";panel.appendChild(q);
+    panel.appendChild(el("p","ai9-status","La recherche comprend le sens de votre demande et renvoie les pages pertinentes."));
+    const run=el("button","btn sm","Rechercher dans le document");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
+    run.onclick=async()=>{if(!source.text){toast("Téléversez un PDF ou utilisez le PDF ouvert.","warn");return;}if(!q.value.trim())return toast("Saisissez une recherche.","warn");if(!(await checkAIReady()))return;await runAI9(run,res,"smartsearch",source.text,q.value,"")};return;
+  }
+
+  if(feature==="extractdata"){
+    if(t&&t.pdf)await useCurrent();
+    const q=el("input","rp-input");q.placeholder="Ex. extraire noms, dates, montants et numéros de facture";panel.appendChild(q);
+    panel.appendChild(el("p","ai9-status","Le résultat est structuré pour pouvoir être réutilisé ou exporté."));
+    const run=el("button","btn sm","Extraire les données");panel.appendChild(run);const res=el("div","ai9-result ai9-json");res.style.display="none";panel.appendChild(res);
+    run.onclick=async()=>{if(!source.text){toast("Téléversez un PDF ou utilisez le PDF ouvert.","warn");return;}if(!(await checkAIReady()))return;try{await runAI9(run,res,"extractdata",source.text,q.value,"");const dl=el("button","btn ghost sm","Télécharger JSON");dl.onclick=()=>{const blob=new Blob([res.dataset.raw||"{}"],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="readix-donnees.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};res.after(dl)}catch(e){showAI9Error(res,e)}};return;
+  }
   if(feature==="copilot"){renderCopilotPanel(panel);return;}
 }
 async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
