@@ -234,6 +234,66 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .ai9-panel-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;margin-bottom:13px}.ai9-panel-head h3{font-family:'Space Grotesk',sans-serif;font-size:17px}.ai9-panel-head p{font-size:12px;color:var(--ink-soft);margin-top:4px;line-height:1.5}.ai9-input{width:100%;min-height:105px;margin:7px 0;padding:11px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface-2);color:var(--ink);font:13px Inter,sans-serif;line-height:1.5;resize:vertical}.ai9-input:focus{outline:none;border-color:var(--brand)}.ai9-file{margin:7px 0 10px;max-width:100%}.ai9-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.ai9-result{margin-top:13px;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-size:13px;line-height:1.6;color:var(--ink);white-space:normal;overflow:auto;max-height:520px}.ai9-page{border:0;background:var(--brand-soft);color:var(--brand-ink);border-radius:6px;padding:2px 6px;font-size:11px;font-weight:700;cursor:pointer;margin:0 2px}.ai9-page:hover{text-decoration:underline}.ai9-json{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;white-space:pre-wrap}
 @media(max-width:1050px){.ai9-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.ai9-wrap{padding:14px}.ai9-grid{grid-template-columns:1fr 1fr}.ai9-head{flex-direction:column}.ai9-card{min-height:135px}}
+
+/* ========================= PHASE 10 — IA FUTURISTE READIX ========================= */
+.ai9-wrap{position:relative;max-width:1120px;margin:0 auto;padding:28px 24px 44px;display:flex;flex-direction:column;gap:18px;isolation:isolate}
+.ai9-wrap:before{content:"";position:absolute;inset:8px 8px 24px;border-radius:28px;background:radial-gradient(circle at 10% 0%,rgba(99,82,255,.11),transparent 34%),radial-gradient(circle at 90% 12%,rgba(62,196,255,.09),transparent 30%),linear-gradient(rgba(99,82,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(99,82,255,.035) 1px,transparent 1px);background-size:auto,auto,28px 28px,28px 28px;pointer-events:none;z-index:-1}
+.ai9-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;padding:2px 4px 4px}
+.ai9-head h2{font-family:'Space Grotesk',sans-serif;font-size:28px;line-height:1.08;letter-spacing:-.045em;margin:0;background:linear-gradient(110deg,var(--ink) 8%,var(--brand) 55%,#36b9ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ai9-sub{color:var(--ink-soft);font-size:13px;line-height:1.6;margin-top:7px;max-width:760px}
+.ai9-status{font-size:10.5px;color:var(--ink-faint);white-space:nowrap}
+.ai9-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.ai9-card{position:relative;overflow:hidden;min-height:176px;border:1px solid rgba(120,125,160,.22);background:linear-gradient(155deg,rgba(255,255,255,.98),rgba(247,248,253,.94));border-radius:18px;padding:15px;text-align:left;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease;box-shadow:0 8px 26px rgba(23,28,50,.06);display:flex;flex-direction:column;align-items:flex-start}
+.ai9-card:before{content:"";position:absolute;right:-24px;top:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(101,83,255,.15),transparent 68%);pointer-events:none}
+.ai9-card:after{content:"";position:absolute;inset:auto 0 0;height:2px;background:linear-gradient(90deg,transparent,var(--brand),#38bfff,transparent);opacity:0;transition:.2s}
+.ai9-card:hover{transform:translateY(-3px);border-color:rgba(99,82,255,.42);box-shadow:0 14px 34px rgba(53,47,130,.13)}
+.ai9-card:hover:after,.ai9-card.on:after{opacity:1}
+.ai9-card.on{border-color:rgba(99,82,255,.55);background:linear-gradient(155deg,rgba(246,244,255,.98),rgba(237,244,255,.96));box-shadow:0 14px 36px rgba(80,69,180,.16)}
+.ai9-icon{width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(99,82,255,.16);border-radius:14px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(238,237,255,.9));color:var(--brand);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 16px rgba(81,73,185,.08);margin-bottom:12px}
+.ai9-icon svg{width:27px;height:27px;filter:drop-shadow(0 2px 5px rgba(77,65,195,.18))}
+.ai9-card b{font-family:'Space Grotesk',sans-serif;font-size:14px;line-height:1.2;letter-spacing:-.015em;color:var(--ink);margin-bottom:6px}
+.ai9-card span{font-size:11.5px;line-height:1.5;color:var(--ink-soft);flex:1;max-width:205px}
+.ai9-card small{font-size:9.5px;color:var(--ink-faint);margin-top:11px;letter-spacing:.02em}
+.ai9-panel{position:relative;border:1px solid rgba(120,125,160,.22);border-radius:22px;background:rgba(255,255,255,.92);padding:22px;box-shadow:0 16px 42px rgba(23,28,50,.08);overflow:hidden}
+.ai9-panel:before{content:"PDF / AI";position:absolute;right:20px;top:17px;font:700 9px/1 'Space Grotesk',sans-serif;letter-spacing:.18em;color:var(--ink-faint);opacity:.65}
+.ai9-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;padding-right:55px}
+.ai9-panel-head h3{font-family:'Space Grotesk',sans-serif;font-size:19px;letter-spacing:-.025em;margin:0;background:linear-gradient(110deg,var(--ink),var(--brand));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ai9-panel-head p{font-size:12px;line-height:1.5;color:var(--ink-soft);margin-top:5px;max-width:760px}
+.ai9-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ai9-input{width:100%;min-height:78px;resize:vertical;border:1px solid var(--line-strong);border-radius:13px;padding:12px 13px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:13px;line-height:1.5;box-sizing:border-box;margin-bottom:10px}
+.ai9-input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-glow)}
+.ai9-file{width:100%;margin:5px 0 12px;font-size:12px;color:var(--ink-soft)}
+.ai9-result{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);padding:14px;font-size:13px;line-height:1.6;color:var(--ink);max-height:430px;overflow:auto}
+.ai9-page{border:1px solid var(--brand);background:var(--brand-soft);color:var(--brand-ink);border-radius:7px;padding:1px 6px;font-size:11px;font-weight:700;cursor:pointer}
+.ai9-status{line-height:1.5}
+/* Phase 10 — compositeur Copilot type moteur IA */
+.ai10-copilot{min-height:420px;display:flex;flex-direction:column}
+.ai10-feed{flex:1;min-height:180px;max-height:380px;overflow:auto;padding:4px 2px 18px;display:flex;flex-direction:column;gap:10px}
+.ai10-empty{display:grid;place-items:center;min-height:210px;text-align:center;color:var(--ink-soft);padding:20px}
+.ai10-empty .orb{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;margin:0 auto 12px;background:radial-gradient(circle at 35% 30%,#fff,rgba(255,255,255,.55) 22%,rgba(100,82,255,.2) 48%,rgba(57,188,255,.12) 72%);border:1px solid rgba(99,82,255,.22);box-shadow:0 0 0 7px rgba(99,82,255,.04),0 10px 30px rgba(77,65,195,.12)}
+.ai10-empty .orb svg{width:31px;height:31px;color:var(--brand)}
+.ai10-empty b{font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--ink);display:block;margin-bottom:5px}
+.ai10-empty span{font-size:12px;max-width:530px;display:block;line-height:1.5}
+.ai10-msg{max-width:82%;padding:10px 13px;border-radius:14px;font-size:12.5px;line-height:1.55;box-shadow:0 5px 16px rgba(20,24,45,.05)}
+.ai10-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--brand),#6d66ff);color:#fff;border-bottom-right-radius:5px}
+.ai10-msg.bot{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px}
+.ai10-composer{position:relative;margin:2px auto 0;width:min(100%,790px);border:1px solid rgba(110,115,150,.28);border-radius:24px;background:rgba(255,255,255,.98);box-shadow:0 10px 32px rgba(28,31,55,.12),0 0 0 4px rgba(99,82,255,.035);padding:8px 9px 8px 13px;display:flex;align-items:flex-end;gap:8px}
+.ai10-composer:focus-within{border-color:rgba(99,82,255,.62);box-shadow:0 12px 36px rgba(65,58,160,.14),0 0 0 4px rgba(99,82,255,.07)}
+.ai10-plus,.ai10-mic,.ai10-send{width:34px;height:34px;flex:none;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.ai10-plus{background:transparent;color:var(--ink-soft);font-size:22px}
+.ai10-mic{background:transparent;color:var(--ink-soft)}
+.ai10-mic.listening{color:var(--danger);background:rgba(224,70,70,.09);animation:ai10pulse 1.1s infinite}
+.ai10-send{background:linear-gradient(145deg,var(--brand-2),var(--brand));color:#fff;box-shadow:0 5px 14px var(--brand-glow)}
+.ai10-send:disabled{opacity:.55;cursor:default}
+.ai10-mic svg,.ai10-send svg{width:18px;height:18px}
+.ai10-query{flex:1;min-width:0;min-height:34px;max-height:120px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:inherit;font-size:13px;line-height:1.45;padding:7px 2px}
+.ai10-query::placeholder{color:#8b8fa1}
+.ai10-hint{font-size:10px;color:var(--ink-faint);text-align:center;margin-top:8px}
+@keyframes ai10pulse{50%{transform:scale(1.08)}}
+@media(max-width:1050px){.ai9-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.ai9-wrap{padding:18px 12px 34px}.ai9-grid{grid-template-columns:1fr 1fr}.ai9-head{align-items:flex-start;flex-direction:column}.ai9-head h2{font-size:23px}.ai9-panel{padding:15px;border-radius:17px}.ai10-msg{max-width:94%}}
+@media(max-width:480px){.ai9-grid{grid-template-columns:1fr}.ai9-card{min-height:145px}}
+
 </style>
 </head>
 <body>
@@ -297,7 +357,7 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
   </div>
 
   <aside class="rrail">
-    <button class="ai" id="rAi" title="Assistant IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg></button>
+    <button class="ai" id="rAi" title="IA avancée" aria-label="Ouvrir l’IA avancée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5M6 15.5v3M4.5 17h3"/><circle cx="12" cy="10" r="1.25" fill="currentColor" stroke="none"/></svg></button>
     <button class="ico" data-panel="thumbs" title="Vignettes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
     <button class="ico" data-panel="outline" title="Signets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
     <button class="ico" data-panel="search" title="Recherche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
@@ -307,10 +367,10 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
   </aside>
 </div>
 
-<button class="cbot-fab" id="cbotFab" title="Assistant Readix" aria-label="Ouvrir l'assistant Readix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/></svg></button>
+<button class="cbot-fab" id="cbotFab" title="Assistant Readix — Guide" aria-label="Ouvrir l'assistant Readix — Guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/></svg></button>
 <div class="cbot" id="cbot" role="dialog" aria-label="Assistant Readix">
-  <div class="cbot-head"><div><div class="cbot-name">Assistant Readix</div><div class="cbot-sub">Aide sur les outils et les documents</div></div><button class="cbot-close" id="cbotClose">✕</button></div>
-  <div class="cbot-body" id="cbotBody"><div class="cbot-msg bot">Bonjour ! Je peux vous guider dans Readix : remplir, signer, modifier, organiser, fusionner, protéger ou utiliser les fonctions IA.</div><div class="cbot-chips"><button data-chat="Comment fusionner des PDF ?">Fusionner</button><button data-chat="Comment remplir et signer ?">Remplir & signer</button><button data-chat="Quels sont les outils IA ?">Outils IA</button></div></div>
+  <div class="cbot-head"><div><div class="cbot-name">Assistant Readix</div><div class="cbot-sub">Guide d’utilisation de Readix</div></div><button class="cbot-close" id="cbotClose">✕</button></div>
+  <div class="cbot-body" id="cbotBody"><div class="cbot-msg bot">Bonjour ! Je suis le guide Readix. Je vous explique comment utiliser les outils et dans quel ordre les utiliser. Je ne crée ni ne modifie vos fichiers.</div><div class="cbot-chips"><button data-chat="Comment fusionner des PDF ?">Fusionner</button><button data-chat="Comment remplir et signer ?">Remplir & signer</button><button data-chat="Quels sont les outils IA ?">Outils IA</button></div></div>
   <div class="cbot-inputrow"><input class="cbot-input" id="cbotInput" placeholder="Posez votre question…" autocomplete="off"><button class="cbot-send" id="cbotSend">Envoyer</button></div>
 </div>
 
@@ -563,11 +623,11 @@ async function fillPanel(name){
 function jumpToPage(i){const stage=$("#stage");const p=$$(".page,.fpage",stage).find(x=>+x.dataset.page===i);if(p)p.scrollIntoView({behavior:"smooth",block:"start"});}
 /* ---------- Phase 9 : Readix Intelligence documentaire ---------- */
 const AI9_FEATURES=[
-  {id:"workspace",name:"Readix AI Workspace",desc:"Analyse du document, questions-réponses et réponses avec références aux pages.",plan:"Pro",icon:"🧠"},
-  {id:"smartsearch",name:"Recherche intelligente",desc:"Recherche sémantique dans le document, même lorsque les mots exacts diffèrent.",plan:"Pro",icon:"🔎"},
-  {id:"extractdata",name:"Extraction structurée",desc:"Transforme les informations du PDF en données organisées et exportables.",plan:"Pro",icon:"📊"},
-  {id:"compareai",name:"Comparaison intelligente",desc:"Compare deux PDF et met en évidence les changements de contenu et de sens.",plan:"Pro",icon:"🆚"},
-  {id:"copilot",name:"Readix Copilot",desc:"Assistant contextuel qui comprend le document ouvert et vous guide dans les actions Readix.",plan:"Pro",icon:"🤖"}
+  {id:"workspace",name:"Readix AI Workspace",desc:"Analyse du document, questions-réponses et réponses avec références aux pages.",plan:"Pro",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="2.2"/><path d="M8.5 8h7M8.5 11h4.5M8.5 14h7"/><path d="M17.5 4.5l1.8-1.7M18.8 7.2h2.2"/></svg>'},
+  {id:"smartsearch",name:"Recherche intelligente",desc:"Recherche sémantique dans le document, même lorsque les mots exacts diffèrent.",plan:"Pro",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="5.8"/><path d="M15 15l5.1 5.1"/><path d="M7.7 10.5h5.6M10.5 7.7v5.6"/></svg>'},
+  {id:"extractdata",name:"Extraction structurée",desc:"Transforme les informations du PDF en données organisées et exportables.",plan:"Pro",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M8 16v-4M12 16V8M16 16v-7"/><path d="M7.5 18h9"/></svg>'},
+  {id:"compareai",name:"Comparaison intelligente",desc:"Compare deux PDF et met en évidence les changements de contenu et de sens.",plan:"Pro",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6l2 3-2 3H4zM14 12h6l-2 3 2 3h-6l-2-3z"/><path d="M12 9v6"/><path d="M8 17h2M14 7h2"/></svg>'},
+  {id:"copilot",name:"Readix Copilot",desc:"Assistant contextuel qui comprend le document ouvert et vous guide dans les actions Readix.",plan:"Pro",icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/><path d="M2.5 11v3M21.5 11v3"/></svg>'}
 ];
 async function ai9TextFallback(){const t=activeTab();if(!t||!t.pdf)return "";return extractPdfText(t);}
 async function extractPdfText(t){
@@ -589,7 +649,7 @@ async function runAI9(btn,res,feature,text,question,target){
 }
 async function renderAIAdvanced(t,stage){
   const wrap=el("div","ai9-wrap");
-  wrap.innerHTML=`<div class="ai9-head"><div><h2>Readix AI Workspace</h2><div class="ai9-sub">Une intelligence documentaire intégrée à Readix : comprendre, rechercher, extraire, comparer et agir sur vos PDF.</div></div><div class="ai9-status">Plan : ${PLAN_LABEL[APP.plan]||"Gratuit"}</div></div>`;
+  wrap.innerHTML=`<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Un espace d’intelligence documentaire pensé pour les PDF : comprendre, rechercher, extraire, comparer et être guidé, dans une interface Readix plus visuelle et plus futuriste.</div></div><div class="ai9-status">Plan : ${PLAN_LABEL[APP.plan]||"Gratuit"}</div></div>`;
   const grid=el("div","ai9-grid");wrap.appendChild(grid);
   const panel=el("div","ai9-panel");wrap.appendChild(panel);
   let selected="workspace";
@@ -599,7 +659,7 @@ async function renderAIAdvanced(t,stage){
   };
   const drawPanel=async()=>{
     const f=AI9_FEATURES.find(x=>x.id===selected);panel.innerHTML="";
-    const head=el("div","ai9-panel-head");head.innerHTML=`<div><h3>${f.icon} ${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan}</span>`;panel.appendChild(head);
+    const head=el("div","ai9-panel-head");head.innerHTML=`<div><h3>${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan} · IA premium</span>`;panel.appendChild(head);
     if(selected==="compareai"){
       panel.appendChild(el("p","ai9-status","PDF A : document ouvert. PDF B : choisissez une seconde version à comparer."));
       const file=el("input","ai9-file");file.type="file";file.accept="application/pdf";panel.appendChild(file);
@@ -635,10 +695,25 @@ async function renderAIAdvanced(t,stage){
       return;
     }
     if(selected==="copilot"){
-      const q=el("textarea","ai9-input");q.placeholder="Ex. : résume ce contrat, trouve les dates importantes ou explique la page 8…";panel.appendChild(q);
-      const hint=el("p","ai9-status","Le Copilot utilise le document ouvert comme contexte et peut vous guider vers les outils Readix adaptés.");panel.appendChild(hint);
-      const run=el("button","btn sm","Demander au Copilot");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
-      run.onclick=async()=>{if(!q.value.trim()){toast("Posez une question au Copilot.","warn");return;}const text=await ai9TextFallback();await runAI9(run,res,"copilot",text,q.value,"");};
+      const box=el("div","ai10-copilot");panel.appendChild(box);
+      const feed=el("div","ai10-feed");box.appendChild(feed);
+      const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Comment puis-je vous guider dans Readix ?</b><span>Posez votre question sur l’utilisation d’un outil, une étape ou le meilleur chemin pour réaliser une opération PDF.</span></div>';feed.appendChild(empty);
+      const composer=el("div","ai10-composer");
+      const plus=el("button","ai10-plus");plus.type="button";plus.title="Ouvrir les outils IA";plus.textContent="+";
+      const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Poser une question sur Readix…";q.setAttribute("aria-label","Question au Copilot Readix");
+      const mic=el("button","ai10-mic");mic.type="button";mic.title="Recherche vocale";mic.setAttribute("aria-label","Recherche vocale");mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
+      const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.setAttribute("aria-label","Envoyer la question");send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';
+      composer.append(plus,q,mic,send);box.appendChild(composer);
+      const hint=el("div","ai10-hint","Le Copilot vous explique les outils Readix. Il ne crée ni ne modifie vos fichiers.");box.appendChild(hint);
+      plus.onclick=()=>{selected="workspace";draw();drawPanel();};
+      const addMsg=(role,html)=>{const m=el("div","ai10-msg "+role);m.innerHTML=html;feed.appendChild(m);feed.scrollTop=feed.scrollHeight;return m;};
+      const submit=async()=>{const question=q.value.trim();if(!question)return;if(!APP.user){toast("Connectez-vous pour utiliser le Copilot.","warn");openAuth("login");return;}q.value="";q.style.height="34px";empty.remove();addMsg("user",pageAwareHTML(question));const pending=addMsg("bot",'<span class="spin"></span> Recherche dans le guide Readix…');send.disabled=true;try{const d=await api('/api/ai/chatbot',{message:question,history:CHAT_HISTORY.slice(-8)});pending.innerHTML=pageAwareHTML(d.answer||"Je n’ai pas trouvé d’instruction correspondante.");bindPageRefs(pending);CHAT_HISTORY.push({role:"user",content:question},{role:"assistant",content:d.answer||""});}catch(e){pending.textContent="Erreur : "+e.message;}finally{send.disabled=false;q.focus();}};
+      send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
+      // Recherche vocale via Web Speech API, sans envoyer l'audio au serveur.
+      let recognition=null;
+      const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang=(APP.lang||"fr").toLowerCase()==="en"?"en-US":"fr-FR";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{mic.classList.add("listening");mic.title="Écoute en cours…";};recognition.onresult=e=>{let finalText="";for(let i=e.resultIndex;i<e.results.length;i++)finalText+=e.results[i][0].transcript;if(finalText){q.value=finalText;q.dispatchEvent(new Event("input"));}};recognition.onerror=e=>{mic.classList.remove("listening");mic.title="Recherche vocale";if(e.error!=="aborted")toast("La recherche vocale n’est pas disponible : "+e.error,"warn");};recognition.onend=()=>{mic.classList.remove("listening");mic.title="Recherche vocale";};mic.onclick=()=>{try{if(mic.classList.contains("listening")){recognition.stop();}else{recognition.start();}}catch(e){}};
+      }else{mic.onclick=()=>toast("La recherche vocale n’est pas prise en charge par ce navigateur.","warn");}
       return;
     }
   };
@@ -1327,7 +1402,7 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- init ---------- */
-$("#rAi").onclick=()=>{$("#cbot").classList.add("open");$("#cbotInput").focus();};
+$("#rAi").onclick=()=>{ $("#cbot").classList.remove("open"); openTool("aiadvanced"); };
 (async function init(){
   createTab();switchTab(APP.active,false);
   try{await restoreSession();}catch(e){}
