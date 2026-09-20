@@ -306,6 +306,26 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 @media(max-width:700px){.ai9-wrap{padding:18px 12px 34px}.ai9-grid{grid-template-columns:1fr 1fr}.ai9-head{align-items:flex-start;flex-direction:column}.ai9-head h2{font-size:23px}.ai9-panel{padding:15px;border-radius:17px}.ai10-msg{max-width:94%}}
 @media(max-width:480px){.ai9-grid{grid-template-columns:1fr}.ai9-card{min-height:145px}}
 
+
+/* Phase 10.2 — IA flottante + Copilot conversations */
+.ai-float{position:absolute;left:clamp(70px,8vw,150px);right:70px;top:16px;bottom:16px;z-index:125;display:none;pointer-events:none}.ai-float.open{display:block}
+.ai-float-card{width:min(1120px,100%);height:100%;margin:0 auto;display:flex;flex-direction:column;pointer-events:auto;border:1px solid rgba(111,116,150,.28);border-radius:22px;background:rgba(255,255,255,.96);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);box-shadow:0 26px 70px rgba(25,28,55,.18),0 0 0 1px rgba(255,255,255,.55) inset;overflow:hidden}
+.ai-float.minimized{top:auto;bottom:16px;height:58px}.ai-float.minimized .ai-float-body{display:none}
+.ai-float-head{height:58px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,249,253,.94))}
+.ai-float-brand{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,var(--brand-2),var(--brand));box-shadow:0 7px 18px var(--brand-glow)}.ai-float-brand svg{width:19px;height:19px}
+.ai-float-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13.5px;color:var(--ink);letter-spacing:-.015em}.ai-float-sub{font-size:10px;color:var(--ink-faint);margin-top:2px}.ai-float-actions{margin-left:auto;display:flex;gap:4px}.ai-float-actions button{width:32px;height:32px;border:0;border-radius:9px;background:transparent;color:var(--ink-soft);cursor:pointer}.ai-float-actions button:hover{background:var(--surface-2);color:var(--ink)}
+.ai-float-body{flex:1;min-height:0;overflow:hidden;background:linear-gradient(180deg,rgba(248,249,253,.7),rgba(242,244,249,.82))}
+.ai9-float-home{height:100%;overflow:auto;padding:26px}.ai9-float-home .ai9-grid{grid-template-columns:repeat(5,minmax(0,1fr));max-width:1080px;margin:20px auto 0}.ai9-float-home .ai9-panel{display:none}
+.ai9-tool-view{height:100%;display:flex;flex-direction:column;min-height:0}.ai9-tool-toolbar{display:flex;align-items:center;gap:9px;padding:12px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.72)}.ai9-tool-toolbar .back-ai{border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:9px;padding:7px 10px;font-size:11px;cursor:pointer}.ai9-tool-toolbar .back-ai:hover{border-color:var(--brand);color:var(--brand)}.ai9-tool-toolbar .tool-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink)}.ai9-tool-content{flex:1;min-height:0;overflow:auto;padding:18px 22px}.ai9-tool-content>.ai9-panel{max-width:1080px;margin:0 auto;min-height:100%;box-sizing:border-box}
+.ai10-chat-shell{height:100%;display:grid;grid-template-columns:225px minmax(0,1fr);min-height:0}.ai10-chat-sidebar{border-right:1px solid var(--line);background:rgba(248,249,253,.86);display:flex;flex-direction:column;min-width:0}.ai10-newchat{margin:12px;border:1px solid rgba(99,82,255,.25);background:var(--brand-soft);color:var(--brand-ink);border-radius:10px;padding:9px 10px;text-align:left;font-size:11px;font-weight:700;cursor:pointer}.ai10-newchat:hover{border-color:var(--brand);background:rgba(99,82,255,.11)}.ai10-history{flex:1;overflow:auto;padding:0 8px 12px}.ai10-history-title{font-size:9.5px;color:var(--ink-faint);padding:6px 8px 8px;text-transform:uppercase;letter-spacing:.09em}.ai10-chat-item{width:100%;border:0;background:transparent;color:var(--ink-soft);padding:9px;border-radius:9px;text-align:left;cursor:pointer;display:flex;gap:7px;align-items:center}.ai10-chat-item:hover{background:var(--surface)}.ai10-chat-item.on{background:var(--brand-soft);color:var(--brand-ink)}.ai10-chat-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex:none}.ai10-chat-item .ct{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+.ai10-chat-main{min-width:0;min-height:0;display:flex;flex-direction:column;background:rgba(255,255,255,.65)}.ai10-chat-top{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.76)}.ai10-chat-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ai10-chat-meta{font-size:9.5px;color:var(--ink-faint);margin-left:auto}
+.ai10-feed{flex:1;min-height:0;max-height:none;overflow:auto;padding:22px clamp(16px,4vw,52px);display:flex;flex-direction:column;gap:13px}.ai10-empty{display:grid;place-items:center;min-height:260px;text-align:center;color:var(--ink-soft);padding:20px}.ai10-msg{max-width:min(760px,88%);padding:11px 14px;border-radius:15px;font-size:12.5px;line-height:1.6;box-shadow:0 5px 16px rgba(20,24,45,.05);position:relative}.ai10-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--brand),#6d66ff);color:#fff;border-bottom-right-radius:5px}.ai10-msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:5px}
+.ai10-attachment{display:flex;align-items:center;gap:9px;margin-top:9px;padding:7px 9px;border-radius:10px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.25);min-width:190px;max-width:300px}.ai10-msg.bot .ai10-attachment{background:var(--surface-2);border-color:var(--line)}.ai10-attachment img{width:34px;height:42px;object-fit:cover;border-radius:4px;background:#eef0f6;flex:none}.ai10-attachment .afn{font-size:10.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ai10-attachment .afs{font-size:9px;opacity:.72;margin-top:2px}
+.ai10-draft{display:flex;gap:7px;flex-wrap:wrap;padding:0 clamp(16px,4vw,52px) 8px}.ai10-draft-card{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid rgba(99,82,255,.2);background:var(--brand-soft);border-radius:9px;font-size:10px;color:var(--brand-ink)}.ai10-draft-card img{width:24px;height:30px;object-fit:cover;border-radius:3px;background:#fff}.ai10-draft-card button{border:0;background:transparent;color:inherit;cursor:pointer}
+.ai10-composer-wrap{padding:8px clamp(16px,4vw,52px) 16px;background:linear-gradient(180deg,transparent,rgba(248,249,253,.92) 30%)}.ai10-composer{position:relative;margin:0 auto;width:min(100%,820px);border:1px solid rgba(110,115,150,.28);border-radius:24px;background:rgba(255,255,255,.98);box-shadow:0 10px 32px rgba(28,31,55,.12),0 0 0 4px rgba(99,82,255,.035);padding:8px 9px 8px 13px;display:flex;align-items:flex-end;gap:8px}.ai10-plus-wrap{position:relative;flex:none}.ai10-plus,.ai10-mic,.ai10-send{width:34px;height:34px;flex:none;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer}.ai10-plus{background:transparent;color:var(--ink-soft);font-size:22px}.ai10-mic{background:transparent;color:var(--ink-soft)}.ai10-mic.listening{color:var(--danger);background:rgba(224,70,70,.09);animation:ai10pulse 1.1s infinite}.ai10-send{background:linear-gradient(145deg,var(--brand-2),var(--brand));color:#fff;box-shadow:0 5px 14px var(--brand-glow)}.ai10-send:disabled{opacity:.55;cursor:default}.ai10-mic svg,.ai10-send svg{width:18px;height:18px}.ai10-query{flex:1;min-width:0;min-height:34px;max-height:120px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:inherit;font-size:13px;line-height:1.45;padding:7px 2px}.ai10-query::placeholder{color:#8b8fa1}
+.ai10-plus-menu{position:absolute;left:0;bottom:44px;width:285px;padding:7px;border:1px solid rgba(110,115,150,.25);border-radius:14px;background:rgba(255,255,255,.99);box-shadow:0 16px 40px rgba(28,31,55,.16);display:none;z-index:30}.ai10-plus-menu.open{display:block}.ai10-plus-menu button{width:100%;display:flex;align-items:flex-start;gap:10px;border:0;background:transparent;border-radius:10px;padding:9px;text-align:left;color:var(--ink);cursor:pointer}.ai10-plus-menu button:hover{background:var(--surface-2)}.ai10-plus-menu .pm-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:15px;flex:none}.ai10-plus-menu b{font-size:11.5px;display:block;margin-bottom:2px}.ai10-plus-menu span{font-size:10px;line-height:1.35;color:var(--ink-soft);display:block}.ai10-context-note{font-size:9.5px;color:var(--ink-faint);text-align:center;margin-top:7px}.ai-float-copilot .ai-float-body{background:rgba(246,247,251,.92)}
+@media(max-width:900px){.ai-float{left:12px;right:62px;top:10px;bottom:10px}.ai9-float-home .ai9-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai10-chat-shell{grid-template-columns:1fr}.ai10-chat-sidebar{display:none}}@media(max-width:560px){.ai-float{left:8px;right:8px;top:8px;bottom:8px}.ai9-float-home{padding:16px}.ai9-float-home .ai9-grid{grid-template-columns:1fr}.ai10-msg{max-width:95%}}
+
 </style>
 </head>
 <body>
@@ -379,12 +399,17 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
   </aside>
 </div>
 
-<button class="cbot-fab" id="cbotFab" title="Assistant Readix — Guide" aria-label="Ouvrir l'assistant Readix — Guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/></svg></button>
-<div class="cbot" id="cbot" role="dialog" aria-label="Assistant Readix">
-  <div class="cbot-head"><div><div class="cbot-name">Assistant Readix</div><div class="cbot-sub">Guide d’utilisation de Readix</div></div><button class="cbot-close" id="cbotClose">✕</button></div>
-  <div class="cbot-body" id="cbotBody"><div class="cbot-msg bot">Bonjour ! Je suis le guide Readix. Je vous explique comment utiliser les outils et dans quel ordre les utiliser. Je ne crée ni ne modifie vos fichiers.</div><div class="cbot-chips"><button data-chat="Comment fusionner des PDF ?">Fusionner</button><button data-chat="Comment remplir et signer ?">Remplir & signer</button><button data-chat="Quels sont les outils IA ?">Outils IA</button></div></div>
-  <div class="cbot-inputrow"><input class="cbot-input" id="cbotInput" placeholder="Posez votre question…" autocomplete="off"><button class="cbot-send" id="cbotSend">Envoyer</button></div>
+<div class="ai-float" id="aiFloat" aria-hidden="true">
+  <div class="ai-float-card">
+    <div class="ai-float-head">
+      <div class="ai-float-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg></div>
+      <div><div class="ai-float-title" id="aiFloatTitle">Readix · IA avancée</div><div class="ai-float-sub" id="aiFloatSub">Espace IA flottant — votre onglet reste ouvert derrière.</div></div>
+      <div class="ai-float-actions"><button id="aiFloatMin" title="Réduire">−</button><button id="aiFloatClose" title="Fermer">×</button></div>
+    </div>
+    <div class="ai-float-body" id="aiFloatBody"></div>
+  </div>
 </div>
+<button class="cbot-fab" id="cbotFab" title="Readix Copilot — ouvrir / réduire" aria-label="Ouvrir ou réduire Readix Copilot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="8" width="16" height="11" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M2 12v3M22 12v3"/></svg></button>
 
 <div class="floatsig" id="floatsig">
   <h4>Mes signatures</h4>
@@ -415,20 +440,23 @@ function confirmSave(){
 /* ---------- IndexedDB (autosave) ---------- */
 let _db=null;
 function idb(){return new Promise((res,rej)=>{ if(_db)return res(_db);
-  const r=indexedDB.open("readix",1);
-  r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("tabs"))db.createObjectStore("tabs",{keyPath:"id"});};
+  const r=indexedDB.open("readix",2);
+  r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("tabs"))db.createObjectStore("tabs",{keyPath:"id"});if(!db.objectStoreNames.contains("copilotChats"))db.createObjectStore("copilotChats",{keyPath:"id"});};
   r.onsuccess=()=>{_db=r.result;res(_db);};r.onerror=()=>rej(r.error);
 });}
 async function idbSave(id,state){try{const db=await idb();const tx=db.transaction("tabs","readwrite");tx.objectStore("tabs").put({id,...state,ts:Date.now()});}catch(e){}}
 async function idbLoad(id){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("tabs").objectStore("tabs").get(id);q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null);});}catch(e){return null;}}
 async function idbAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("tabs").objectStore("tabs").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
 async function idbDel(id){try{const db=await idb();db.transaction("tabs","readwrite").objectStore("tabs").delete(id);}catch(e){}}
+async function idbChatSave(chat){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").put(chat);}catch(e){}}
+async function idbChatAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("copilotChats").objectStore("copilotChats").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
+async function idbChatDel(id){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").delete(id);}catch(e){}}
 
 /* ---------- état global ---------- */
 const APP={ tabs:[], active:null, tool:"home", theme:"light", lang:"fr",
   user:null, plan:"free" };
 function activeTab(){return APP.tabs.find(t=>t.id===APP.active)||null;}
-function newTabObj(name){return {id:"t"+Date.now()+Math.floor(Math.random()*1e3),name:name||"Nouvel onglet",bytes:null,pdf:null,tool:"home",page:1,zoom:1,fields:[],sigs:[],dirty:false};}
+function newTabObj(name){return {id:"t"+Date.now()+Math.floor(Math.random()*1e3),name:name||"Nouvel onglet",bytes:null,pdf:null,tool:"home",page:1,zoom:1,fields:[],sigs:[],dirty:false,nav:{stack:[{tool:"home",page:1}],index:0}};}
 
 /* ---------- helpers PDF ---------- */
 async function readAB(file){return await file.arrayBuffer();}
@@ -452,7 +480,7 @@ function createTab(name){const t=newTabObj(name);APP.tabs.push(t);switchTab(t.id
 function switchTab(id,push){
   APP.active=id;const t=activeTab();if(!t)return;
   APP.tool=t.tool||"home";
-  renderTabs();renderTools();renderView();updateHeader();
+  renderTabs();renderTools();renderView();updateHeader();updateNavBtns();
   if(push!==false)pushHist();
 }
 async function closeTab(id){
@@ -489,12 +517,12 @@ async function offerResume(){
   };
 }
 
-/* ---------- historique interne (précédent/suivant) ---------- */
-function pushHist(){try{history.pushState({tab:APP.active,tool:APP.tool},"","#"+(APP.tool||"home"));}catch(e){}updateNavBtns();}
-window.addEventListener("popstate",e=>{const s=e.state;if(!s)return;if(s.tab&&APP.tabs.find(t=>t.id===s.tab)){APP.active=s.tab;const t=activeTab();if(t){APP.tool=s.tool||"home";t.tool=APP.tool;}renderTabs();renderTools();renderView();updateHeader();}updateNavBtns();});
-function updateNavBtns(){/* les boutons ← → utilisent history.back/forward */}
-$("#navBack").onclick=()=>history.back();
-$("#navFwd").onclick=()=>history.forward();
+/* ---------- historique interne par onglet ---------- */
+function pushHist(state){const t=activeTab();if(!t)return;const nav=t.nav||(t.nav={stack:[{tool:t.tool||"home",page:t.page||1}],index:0});const next=state||{tool:t.tool||"home",page:t.page||1};const cur=nav.stack[nav.index];if(cur&&cur.tool===next.tool&&cur.page===next.page){updateNavBtns();return;}nav.stack=nav.stack.slice(0,nav.index+1);nav.stack.push(next);nav.index=nav.stack.length-1;updateNavBtns();}
+function updateNavBtns(){const t=activeTab(),nav=t&&t.nav;const back=!!(nav&&nav.index>0),fwd=!!(nav&&nav.index<nav.stack.length-1);$("#navBack").disabled=!back;$("#navFwd").disabled=!fwd;$("#navBack").classList.toggle("on",back);$("#navFwd").classList.toggle("on",fwd);}
+function navigateTab(delta){const t=activeTab();if(!t||!t.nav)return;const ni=t.nav.index+delta;if(ni<0||ni>=t.nav.stack.length)return;t.nav.index=ni;const st=t.nav.stack[ni];t.tool=st.tool||"home";t.page=st.page||t.page||1;APP.tool=t.tool;renderTabs();renderTools();renderView();updateHeader();updateNavBtns();}
+$("#navBack").onclick=()=>navigateTab(-1);
+$("#navFwd").onclick=()=>navigateTab(1);
 
 /* ---------- protection perte de données ---------- */
 window.addEventListener("beforeunload",e=>{if(APP.tabs.some(t=>t.dirty)){e.preventDefault();e.returnValue="";}});
@@ -538,9 +566,8 @@ async function openPdfBytes(bytes,name){
   if(!t){t=createTab(name);} 
   t.bytes=u8(bytes);t.name=name||t.name;
   try{ t.pdf=await pdfjsLib.getDocument({data:u8(bytes).slice(0)}).promise; }catch(e){toast("PDF illisible.","err");return;}
-  if(t.tool==="home")t.tool="view";
-  APP.tool=t.tool;
-  renderTabs();renderTools();renderView();updateHeader();
+  if(t.tool==="home"){t.tool="view";APP.tool="view";pushHist({tool:"view",page:t.page||1});}else APP.tool=t.tool;
+  renderTabs();renderTools();renderView();updateHeader();updateNavBtns();
   scheduleAutosave();
 }
 $("#hiddenFile").onchange=async e=>{const f=e.target.files[0];if(f){await openPdfBytes(await readAB(f),f.name);}e.target.value="";};
@@ -560,7 +587,6 @@ async function renderView(){
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
   if(t&&t.tool==="compare"){ return renderCompare(t,stage); }
-  if(t&&t.tool==="aiadvanced"){ return renderAIAdvanced(t,stage); }
   if(!t||!t.pdf){
     stage.classList.add("empty");
     const op=el("div","opener");
@@ -659,103 +685,59 @@ async function runAI9(btn,res,feature,text,question,target){
   try{const d=await api('/api/ai/'+feature,{text:text.slice(0,60000),question,target});res.dataset.raw=d.answer||"";showAI9Result(res,d.answer);}
   catch(e){showAI9Error(res,e)}finally{btn.disabled=false;btn.textContent=old;}
 }
-async function renderAIAdvanced(t,stage){
-  const wrap=el("div","ai9-wrap");
-  wrap.innerHTML=`<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Un espace d’intelligence documentaire pensé pour les PDF : comprendre, rechercher, extraire, comparer et être guidé, dans une interface Readix plus visuelle et plus futuriste.</div></div><div class="ai9-status">Plan : ${PLAN_LABEL[APP.plan]||"Gratuit"}</div></div>`;
-  const grid=el("div","ai9-grid");wrap.appendChild(grid);
-  const panel=el("div","ai9-panel");wrap.appendChild(panel);
-  let selected=window.__readixAI9Selected||"workspace"; window.__readixAI9Selected=null;
-  const draw=()=>{
-    grid.innerHTML="";
-    AI9_FEATURES.forEach(f=>{const c=el("button","ai9-card"+(f.id===selected?" on":""));c.innerHTML=`<div class="ai9-icon">${f.icon}</div><b>${f.name}</b><span>${f.desc}</span><small>${f.plan} · IA premium</small>`;c.onclick=()=>{selected=f.id;draw();drawPanel();};grid.appendChild(c);});
-  };
-  const drawPanel=async()=>{
-    const f=AI9_FEATURES.find(x=>x.id===selected);panel.innerHTML="";
-    const head=el("div","ai9-panel-head");head.innerHTML=`<div><h3>${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan} · IA premium</span>`;panel.appendChild(head);
-    if(selected==="compareai"){
-      panel.appendChild(el("p","ai9-status","PDF A : document ouvert. PDF B : choisissez une seconde version à comparer."));
-      const file=el("input","ai9-file");file.type="file";file.accept="application/pdf";panel.appendChild(file);
-      const q=el("textarea","ai9-input");q.placeholder="Question facultative : ex. Quels changements ont le plus d'impact ?";panel.appendChild(q);
-      const run=el("button","btn sm","Comparer les documents");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
-      run.onclick=async()=>{if(!t.pdf){toast("Ouvrez d'abord un PDF A.","warn");return;}if(!file.files[0]){toast("Choisissez le PDF B.","warn");return;}run.disabled=true;run.textContent="Comparaison…";try{const a=await extractPdfText(t);const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await file.files[0].arrayBuffer())}).promise;const b=await extractPdfText({pdf:bdoc});await runAI9(run,res,"compareai",`DOCUMENT A:\n${a}\n\nDOCUMENT B:\n${b}`,q.value,"");}catch(e){showAI9Error(res,e)}finally{run.disabled=false;run.textContent="Comparer les documents";}};
-      return;
-    }
-    if(selected==="workspace"){
-      const ta=el("textarea","ai9-input");ta.placeholder="Le texte du PDF sera chargé automatiquement…";panel.appendChild(ta);
-      const q=el("textarea","ai9-input");q.placeholder="Posez une question : ex. Quelles sont les dates importantes ?";panel.appendChild(q);
-      const row=el("div","ai9-row");const load=el("button","btn ghost sm","Charger le document");const run=el("button","btn sm","Analyser");row.append(load,run);panel.appendChild(row);
-      const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
-      load.onclick=async()=>{try{ta.value=await ai9TextFallback();if(!ta.value)toast("Aucun texte extractible trouvé.","warn");}catch(e){toast(e.message,"err")}};
-      run.onclick=async()=>{const text=ta.value.trim();if(!text){toast("Chargez d'abord le document.","warn");return;}await runAI9(run,res,"workspace",text,q.value,"");};
-      return;
-    }
-    if(selected==="smartsearch"){
-      const q=el("input","rp-input");q.placeholder="Ex. où parle-t-on des conditions de résiliation ?";panel.appendChild(q);
-      const hint=el("p","ai9-status","La recherche comprend le sens de votre demande et renvoie les pages pertinentes.");panel.appendChild(hint);
-      const run=el("button","btn sm","Rechercher dans le document");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);
-      run.onclick=async()=>{if(!q.value.trim()){toast("Saisissez une recherche.","warn");return;}run.disabled=true;const old=run.textContent;run.textContent="Recherche…";try{const text=await ai9TextFallback();await runAI9(run,res,"smartsearch",text,q.value,"");}catch(e){showAI9Error(res,e)}finally{run.disabled=false;run.textContent=old;}};
-      return;
-    }
-    if(selected==="extractdata"){
-      const q=el("input","rp-input");q.placeholder="Optionnel : ex. extraire les noms, dates, montants et numéros de facture";panel.appendChild(q);
-      const hint=el("p","ai9-status","Le résultat est structuré pour pouvoir être réutilisé ou exporté.");panel.appendChild(hint);
-      const run=el("button","btn sm","Extraire les données");panel.appendChild(run);const res=el("div","ai9-result ai9-json");res.style.display="none";panel.appendChild(res);
-      run.onclick=async()=>{if(!t.pdf){toast("Ouvrez un PDF.","warn");return;}run.disabled=true;const old=run.textContent;run.textContent="Extraction…";try{const text=await ai9TextFallback();await runAI9(run,res,"extractdata",text,q.value,"");const dl=el("button","btn ghost sm","Télécharger JSON");dl.onclick=()=>{const blob=new Blob([res.dataset.raw||"{}"],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="readix-donnees.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};res.after(dl);}catch(e){showAI9Error(res,e)}finally{run.disabled=false;run.textContent=old;}};
-      const oldShow=showAI9Result; // preserve global renderer while storing raw JSON below
-      const originalRun=runAI9;
-      // result storage is handled by the response hook below
-      return;
-    }
-    if(selected==="copilot"){
-      const box=el("div","ai10-copilot");panel.appendChild(box);
-      const feed=el("div","ai10-feed");box.appendChild(feed);
-      const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Comment puis-je vous guider dans Readix ?</b><span>Posez une question comme dans ChatGPT. Le Copilot peut comprendre votre document, la page actuelle et les outils Readix pour vous indiquer quoi faire, étape par étape.</span></div>';feed.appendChild(empty);
-      const context=el("div","ai10-context");box.appendChild(context);
-      const contextEmpty=el("span","ai10-context-empty","Aucun contexte ajouté — le document ouvert reste disponible comme contexte de base.");context.appendChild(contextEmpty);
-      const composer=el("div","ai10-composer");box.appendChild(composer);
-      const plusWrap=el("div","ai10-plus-wrap");
-      const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter du contexte";plus.setAttribute("aria-label","Ajouter du contexte");plus.textContent="+";
-      const menu=el("div","ai10-plus-menu");menu.innerHTML=`
-        <button type="button" data-ctx="doc"><span class="pm-ic">📄</span><span><b>Document ouvert</b><span>Ajouter le texte du PDF comme contexte.</span></span></button>
-        <button type="button" data-ctx="page"><span class="pm-ic">⌖</span><span><b>Page actuelle</b><span>Concentrer la question sur la page affichée.</span></span></button>
-        <button type="button" data-ctx="selection"><span class="pm-ic">✦</span><span><b>Texte sélectionné</b><span>Utiliser le texte sélectionné dans le document.</span></span></button>
-        <button type="button" data-ctx="pdf"><span class="pm-ic">＋</span><span><b>Ajouter un PDF</b><span>Ajouter un second document comme contexte.</span></span></button>`;
-      plusWrap.append(plus,menu);
-      const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Posez une question sur votre document ou sur Readix…";q.setAttribute("aria-label","Question au Copilot Readix");
-      const mic=el("button","ai10-mic");mic.type="button";mic.title="Recherche vocale";mic.setAttribute("aria-label","Recherche vocale");mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
-      const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.setAttribute("aria-label","Envoyer la question");send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';
-      composer.append(plusWrap,q,mic,send);
-      const hint=el("div","ai10-hint","Le Copilot est le guide intelligent de Readix. Il explique, contextualise et oriente ; il ne modifie pas vos fichiers tout seul.");box.appendChild(hint);
-      const ctxState={doc:false,page:false,selection:false,extraPdf:""};
-      const addBadge=(label,key)=>{const b=el("span","ai10-context-badge");b.innerHTML=`${label}<button type="button" aria-label="Retirer le contexte">×</button>`;b.querySelector("button").onclick=()=>{ctxState[key]=key==="extraPdf"?"":false;refreshContext();};context.appendChild(b);};
-      const refreshContext=()=>{context.innerHTML="";let n=0;if(ctxState.doc){addBadge("📄 Document ouvert","doc");n++;}if(ctxState.page){addBadge("⌖ Page "+(t.page||1),"page");n++;}if(ctxState.selection){addBadge("✦ Sélection","selection");n++;}if(ctxState.extraPdf){addBadge("＋ PDF ajouté","extraPdf");n++;}if(!n){const e=el("span","ai10-context-empty","Aucun contexte ajouté — le document ouvert reste disponible comme contexte de base.");context.appendChild(e);}};
-      const closeMenu=()=>menu.classList.remove("open");
-      plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open");};
-      menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;const type=b.dataset.ctx;closeMenu();
-        if(type==="doc"){if(!t.pdf){toast("Ouvrez d'abord un PDF.","warn");return;}ctxState.doc=!ctxState.doc;refreshContext();}
-        else if(type==="page"){if(!t.pdf){toast("Ouvrez d'abord un PDF.","warn");return;}ctxState.page=!ctxState.page;refreshContext();}
-        else if(type==="selection"){const sel=(window.getSelection&&window.getSelection().toString()||"").trim();if(!sel){toast("Sélectionnez d'abord du texte dans le document.","warn");return;}ctxState.selection=sel;refreshContext();}
-        else if(type==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;ctxState.extraPdf=await extractPdfText({pdf:bdoc});refreshContext();toast("PDF ajouté au contexte du Copilot.","ok");}catch(err){toast("Impossible de lire ce PDF : "+err.message,"err");}};input.click();}
-      };
-      const addMsg=(role,html)=>{const m=el("div","ai10-msg "+role);m.innerHTML=html;feed.appendChild(m);feed.scrollTop=feed.scrollHeight;return m;};
-      const buildContext=async()=>{let parts=[];if(t.pdf&&(!ctxState.doc&&!ctxState.page&&!ctxState.selection)){parts.push("DOCUMENT OUVERT : "+t.name+"\nPAGE ACTUELLE : "+(t.page||1));}
-        if(ctxState.doc&&t.pdf)parts.push("DOCUMENT OUVERT (texte extrait) :\n"+(await extractPdfText(t)).slice(0,45000));
-        if(ctxState.page&&t.pdf){const pn=t.page||1;const pg=await t.pdf.getPage(pn);const c=await pg.getTextContent();parts.push("PAGE ACTUELLE [Page "+pn+"] :\n"+c.items.map(x=>x.str).join(" "));}
-        if(ctxState.selection)parts.push("TEXTE SÉLECTIONNÉ :\n"+String(ctxState.selection).slice(0,12000));
-        if(ctxState.extraPdf)parts.push("PDF AJOUTÉ AU CONTEXTE :\n"+String(ctxState.extraPdf).slice(0,30000));
-        return parts.join("\n\n");};
-      const submit=async()=>{const question=q.value.trim();if(!question)return;if(!APP.user){toast("Connectez-vous pour utiliser le Copilot.","warn");openAuth("login");return;}q.value="";q.style.height="34px";empty.remove();addMsg("user",pageAwareHTML(question));const pending=addMsg("bot",'<span class="spin"></span> Analyse du contexte Readix…');send.disabled=true;try{const documentContext=await buildContext();const d=await api('/api/copilot',{message:question,history:CHAT_HISTORY.slice(-10),documentContext,page:t.page||1,documentName:t.name||""});pending.innerHTML=pageAwareHTML(d.answer||"Je n’ai pas trouvé de réponse correspondante.");bindPageRefs(pending);CHAT_HISTORY.push({role:"user",content:question},{role:"assistant",content:d.answer||""});}catch(e){pending.textContent="Erreur : "+e.message;}finally{send.disabled=false;q.focus();}};
-      send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
-      let recognition=null;const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-      if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang=(APP.lang||"fr").toLowerCase()==="en"?"en-US":"fr-FR";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{mic.classList.add("listening");mic.title="Écoute en cours…";};recognition.onresult=e=>{let finalText="";for(let i=e.resultIndex;i<e.results.length;i++)finalText+=e.results[i][0].transcript;if(finalText){q.value=finalText;q.dispatchEvent(new Event("input"));}};recognition.onerror=e=>{mic.classList.remove("listening");mic.title="Recherche vocale";if(e.error!=="aborted")toast("La recherche vocale n’est pas disponible : "+e.error,"warn");};recognition.onend=()=>{mic.classList.remove("listening");mic.title="Recherche vocale";};mic.onclick=()=>{try{if(mic.classList.contains("listening")){recognition.stop();}else{recognition.start();}}catch(e){}};}else{mic.onclick=()=>toast("La recherche vocale n’est pas prise en charge par ce navigateur.","warn");}
-      document.addEventListener("click",e=>{if(!plusWrap.contains(e.target))closeMenu();},{once:false});
-      return;
-    }
-  };
-  // Special renderer for structured extraction so raw JSON remains downloadable.
-  const originalRunAI9=window.runAI9;
-  wrap._draw=drawPanel;stage.appendChild(wrap);draw();await drawPanel();
+const AI_FLOAT_STATE={open:false,minimized:false,mode:"advanced",feature:"workspace"};
+const COPILOT_STATE={chats:[],activeId:null,draftAttachments:[],loaded:false};
+function chatId(){return "c"+Date.now()+Math.floor(Math.random()*1e4);}
+function newCopilotChat(){const now=Date.now();return {id:chatId(),title:"Nouvelle discussion",messages:[],createdAt:now,updatedAt:now};}
+async function initCopilotHistory(){if(COPILOT_STATE.loaded)return;COPILOT_STATE.chats=(await idbChatAll()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];await idbChatSave(c);}COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;}
+function activeCopilotChat(){return COPILOT_STATE.chats.find(c=>c.id===COPILOT_STATE.activeId)||null;}
+async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));}
+async function createCopilotChat(){const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;COPILOT_STATE.draftAttachments=[];await idbChatSave(c);if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
+async function switchCopilotChat(id){if(!COPILOT_STATE.chats.some(c=>c.id===id))return;COPILOT_STATE.activeId=id;COPILOT_STATE.draftAttachments=[];if(AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
+function fmtChatDate(ts){try{return new Date(ts).toLocaleDateString("fr-CA",{day:"2-digit",month:"2-digit"});}catch(e){return "";}}
+function attachmentHTML(a){const name=String(a.name||"Document.pdf").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));const thumb=a.thumb?`<img src="${a.thumb}" alt="">`:'<div style="width:34px;height:42px;display:grid;place-items:center;background:#eef0f6;border-radius:4px">PDF</div>';return `<div class="ai10-attachment">${thumb}<div style="min-width:0"><div class="afn">${name}</div><div class="afs">${a.type==="page"?"Page "+(a.page||""):"PDF joint"}</div></div></div>`;}
+function messageHTML(m){const text=pageAwareHTML(m.content||"");const att=(m.attachments||[]).map(attachmentHTML).join("");return `<div class="ai10-msg-text">${text}</div>${att}`;}
+async function makePdfAttachment(file,nameOverride){const bytes=new Uint8Array(await file.arrayBuffer());const doc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;let thumb="";try{const pg=await doc.getPage(1);const vp=pg.getViewport({scale:.34});const cv=document.createElement("canvas");cv.width=Math.max(90,Math.round(vp.width));cv.height=Math.max(120,Math.round(vp.height));await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;thumb=cv.toDataURL("image/jpeg",.72);}catch(e){}const text=await extractPdfText({pdf:doc});return {id:"a"+Date.now()+Math.floor(Math.random()*1e4),name:nameOverride||file.name||"Document.pdf",text:text.slice(0,60000),thumb,type:"pdf",pages:doc.numPages};}
+async function attachmentFromCurrentTab(t){if(!t||!t.pdf)return null;const blob=new Blob([u8(t.bytes)],{type:"application/pdf"});const f=new File([blob],t.name||"Document.pdf",{type:"application/pdf"});return await makePdfAttachment(f,t.name||"Document.pdf");}
+async function attachmentFromCurrentPage(t){if(!t||!t.pdf)return null;const pn=t.page||1;const pg=await t.pdf.getPage(pn);const c=await pg.getTextContent();let thumb="";try{const vp=pg.getViewport({scale:.34});const cv=document.createElement("canvas");cv.width=Math.max(90,Math.round(vp.width));cv.height=Math.max(120,Math.round(vp.height));await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;thumb=cv.toDataURL("image/jpeg",.72);}catch(e){}return {id:"p"+Date.now(),name:`${t.name||"Document.pdf"} — page ${pn}`,text:`[Page ${pn}]\n`+c.items.map(x=>x.str).join(" "),thumb,type:"page",page:pn,pages:1};}
+function renderCopilotHistory(side){side.innerHTML='<div class="ai10-history-title">Historique</div>';COPILOT_STATE.chats.forEach(c=>{const b=el("button","ai10-chat-item"+(c.id===COPILOT_STATE.activeId?" on":""));b.innerHTML=`<span class="dot"></span><span class="ct">${String(c.title||"Nouvelle discussion").replace(/[&<>]/g,"")}</span>`;b.onclick=()=>switchCopilotChat(c.id);side.appendChild(b);});}
+function renderCopilotPanel(body){
+  const shell=el("div","ai10-chat-shell");body.appendChild(shell);
+  const side=el("aside","ai10-chat-sidebar");const newBtn=el("button","ai10-newchat","＋ Nouvelle discussion");newBtn.onclick=()=>createCopilotChat();side.appendChild(newBtn);const hist=el("div","ai10-history");renderCopilotHistory(hist);side.appendChild(hist);shell.appendChild(side);
+  const main=el("section","ai10-chat-main");shell.appendChild(main);const chat=activeCopilotChat()||COPILOT_STATE.chats[0];
+  const top=el("div","ai10-chat-top");const title=el("div","ai10-chat-title",chat?chat.title:"Nouvelle discussion");const meta=el("div","ai10-chat-meta",chat?`${chat.messages.length} message${chat.messages.length>1?"s":""}`:"0 message");top.append(title,meta);main.appendChild(top);
+  const feed=el("div","ai10-feed");main.appendChild(feed);
+  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);feed.appendChild(msg);bindPageRefs(msg);});}
+  const draft=el("div","ai10-draft");COPILOT_STATE.draftAttachments.forEach((a,i)=>{const card=el("div","ai10-draft-card");card.innerHTML=`${a.thumb?`<img src="${a.thumb}" alt="">`:"<span>PDF</span>"}<span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(a.name||"PDF").replace(/[&<>]/g,"")}</span><button title="Retirer">×</button>`;card.querySelector("button").onclick=()=>{COPILOT_STATE.draftAttachments.splice(i,1);renderAIFloating();};draft.appendChild(card);});if(COPILOT_STATE.draftAttachments.length)main.appendChild(draft);
+  const cw=el("div","ai10-composer-wrap");const composer=el("div","ai10-composer");const plusWrap=el("div","ai10-plus-wrap");const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter un fichier ou un contexte";plus.textContent="+";const menu=el("div","ai10-plus-menu");menu.innerHTML='<button data-ctx="pdf"><span class="pm-ic">📎</span><span><b>Joindre un PDF</b><span>Le PDF sera attaché uniquement à cette question.</span></span></button><button data-ctx="doc"><span class="pm-ic">📄</span><span><b>Joindre le document ouvert</b><span>Créer une pièce jointe à partir de l’onglet actif.</span></span></button><button data-ctx="page"><span class="pm-ic">⌖</span><span><b>Joindre la page actuelle</b><span>Envoyer seulement la page affichée avec votre question.</span></span></button>' ;plusWrap.append(plus,menu);const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Message à Readix Copilot…";q.setAttribute("aria-label","Message à Readix Copilot");const mic=el("button","ai10-mic");mic.type="button";mic.title="Saisie vocale";mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';composer.append(plusWrap,q,mic,send);cw.appendChild(composer);const note=el("div","ai10-context-note","Les PDF joints sont indépendants : ils accompagnent le message qui les contient et restent visibles dans l’historique de cette discussion.");cw.appendChild(note);main.appendChild(cw);
+  const closeMenu=()=>menu.classList.remove("open");plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;closeMenu();const t=activeTab();try{if(b.dataset.ctx==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.multiple=true;input.onchange=async()=>{for(const f of [...(input.files||[])]){const a=await makePdfAttachment(f);COPILOT_STATE.draftAttachments.push(a);}renderAIFloating();};input.click();}else if(b.dataset.ctx==="doc"){const a=await attachmentFromCurrentTab(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}else if(b.dataset.ctx==="page"){const a=await attachmentFromCurrentPage(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}}catch(err){toast("Impossible d’ajouter ce contexte : "+err.message,"err");}};
+  const submit=async()=>{const question=q.value.trim();if(!question&&!COPILOT_STATE.draftAttachments.length)return;if(!APP.user){toast("Connectez-vous pour utiliser Readix Copilot.","warn");openAuth("login");return;}let c=activeCopilotChat();if(!c){await createCopilotChat();c=activeCopilotChat();}const attachments=COPILOT_STATE.draftAttachments.slice();const content=question||"Analyse les documents joints et indique-moi ce qui est important.";const userMsg={role:"user",content,attachments};c.messages.push(userMsg);if(c.messages.length===1)c.title=content.slice(0,48)+(content.length>48?"…":"");COPILOT_STATE.draftAttachments=[];await saveCopilotChat(c);renderAIFloating();
+    const currentHistory=c.messages.slice(0,-1).slice(-16).map(m=>({role:m.role,content:m.content,attachments:(m.attachments||[]).map(a=>({name:a.name,text:a.text,type:a.type,page:a.page}))}));
+    const pending=document.querySelector('.ai10-feed')?.lastElementChild;const sendBtn=document.querySelector('.ai10-send');if(sendBtn)sendBtn.disabled=true;
+    try{const d=await api('/api/copilot',{message:content,history:currentHistory,attachments:attachments.map(a=>({name:a.name,text:a.text,type:a.type,page:a.page})),page:activeTab()?.page||1,documentName:activeTab()?.name||""});c.messages.push({role:"assistant",content:d.answer||"Je n’ai pas trouvé de réponse correspondante."});await saveCopilotChat(c);renderAIFloating();}catch(e){c.messages.push({role:"assistant",content:"Erreur : "+e.message});await saveCopilotChat(c);renderAIFloating();}finally{const sb=document.querySelector('.ai10-send');if(sb)sb.disabled=false;}};
+  send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const rec=new SR();rec.lang=(APP.lang||"fr")==="en"?"en-US":"fr-FR";rec.interimResults=true;rec.continuous=false;rec.onstart=()=>{mic.classList.add("listening");};rec.onresult=e=>{let txt="";for(let i=e.resultIndex;i<e.results.length;i++)txt+=e.results[i][0].transcript;if(txt){q.value=txt;q.dispatchEvent(new Event("input"));}};rec.onend=()=>mic.classList.remove("listening");rec.onerror=()=>mic.classList.remove("listening");mic.onclick=()=>{try{mic.classList.contains("listening")?rec.stop():rec.start();}catch(e){}};}else mic.onclick=()=>toast("La saisie vocale n’est pas prise en charge par ce navigateur.","warn");
 }
+function aiFeatureCardHTML(f){return `<div class="ai9-icon">${f.icon}</div><b>${f.name}</b><span>${f.desc}</span><small>${f.plan} · IA premium</small>`;}
+async function buildAI9ToolPanel(feature,t,panel){
+  const f=AI9_FEATURES.find(x=>x.id===feature);panel.innerHTML="";const head=el("div","ai9-panel-head");head.innerHTML=`<div><h3>${f.name}</h3><p>${f.desc}</p></div><span class="ai9-status">${f.plan} · IA premium</span>`;panel.appendChild(head);
+  if(feature==="compareai"){panel.appendChild(el("p","ai9-status","PDF A : document ouvert. PDF B : choisissez une seconde version à comparer."));const file=el("input","ai9-file");file.type="file";file.accept="application/pdf";panel.appendChild(file);const q=el("textarea","ai9-input");q.placeholder="Question facultative : ex. Quels changements ont le plus d’impact ?";panel.appendChild(q);const run=el("button","btn sm","Comparer les documents");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!t.pdf){toast("Ouvrez d’abord un PDF dans l’onglet actif.","warn");return;}if(!file.files[0]){toast("Choisissez le PDF B.","warn");return;}try{const a=await extractPdfText(t);const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await file.files[0].arrayBuffer())}).promise;const b=await extractPdfText({pdf:bdoc});await runAI9(run,res,"compareai",`DOCUMENT A:\n${a}\n\nDOCUMENT B:\n${b}`,q.value,"");}catch(e){showAI9Error(res,e)} };return;}
+  if(feature==="workspace"){const ta=el("textarea","ai9-input");ta.placeholder="Le texte du PDF sera chargé automatiquement…";panel.appendChild(ta);const q=el("textarea","ai9-input");q.placeholder="Posez une question : ex. Quelles sont les dates importantes ?";panel.appendChild(q);const row=el("div","ai9-row");const load=el("button","btn ghost sm","Charger le document");const run=el("button","btn sm","Analyser");row.append(load,run);panel.appendChild(row);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);load.onclick=async()=>{try{ta.value=await ai9TextFallback();if(!ta.value)toast("Aucun texte extractible trouvé.","warn")}catch(e){toast(e.message,"err")}};run.onclick=async()=>{const text=ta.value.trim();if(!text){toast("Chargez d’abord le document.","warn");return}await runAI9(run,res,"workspace",text,q.value,"")};return;}
+  if(feature==="smartsearch"){const q=el("input","rp-input");q.placeholder="Ex. où parle-t-on des conditions de résiliation ?";panel.appendChild(q);panel.appendChild(el("p","ai9-status","La recherche comprend le sens de votre demande et renvoie les pages pertinentes."));const run=el("button","btn sm","Rechercher dans le document");panel.appendChild(run);const res=el("div","ai9-result");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!q.value.trim())return toast("Saisissez une recherche.","warn");try{await runAI9(run,res,"smartsearch",await ai9TextFallback(),q.value,"")}catch(e){showAI9Error(res,e)}};return;}
+  if(feature==="extractdata"){const q=el("input","rp-input");q.placeholder="Ex. extraire noms, dates, montants et numéros de facture";panel.appendChild(q);panel.appendChild(el("p","ai9-status","Le résultat est structuré pour pouvoir être réutilisé ou exporté."));const run=el("button","btn sm","Extraire les données");panel.appendChild(run);const res=el("div","ai9-result ai9-json");res.style.display="none";panel.appendChild(res);run.onclick=async()=>{if(!t.pdf)return toast("Ouvrez un PDF.","warn");try{await runAI9(run,res,"extractdata",await ai9TextFallback(),q.value,"");const dl=el("button","btn ghost sm","Télécharger JSON");dl.onclick=()=>{const blob=new Blob([res.dataset.raw||"{}"],{type:"application/json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="readix-donnees.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};res.after(dl)}catch(e){showAI9Error(res,e)}};return;}
+  if(feature==="copilot"){renderCopilotPanel(panel);return;}
+}
+async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
+  if(AI_FLOAT_STATE.mode==="copilot"){await initCopilotHistory();body.innerHTML="";renderCopilotPanel(body);return;}
+  body.innerHTML="";const selected=AI_FLOAT_STATE.feature;
+  if(!selected||selected==="__home"){const home=el("div","ai9-float-home");home.innerHTML='<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Comprendre, rechercher, extraire et comparer vos documents PDF avec les moteurs IA de Readix.</div></div><div class="ai9-status">Plan : '+(PLAN_LABEL[APP.plan]||"Gratuit")+'</div></div>';const grid=el("div","ai9-grid");AI9_FEATURES.forEach(x=>{const c=el("button","ai9-card");c.innerHTML=aiFeatureCardHTML(x);c.onclick=()=>{AI_FLOAT_STATE.feature=x.id;renderAIFloating();};grid.appendChild(c)});home.appendChild(grid);body.appendChild(home);return;}
+  const f=AI9_FEATURES.find(x=>x.id===selected);if(!f){AI_FLOAT_STATE.feature="__home";return renderAIFloating();}
+  const view=el("div","ai9-tool-view");const bar=el("div","ai9-tool-toolbar");const back=el("button","back-ai","← Tous les modules");back.onclick=()=>{AI_FLOAT_STATE.feature="__home";renderAIFloating()};bar.append(back,el("span","tool-title",f.name));view.appendChild(bar);const content=el("div","ai9-tool-content");view.appendChild(content);body.appendChild(view);const panel=el("div","ai9-panel");content.appendChild(panel);await buildAI9ToolPanel(selected,activeTab(),panel);}
+function openAIFloating(feature){if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot"&&feature==="copilot"){AI_FLOAT_STATE.open=false;return renderAIFloating();}AI_FLOAT_STATE.open=true;AI_FLOAT_STATE.minimized=false;AI_FLOAT_STATE.mode=feature==="copilot"?"copilot":"advanced";AI_FLOAT_STATE.feature=feature||"__home";renderAIFloating();}
+function toggleCopilotFloating(){if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot"){AI_FLOAT_STATE.open=false;renderAIFloating();}else openAIFloating("copilot");}
+function closeAIFloating(){AI_FLOAT_STATE.open=false;renderAIFloating();}
+function toggleAIMin(){if(!AI_FLOAT_STATE.open)return;AI_FLOAT_STATE.minimized=!AI_FLOAT_STATE.minimized;renderAIFloating();}
+async function renderAIAdvanced(t,stage){openAIFloating("__home");}
 
 /* ---------- catalogue d'outils (Phase 1 : réels) ---------- */
 const TOOLS=[
@@ -786,9 +768,10 @@ function renderTools(){
   $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool));
 }
 function openTool(id){
+  if(id==="aiadvanced"){openAIFloating("__home");return;}
   let t=activeTab();if(!t){t=createTab();}
-  t.tool=id;APP.tool=id;
-  renderTabs();renderTools();renderView();updateHeader();pushHist();
+  t.tool=id;APP.tool=id;pushHist({tool:id,page:t.page||1});
+  renderTabs();renderTools();renderView();updateHeader();
   $("#floatsig").classList.toggle("show",id==="fillsign"&&!!t.pdf);
 }
 $$(".mtab").forEach(m=>m.onclick=()=>{ if(m.dataset.view==="home")openTool("view"); else openTool(m.dataset.tool); });
@@ -1357,9 +1340,6 @@ function openPricing(){
   $('#priceMonth',dl.root).onclick=()=>setPeriod('month'); $('#priceYear',dl.root).onclick=()=>setPeriod('year'); setPeriod('month');
   $$('.price-card button[data-plan]',dl.root).forEach(b=>b.onclick=async()=>{try{if(!APP.user){dl.close();openAuth('login');return;}b.disabled=true;b.textContent='Ouverture…';const d=await api('/api/billing/checkout',{plan:b.dataset.plan,period});if(d.url)location.href=d.url;else throw new Error(d.error||'Checkout indisponible');}catch(e){b.disabled=false;b.textContent='Choisir';toast(e.message,'err');}});
 }
-function appendChat(role,text){const body=$('#cbotBody');const m=el('div','cbot-msg '+role,text);body.appendChild(m);body.scrollTop=body.scrollHeight;}
-let CHAT_HISTORY=[];
-async function sendChat(text){text=(text||'').trim();if(!text)return;if(!APP.user){toast('Connectez-vous pour utiliser l’assistant.','warn');openAuth('login');return;}appendChat('user',text);CHAT_HISTORY.push({role:'user',content:text});$('#cbotInput').value='';const pending=el('div','cbot-msg bot','Réflexion…');$('#cbotBody').appendChild(pending);try{const d=await api('/api/ai/chatbot',{message:text,history:CHAT_HISTORY.slice(-10)});pending.textContent=d.answer||'Je n’ai pas de réponse pour le moment.';CHAT_HISTORY.push({role:'assistant',content:d.answer||''});}catch(e){pending.textContent='Erreur : '+e.message;}$('#cbotBody').scrollTop=$('#cbotBody').scrollHeight;}
 async function restoreSession(){const t=getToken();if(!t)return;try{const d=await api("/api/me");if(d&&d.user){APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();}}catch(e){clearToken();}}
 function openAuth(mode){
   mode=mode||"login";
@@ -1407,12 +1387,11 @@ window.addEventListener("resize",fixMob);fixMob();
 function bindMenu(btn,menu){btn.onclick=e=>{e.stopPropagation();const open=menu.classList.contains("open");$$(".menu.open").forEach(m=>m.classList.remove("open"));if(!open)menu.classList.add("open");};}
 bindMenu($("#createBtn"),$("#createMenu"));bindMenu($("#acctBtn"),$("#acctMenu"));
 $('#umPricing').onclick=()=>{openPricing();};
-$("#cbotFab").onclick=()=>{ $("#cbot").classList.remove("open"); window.__readixAI9Selected="copilot"; openTool("aiadvanced"); };
-$('#cbotClose').onclick=()=>$('#cbot').classList.remove('open');
-$('#cbotSend').onclick=()=>sendChat($('#cbotInput').value);
-$('#cbotInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat(e.target.value);});
-$$('#cbotBody [data-chat]').forEach(b=>b.onclick=()=>sendChat(b.dataset.chat));
+$("#cbotFab").onclick=()=>toggleCopilotFloating();
+$("#aiFloatClose").onclick=()=>closeAIFloating();
+$("#aiFloatMin").onclick=()=>toggleAIMin();
 document.addEventListener("click",()=>$$(".menu.open").forEach(m=>m.classList.remove("open")));
+document.addEventListener("click",e=>{$$(".ai10-plus-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
 $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)return;const a=b.dataset.create;
   if(a==="tab"){createTab();openTool("view");}
   else if(a==="blank"){makeBlank();}
@@ -1437,13 +1416,14 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- init ---------- */
-$("#rAi").onclick=()=>{ $("#cbot").classList.remove("open"); window.__readixAI9Selected="workspace"; openTool("aiadvanced"); };
+$("#rAi").onclick=()=>openAIFloating("__home");
 (async function init(){
   createTab();switchTab(APP.active,false);
   try{await restoreSession();}catch(e){}
   try{await offerResume();}catch(e){}
   if(new URLSearchParams(location.search).get("pricing")==="1") setTimeout(openPricing,250);
-  history.replaceState({tab:APP.active,tool:APP.tool},"","#view");
+  updateNavBtns();
+  await initCopilotHistory();
 })();
 </script>
 </body>
