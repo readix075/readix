@@ -831,7 +831,17 @@ function renderCopilotPanel(body){
     const currentHistory=c.messages.slice(0,-1).slice(-16).map(m=>({role:m.role,content:m.content,attachments:(m.attachments||[]).map(a=>({name:a.name,text:a.text,type:a.type,page:a.page}))}));
     const pending=document.querySelector('.ai10-feed')?.lastElementChild;const sendBtn=document.querySelector('.ai10-send');if(sendBtn)sendBtn.disabled=true;
     try{const current=activeTab();let documentContext="";if(current&&current.pdf){documentContext=await extractPdfText(current);}
-      const d=await api('/api/copilot/action',{message:content,history:currentHistory,attachments:attachments.map(a=>({name:a.name,text:a.text,type:a.type,page:a.page})),documentContext:documentContext.slice(0,45000),page:current?.page||1,documentName:current?.name||""});
+      let d;
+      const actionPayload={message:content,history:currentHistory,attachments:attachments.map(a=>({name:a.name,text:a.text,type:a.type,page:a.page})),documentContext:documentContext.slice(0,45000),page:current?.page||1,documentName:current?.name||""};
+      try {
+        d=await api('/api/copilot/action',actionPayload);
+      } catch(firstErr) {
+        // Compatibilité avec certains déploiements/reverse-proxy qui ne publient pas encore l'alias /action.
+        if(String(firstErr.message||"").includes("404")) {
+          try { d=await api('/api/copilot/actions',actionPayload); }
+          catch(secondErr) { throw new Error(`Le serveur Readix ne publie pas le moteur Copilot (404). Redéployez le dossier server de la Phase 19.1. Détail: ${secondErr.message}`); }
+        } else throw firstErr;
+      }
       let answer=d.answer||"Je n’ai pas trouvé de réponse correspondante.";
       const actions=Array.isArray(d.actions)?d.actions:[];
       const destructive=actions.filter(a=>a&&a.type==="delete_pages");
