@@ -129,6 +129,25 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
 
 app.use(express.json({ limit: "12mb" }));
 
+// Diagnostic public: permet de distinguer un ancien déploiement Render d'une erreur IA.
+// N'expose AUCUN secret : uniquement la présence (true/false) des variables de configuration.
+app.get("/api/health", (req, res) => res.json({
+  ok: true,
+  service: "readix",
+  version: "19.1",
+  actionEngine: true,
+  copilotAction: true,
+  config: {
+    database: !!DATABASE_URL,
+    aiKey: !!ANTHROPIC_API_KEY,
+    aiModel: ANTHROPIC_MODEL,
+    stripe: !!process.env.STRIPE_SECRET_KEY,
+    clientUrl: CLIENT_URL
+  },
+  timestamp: new Date().toISOString()
+}));
+
+
 // ---- Auth ----
 function sign(user) { return jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "30d" }); }
 async function auth(req, res, next) {
@@ -239,17 +258,44 @@ const AI_PROMPTS = {
 };
 const AI_MIN_LEVEL = { workspace:2, smartsearch:2, extractdata:2, compareai:2, copilot:2 };
 
-async function callAnthropic(system, userContent) {
+async function anthropicMessage(payload) {
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquante");
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 2000, system, messages: [{ role: "user", content: userContent }] }),
-  });
-  if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
-  const data = await r.json();
+  const requestedModel = payload.model || ANTHROPIC_MODEL;
+  const models = [requestedModel];
+  // Si Render conserve un ancien nom de modèle dans l'environnement, retente automatiquement avec le modèle par défaut actuel.
+  if (requestedModel !== "claude-sonnet-5") models.push("claude-sonnet-5");
+  let last = "";
+  for (const model of models) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
+      body:JSON.stringify({...payload,model})
+    });
+    const body = await r.text();
+    if (r.ok) {
+      try { return JSON.parse(body); } catch { throw new Error("Réponse JSON invalide reçue d’Anthropic."); }
+    }
+    last = `Anthropic ${r.status} avec le modèle ${model}: ${body.slice(0,1200)}`;
+    if (r.status !== 404) break;
+  }
+  throw new Error(last || "Service IA indisponible");
+}
+
+async function callAnthropic(system, userContent) {
+  const data = await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:2000,system,messages:[{role:"user",content:userContent}]});
   return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
 }
+
+app.get("/api/ai/status", auth, async (req, res) => {
+  try {
+    const quota = AI_QUOTA[req.user.plan] ?? 0;
+    const used = await getUsage(req.user.email);
+    if (!ANTHROPIC_API_KEY) return res.status(503).json({ ok:false, error:"La clé IA du serveur n’est pas configurée (ANTHROPIC_API_KEY)." });
+    if (levelOf(req.user.plan) < 2) return res.status(402).json({ ok:false, error:"Un abonnement Pro ou Studio est requis pour les modules IA avancés." });
+    if (used >= quota) return res.status(429).json({ ok:false, error:`Quota IA mensuel atteint (${quota}).` });
+    res.json({ ok:true, plan:req.user.plan, used, quota, model:ANTHROPIC_MODEL });
+  } catch (e) { res.status(500).json({ ok:false, error:e.message }); }
+});
 
 app.post("/api/ai/chatbot", auth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
@@ -355,6 +401,75 @@ ${documentContext ? "CONTEXTE FOURNI PAR READIX :\n" + documentContext : "Aucun 
     res.status(500).json({ error: e.message });
   }
 });
+
+async function handleCopilotAction(req, res) {
+  console.log("[COPILOT ACTION]", req.method, req.path, "user=", req.user?.email, "plan=", req.user?.plan);
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error:"Readix Copilot n’est pas configuré sur le serveur (ANTHROPIC_API_KEY manquante)." });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-12) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 45000);
+  const attachments = Array.isArray(req.body && req.body.attachments) ? req.body.attachments.slice(0, 5) : [];
+  const page = Number(req.body && req.body.page) || 1;
+  const documentName = String((req.body && req.body.documentName) || "").slice(0, 180);
+  if (!message) return res.status(400).json({ error:"Message vide" });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (levelOf(req.user.plan) < (AI_MIN_LEVEL.copilot ?? 2)) return res.status(402).json({ error:"Readix Copilot est disponible avec le plan Pro ou supérieur." });
+  if (used >= quota) return res.status(429).json({ error:`Quota IA mensuel atteint (${quota}).` });
+  const clean = a => ({name:String(a?.name||"Document.pdf").slice(0,160),page:Number(a?.page||0)||0,text:String(a?.text||"").slice(0,35000)});
+  const atts=attachments.map(clean).filter(a=>a.text);
+  const hist=history.filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||"").slice(0,8000)}));
+  const actionSystem = `Tu es le moteur d’actions de Readix Copilot. Tu dois comprendre la demande puis décider si Readix doit simplement répondre ou réellement exécuter une action. Réponds UNIQUEMENT avec un JSON valide, sans markdown.
+
+Schéma exact : {"answer":"texte court à afficher à l’utilisateur","actions":[{"type":"...","title":"...","...":...}]}
+
+Actions autorisées :
+- create_pdf : {type,title,content} crée un vrai PDF local à partir du contenu fourni.
+- create_docx : {type,title,content,open:true} crée un vrai DOCX local.
+- create_docstudio : {type,title,content} ouvre un nouveau document dans Document Studio avec le contenu.
+- open_tool : {type,tool} ouvre un outil Readix existant (view, editpdf, fillsign, organize, merge, split, redact, compare, text, shield, meta, compress, aiadvanced, docstudio).
+- delete_pages : {type,pages:[1,2],requiresConfirmation:true} supprime les pages indiquées du PDF courant.
+- extract_pages : {type,pages:[1,2]} crée un nouveau PDF avec les pages indiquées du PDF courant.
+- rotate_pages : {type,pages:[1,2],degrees:90} fait pivoter les pages du PDF courant.
+- search_document : {type,query} demande une recherche documentaire.
+- extract_data : {type,query} demande une extraction structurée à partir du contexte fourni.
+- summarize : {type} demande un résumé du contexte fourni.
+
+Règles :
+1. N’invente jamais qu’une action a été exécutée : le client l’exécutera après ta réponse.
+2. Pour une demande de création de fichier, utilise create_pdf/create_docx/create_docstudio.
+3. Pour « génère-moi un PDF de ce récapitulatif », crée directement create_pdf avec un contenu complet, structuré et fidèle au contexte disponible. IMPORTANT : le fichier n'est PAS téléchargé automatiquement ; Readix affiche un bouton « Télécharger » que l'utilisateur clique lui-même. Ne dis donc JAMAIS que le fichier a été téléchargé ou enregistré ; formule plutôt « j'ai préparé le document, cliquez sur Télécharger quand vous voulez ».
+4. Pour « mets cela dans Word », utilise create_docstudio ou create_docx selon la demande; si l’utilisateur veut modifier ensuite, préfère create_docstudio.
+5. Les actions delete_pages sont destructives : mets requiresConfirmation:true.
+6. Si le contexte documentaire est insuffisant, ne fabrique pas le contenu; réponds avec actions:[] et explique ce qui manque.
+7. Plusieurs actions peuvent être renvoyées dans l’ordre.
+8. Réponds en français.
+9. Pour une simple question documentaire, actions:[] et answer contient la réponse.
+
+Contexte d’interface : document=${documentName||"aucun"}, page=${page}.
+${documentContext?"DOCUMENT OUVERT :\n"+documentContext:""}
+${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — page ${a.page}`:""} ---\n${a.text}`).join("\n\n"):""}`;
+  try {
+    let data;
+    try {
+      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:3000,system:actionSystem,messages:[...hist,{role:"user",content:message.slice(0,10000)}]});
+    } catch(e) {
+      console.error("[COPILOT ACTION]", e.message);
+      return res.status(502).json({error:e.message});
+    }
+    const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("\n").trim();
+    let parsed; try { parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/\s*```$/,'')); } catch(e) { parsed={answer:raw,actions:[]}; }
+    if(!parsed||typeof parsed!=='object') parsed={answer:raw,actions:[]};
+    if(!Array.isArray(parsed.actions)) parsed.actions=[];
+    await incUsage(req.user.email);
+    res.json({answer:String(parsed.answer||""),actions:parsed.actions.slice(0,5),used:used+1,quota,engine:"19.1"});
+  } catch(e) { console.error("[COPILOT ACTION]", e); res.status(500).json({error:e.message}); }
+}
+
+// Route principale + alias : évite qu'un reverse proxy/ancien déploiement bloque le nouveau moteur.
+app.post("/api/copilot/action", auth, handleCopilotAction);
+app.post("/api/copilot/action/", auth, handleCopilotAction);
+app.post("/api/copilot/actions", auth, handleCopilotAction);
 
 app.post("/api/ai/:feature", auth, async (req, res) => {
   console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!ANTHROPIC_API_KEY);
