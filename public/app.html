@@ -326,6 +326,21 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .ai10-plus-menu{position:absolute;left:0;bottom:44px;width:285px;padding:7px;border:1px solid rgba(110,115,150,.25);border-radius:14px;background:rgba(255,255,255,.99);box-shadow:0 16px 40px rgba(28,31,55,.16);display:none;z-index:30}.ai10-plus-menu.open{display:block}.ai10-plus-menu button{width:100%;display:flex;align-items:flex-start;gap:10px;border:0;background:transparent;border-radius:10px;padding:9px;text-align:left;color:var(--ink);cursor:pointer}.ai10-plus-menu button:hover{background:var(--surface-2)}.ai10-plus-menu .pm-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:15px;flex:none}.ai10-plus-menu b{font-size:11.5px;display:block;margin-bottom:2px}.ai10-plus-menu span{font-size:10px;line-height:1.35;color:var(--ink-soft);display:block}.ai10-context-note{font-size:9.5px;color:var(--ink-faint);text-align:center;margin-top:7px}.ai-float-copilot .ai-float-body{background:rgba(246,247,251,.92)}
 @media(max-width:900px){.ai-float{left:12px;right:62px;top:10px;bottom:10px}.ai9-float-home .ai9-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai10-chat-shell{grid-template-columns:1fr}.ai10-chat-sidebar{display:none}}@media(max-width:560px){.ai-float{left:8px;right:8px;top:8px;bottom:8px}.ai9-float-home{padding:16px}.ai9-float-home .ai9-grid{grid-template-columns:1fr}.ai10-msg{max-width:95%}}
 
+
+/* ===== Phase 11 — Readix Document Studio ===== */
+.docstudio{min-height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#f7f8fb,#eef1f6);color:var(--ink)}
+.docstudio-top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 5px 20px rgba(20,24,45,.06)}
+.docstudio-titlebar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.docstudio-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;min-width:0}.docstudio-title input{border:0;background:transparent;font:inherit;color:inherit;outline:0;width:min(360px,50vw);padding:5px 7px;border-radius:7px}.docstudio-title input:focus{background:var(--surface-2)}
+.docstudio-status{font-size:10px;color:var(--ink-faint);margin-left:4px}.docstudio-status.ok{color:var(--ok)}.docstudio-status.dirty{color:var(--warn)}
+.docstudio-tools{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:7px 12px;background:rgba(250,251,253,.96)}
+.docstudio-tools .sep{width:1px;height:24px;background:var(--line);margin:0 4px}.docbtn{min-width:31px;height:30px;padding:0 8px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--ink-soft);font-size:12px;font-weight:600;cursor:pointer}.docbtn:hover{background:var(--surface-2);color:var(--ink)}.docbtn.on{background:var(--brand-soft);color:var(--brand-ink);border-color:rgba(99,82,255,.18)}.docselect{height:30px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font-size:11px;padding:0 7px}
+.docstudio-main{flex:1;overflow:auto;padding:28px 20px 70px}.docpage{width:min(820px,100%);min-height:1060px;margin:0 auto;background:#fff;box-shadow:0 16px 45px rgba(31,38,60,.13);border:1px solid #e5e7ed;padding:76px 78px;box-sizing:border-box}
+.doceditor{min-height:900px;outline:0;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#1e2430}.doceditor:focus{outline:0}.doceditor h1,.doceditor h2,.doceditor h3{font-family:'Space Grotesk',Arial,sans-serif;line-height:1.2;color:#172033}.doceditor h1{font-size:30px}.doceditor h2{font-size:23px}.doceditor h3{font-size:18px}.doceditor p{margin:0 0 10px}.doceditor blockquote{margin:16px 0;padding:10px 16px;border-left:3px solid var(--brand);background:#f5f4ff;color:#4c5060}.doceditor table{width:100%;border-collapse:collapse;margin:14px 0}.doceditor td,.doceditor th{border:1px solid #cfd4df;padding:7px;min-width:50px}.docstudio-bottom{position:sticky;bottom:0;z-index:15;display:flex;align-items:center;gap:14px;padding:7px 16px;border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(12px);font-size:10px;color:var(--ink-faint)}.docstudio-bottom .sp{flex:1}
+.doc-menu{position:relative}.doc-dropdown{position:absolute;top:34px;left:0;z-index:40;min-width:190px;padding:6px;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 15px 40px rgba(20,24,45,.14);display:none}.doc-dropdown.open{display:block}.doc-dropdown button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:8px;font-size:11px;color:var(--ink);cursor:pointer}.doc-dropdown button:hover{background:var(--surface-2)}
+@media print{body>*:not(.body){display:none!important}.body{height:auto!important;overflow:visible!important}.lrail,.rrail,.rpanel,.ai-float,.tabbar,.menubar,.topbar{display:none!important}.stage{overflow:visible!important;background:#fff!important}.docstudio-top,.docstudio-bottom{display:none!important}.docstudio-main{padding:0!important}.docpage{box-shadow:none!important;border:0!important;width:100%!important;min-height:auto!important;padding:24mm 20mm!important}.doceditor{min-height:0!important}}
+@media(max-width:700px){.docstudio-main{padding:14px 7px 55px}.docpage{padding:42px 28px;min-height:900px}.docstudio-tools{overflow-x:auto;flex-wrap:nowrap}.docstudio-title input{width:190px}}
+
 </style>
 </head>
 <body>
@@ -340,7 +355,8 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
     <button class="btn ghost sm" id="createBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Créer</button>
     <div class="menu" id="createMenu">
       <button data-create="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 9v6M9 12h6"/></svg>Nouvel onglet</button>
-      <button data-create="blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/></svg>Page blanche</button>
+      <button data-create="doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Document Word</button>
+      <button data-create="blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Nouvelle page PDF</button>
       <button data-create="img2pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-3 4 4"/></svg>Images → PDF</button>
     </div>
   </div>
@@ -421,6 +437,7 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 <div class="overlay" id="overlay"><div class="dialog" id="dialog"></div></div>
 
 <input type="file" id="hiddenFile" accept="application/pdf" hidden>
+<input type="file" id="hiddenDocFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const $=(s,r)=>(r||document).querySelector(s);
@@ -456,7 +473,7 @@ async function idbChatDel(id){try{const db=await idb();db.transaction("copilotCh
 const APP={ tabs:[], active:null, tool:"home", theme:"light", lang:"fr",
   user:null, plan:"free" };
 function activeTab(){return APP.tabs.find(t=>t.id===APP.active)||null;}
-function newTabObj(name){return {id:"t"+Date.now()+Math.floor(Math.random()*1e3),name:name||"Nouvel onglet",bytes:null,pdf:null,tool:"home",page:1,zoom:1,fields:[],sigs:[],dirty:false,nav:{stack:[{tool:"home",page:1}],index:0}};}
+function newTabObj(name){return {id:"t"+Date.now()+Math.floor(Math.random()*1e3),name:name||"Nouvel onglet",bytes:null,pdf:null,tool:"home",page:1,zoom:1,fields:[],sigs:[],dirty:false,doc:null,nav:{stack:[{tool:"home",page:1}],index:0}};}
 
 /* ---------- helpers PDF ---------- */
 async function readAB(file){return await file.arrayBuffer();}
@@ -498,7 +515,9 @@ function updateSaveDot(){const t=activeTab();const dot=$("#saveDot");if(!t||!t.b
 let _asTimer=null;
 function scheduleAutosave(){clearTimeout(_asTimer);_asTimer=setTimeout(autosave,900);}
 async function autosave(){
-  const t=activeTab();if(!t||!t.bytes)return;
+  const t=activeTab();if(!t)return;
+  if(t.tool==="docstudio"){if(t.doc){await idbSave(t.id,{name:t.name,tool:"docstudio",doc:t.doc,dirty:false});t.dirty=false;updateDocStudioStatus(t,false);}return;}
+  if(!t.bytes)return;
   const fieldVals=t.fields?t.fields.map(f=>({name:f.name,type:f.type,val:f.el?(f.el.type==="checkbox"||f.el.type==="radio"?f.el.checked:f.el.value):null,ex:f.ex})):[];
   await idbSave(t.id,{name:t.name,tool:t.tool,page:t.page,zoom:t.zoom,bytes:Array.from(u8(t.bytes)),fieldVals});
   const dot=$("#saveDot");if(dot)$(".t",dot).textContent="Enregistré";
@@ -509,7 +528,7 @@ async function offerResume(){
   dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;dl.close();
     if(a.dataset.a==="no"){for(const s of all)await idbDel(s.id);return;}
     for(const s of all){ try{
-      const t=newTabObj(s.name);t.id=s.id;t.bytes=new Uint8Array(s.bytes);t.tool=s.tool||"home";
+      const t=newTabObj(s.name);t.id=s.id;t.bytes=new Uint8Array(s.bytes);t.tool=s.tool||"home";t.doc=s.doc||null;
       t._resumeFields=s.fieldVals||[];
       APP.tabs.push(t);
     }catch(e){} }
@@ -543,6 +562,7 @@ async function saveBytes(bytes,suggestedName){
 async function doSave(){
   const t=activeTab();if(!t||!t.bytes){toast("Aucun document à enregistrer.","warn");return;}
   if(t.tool==="editpdf"){return doSaveEdit(t);}
+  if(t.tool==="docstudio"){return saveDocStudio(t,"docx");}
   let out=u8(t.bytes);
   try{ if(t.tool==="fillsign") out=await fillsignExport(t); }catch(e){}
   const ok=await saveBytes(out,(t.name||"document").replace(/\.pdf$/i,"")+"-readix.pdf");
@@ -572,6 +592,25 @@ async function openPdfBytes(bytes,name){
 }
 $("#hiddenFile").onchange=async e=>{const f=e.target.files[0];if(f){await openPdfBytes(await readAB(f),f.name);}e.target.value="";};
 
+
+/* ---------- Phase 11 : Readix Document Studio ---------- */
+function defaultDocHTML(){return '<h1>Nouveau document</h1><p>Commencez à écrire votre document ici…</p><p></p>';}
+function escXml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\'/g,'&apos;');}
+function xmlText(s){return escXml(s).replace(/\n/g,'<w:br/>');}
+function docBlocksFromHTML(html){const box=document.createElement('div');box.innerHTML=html;const blocks=[];const walk=node=>{if(node.nodeType===Node.TEXT_NODE){if(node.textContent.trim())blocks.push({type:'p',text:node.textContent});return;}if(node.nodeType!==Node.ELEMENT_NODE)return;const tag=node.tagName.toLowerCase();if(/^h[1-3]$/.test(tag)){blocks.push({type:'h',level:+tag[1],text:node.innerText||''});return;}if(tag==='p'||tag==='blockquote'){blocks.push({type:tag,text:node.innerText||''});return;}if(tag==='ul'||tag==='ol'){[...node.children].forEach(li=>blocks.push({type:'li',text:li.innerText||'',ordered:tag==='ol'}));return;}if(tag==='table'){blocks.push({type:'table',html:node.outerHTML});return;}[...node.childNodes].forEach(walk);};[...box.childNodes].forEach(walk);return blocks.length?blocks:[{type:'p',text:''}];}
+function docxXmlFromHTML(html,title){const blocks=docBlocksFromHTML(html);let body='';for(const b of blocks){if(b.type==='table'){const tb=document.createElement('div');tb.innerHTML=b.html;const rows=[...tb.querySelectorAll('tr')];body+='<w:tbl><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>';for(const r of rows){body+='<w:tr>';for(const c of [...r.children])body+='<w:tc><w:p><w:r><w:t xml:space="preserve">'+xmlText(c.innerText||'')+'</w:t></w:r></w:p></w:tc>';body+='</w:tr>';}body+='</w:tbl>';continue;}let ppr='';if(b.type==='h')ppr='<w:pPr><w:pStyle w:val="Heading'+b.level+'"/></w:pPr>';if(b.type==='li')ppr='<w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="'+(b.ordered?2:1)+'"/></w:numPr></w:pPr>';if(b.type==='blockquote')ppr='<w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="6352FF"/></w:pBdr></w:pPr>';body+='<w:p>'+ppr+'<w:r><w:t xml:space="preserve">'+xmlText(b.text||'')+'</w:t></w:r></w:p>';}
+const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>';
+return {documentXml,title:title||'Nouveau document'};}
+async function buildDocxBlob(html,title){const zip=new JSZip();const o=docxXmlFromHTML(html,title);zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>');zip.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');const wf=zip.folder('word');wf.file('document.xml',o.documentXml);wf.file('styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:rPr><w:b/><w:sz w:val="22"/></w:rPr></w:style></w:styles>');return await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});}
+async function saveDocStudio(t,format){const ed=document.querySelector('.doceditor');if(ed)t.doc=ed.innerHTML;t.dirty=false;const title=(t.name||'Nouveau document').replace(/\.(docx?|pdf)$/i,'')||'Nouveau document';if(format==='docx'){const blob=await buildDocxBlob(t.doc||defaultDocHTML(),title);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'.docx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);toast('Document Word exporté.','ok');updateDocStudioStatus(t,false);return true;}return false;}
+async function importDocxFile(file,t){try{const zip=await JSZip.loadAsync(file);const xml=await zip.file('word/document.xml').async('text');const doc=new DOMParser().parseFromString(xml,'application/xml');const ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';const paras=[...doc.getElementsByTagNameNS(ns,'p')];let html='';for(const p of paras){const texts=[...p.getElementsByTagNameNS(ns,'t')].map(x=>x.textContent).join('');const style=p.getElementsByTagNameNS(ns,'pStyle')[0]?.getAttributeNS(ns,'val')||'';let tag=style==='Heading1'?'h1':style==='Heading2'?'h2':style==='Heading3'?'h3':'p';html+='<'+tag+'>'+String(texts).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</'+tag+'>';}t.doc=html||defaultDocHTML();t.name=file.name;t.tool='docstudio';APP.tool='docstudio';renderTabs();renderTools();renderView();updateHeader();toast('Document Word importé.','ok');}catch(e){toast('Impossible de lire ce DOCX.','err');}}
+function updateDocStudioStatus(t,dirty){const s=document.querySelector('.docstudio-status');if(!s)return;s.textContent=dirty?'Modifications non enregistrées':'Enregistré localement';s.classList.toggle('dirty',dirty);s.classList.toggle('ok',!dirty);}
+function docExec(cmd,val){document.execCommand(cmd,false,val);const ed=document.querySelector('.doceditor');if(ed){const t=activeTab();if(t){t.doc=ed.innerHTML;t.dirty=true;updateDocStudioStatus(t,true);scheduleDocSave(t);}}}
+let _docSaveTimer=null;function scheduleDocSave(t){clearTimeout(_docSaveTimer);_docSaveTimer=setTimeout(async()=>{try{const db=await idb();const tx=db.transaction('tabs','readwrite');tx.objectStore('tabs').put({id:t.id,name:t.name,tool:'docstudio',doc:t.doc||defaultDocHTML(),dirty:false,ts:Date.now()});t.dirty=false;updateDocStudioStatus(t,false);}catch(e){}},700);}
+function docInsertTable(){const ed=document.querySelector('.doceditor');if(!ed)return;const html='<table><tbody><tr><th>Colonne 1</th><th>Colonne 2</th></tr><tr><td>Texte</td><td>Texte</td></tr></tbody></table>';ed.focus();docExec('insertHTML',html);}
+function renderDocStudio(t,stage){stage.innerHTML='';const root=el('div','docstudio');const top=el('div','docstudio-top');const titlebar=el('div','docstudio-titlebar');const title=el('div','docstudio-title');title.innerHTML='<input aria-label="Nom du document" value="'+String((t.name||'Nouveau document.docx')).replace(/"/g,'&quot;')+'">';const titleInput=title.querySelector('input');titleInput.onchange=()=>{t.name=titleInput.value.endsWith('.docx')?titleInput.value:titleInput.value+'.docx';renderTabs();updateHeader();};const status=el('div','docstudio-status ok','Enregistré localement');titlebar.append(title,status);const sp=el('span');sp.className='spring';titlebar.append(sp);const imp=el('button','btn ghost sm','Importer DOCX');imp.onclick=()=>$('#hiddenDocFile').click();const exp=el('button','btn sm','Télécharger .DOCX');exp.onclick=()=>saveDocStudio(t,'docx');titlebar.append(imp,exp);top.append(titlebar);const tb=el('div','docstudio-tools');const mk=(txt,cmd,val,title)=>{const b=el('button','docbtn',txt);b.title=title||txt;b.onclick=()=>{if(cmd==='formatBlock')docExec(cmd,val);else docExec(cmd,val)};return b;};tb.append(mk('B','bold'),mk('I','italic'),mk('U','underline'));tb.append(el('span','sep'));const style=el('select','docselect');style.innerHTML='<option value="p">Normal</option><option value="h1">Titre 1</option><option value="h2">Titre 2</option><option value="h3">Titre 3</option><option value="blockquote">Citation</option>';style.onchange=()=>docExec('formatBlock',style.value==='p'?'p':style.value);tb.append(style);const size=el('select','docselect');size.innerHTML='<option value="3">12</option><option value="4">14</option><option value="5">18</option><option value="6">24</option><option value="7">32</option>';size.onchange=()=>docExec('fontSize',size.value);tb.append(size);tb.append(el('span','sep'));tb.append(mk('←','justifyLeft'),mk('↔','justifyCenter'),mk('→','justifyRight'),mk('☰','justifyFull'));tb.append(el('span','sep'));tb.append(mk('• Liste','insertUnorderedList'),mk('1. Liste','insertOrderedList'));tb.append(mk('↗ Lien','createLink','https://'));const tableBtn=mk('▦ Tableau');tableBtn.onclick=()=>docInsertTable();tb.append(tableBtn);const undo=mk('↶','undo'),redo=mk('↷','redo');tb.append(el('span','sep'),undo,redo);top.append(tb);root.append(top);const main=el('div','docstudio-main');const page=el('div','docpage');const ed=el('div','doceditor');ed.contentEditable='true';ed.spellcheck=true;ed.innerHTML=t.doc||defaultDocHTML();ed.oninput=()=>{t.doc=ed.innerHTML;t.dirty=true;updateDocStudioStatus(t,true);scheduleDocSave(t);};ed.onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveDocStudio(t,'docx');}};page.append(ed);main.append(page);root.append(main);const bottom=el('div','docstudio-bottom');bottom.append(el('span','', 'Document Studio · éditeur local Readix'));const bs=el('span','sp');bottom.append(bs);bottom.append(el('span','', 'DOCX'));root.append(bottom);stage.append(root);}
+$('#hiddenDocFile').onchange=async e=>{const f=e.target.files[0];if(f){let t=activeTab();if(!t||t.tool!=='docstudio'){t=createTab(f.name);t.tool='docstudio';APP.tool='docstudio';}await importDocxFile(f,t);}e.target.value='';};
+
 /* ---------- vue centrale ---------- */
 async function ensurePdf(t){ if(t&&t.bytes&&!t.pdf){ try{ t.pdf=await pdfjsLib.getDocument({data:u8(t.bytes).slice(0)}).promise; }catch(e){} } }
 async function renderView(){
@@ -584,6 +623,7 @@ async function renderView(){
     await ensurePdf(t);
     stage.innerHTML="";stage.classList.remove("empty");
   }
+  if(t&&t.tool==="docstudio"){ return renderDocStudio(t,stage); }
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
   if(t&&t.tool==="compare"){ return renderCompare(t,stage); }
@@ -757,6 +797,7 @@ const TOOLS=[
   {id:"shield",name:"Readix Shield",grp:"Sécurité & avancé",ic:'<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/>'},
   {id:"meta",name:"Métadonnées",grp:"Sécurité & avancé",ic:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'},
   {id:"compress",name:"Compresser",grp:"Sécurité & avancé",ic:'<path d="M9 3v6M15 21v-6M4 9h5M15 15h5"/><path d="M9 9L6 6M9 9L6 12M15 15l3 3M15 15l3-3"/>'},  {id:"aiadvanced",name:"IA avancée",grp:"Intelligence artificielle",ic:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/><path d="M19 17v4M17 19h4"/>'},
+  {id:"docstudio",name:"Document Studio",grp:"Création",ic:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h6M9 16h6"/>'},
 ];
 function renderTools(){
   const box=$("#lrailScroll");box.innerHTML="";let g=null;
@@ -769,6 +810,7 @@ function renderTools(){
 }
 function openTool(id){
   if(id==="aiadvanced"){openAIFloating("__home");return;}
+  if(id==="docstudio"){let t=activeTab();if(!t||t.pdf){t=createTab("Nouveau document.docx");} t.tool="docstudio";APP.tool="docstudio";if(!t.doc) t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   let t=activeTab();if(!t){t=createTab();}
   t.tool=id;APP.tool=id;pushHist({tool:id,page:t.page||1});
   renderTabs();renderTools();renderView();updateHeader();
@@ -1394,6 +1436,7 @@ document.addEventListener("click",()=>$$(".menu.open").forEach(m=>m.classList.re
 document.addEventListener("click",e=>{$$(".ai10-plus-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
 $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)return;const a=b.dataset.create;
   if(a==="tab"){createTab();openTool("view");}
+  else if(a==="doc"){createTab("Nouveau document.docx");openTool("docstudio");}
   else if(a==="blank"){makeBlank();}
   else if(a==="img2pdf"){createTab("Images → PDF");openTool("tolpdf");}
 };
