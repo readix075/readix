@@ -956,7 +956,7 @@ function renderPlanStatic(plan){
   });
   return root;
 }
-function copilotActionLabel(a){const m={create_pdf:"Création du PDF",create_docx:"Création du document Word",create_docstudio:"Ouverture dans Document Studio",delete_pages:"Suppression de pages",extract_pages:"Extraction de pages",rotate_pages:"Rotation des pages",open_tool:"Ouverture d’un outil",search_document:"Recherche dans le document",extract_data:"Extraction structurée",summarize:"Résumé du document",convert_pdf_to_docx:"Conversion PDF → Word",convert_docx_to_pdf:"Conversion Word → PDF"};return m[a.type]||"Action Readix";}
+function copilotActionLabel(a){const m={create_pdf:"Création du PDF",create_docx:"Création du document Word",create_docstudio:"Ouverture dans Document Studio",delete_pages:"Suppression de pages",extract_pages:"Extraction de pages",rotate_pages:"Rotation des pages",open_tool:"Ouverture d’un outil",search_document:"Recherche dans le document",extract_data:"Extraction structurée",summarize:"Résumé du document",convert_pdf_to_docx:"Conversion PDF → Word",convert_docx_to_pdf:"Conversion Word → PDF",ocr_document:"Reconnaissance de texte (OCR)"};return m[a.type]||"Action Readix";}
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 function plainForPdf(text){return String(text||"").replace(/```[\s\S]*?```/g,m=>m.replace(/```/g,"")).replace(/\*\*(.*?)\*\*/g,"$1").replace(/^#{1,6}\s*/gm,"").replace(/^[-*]\s+/gm,"• ");}
 async function createPdfFromText(text,title){const {PDFDocument,StandardFonts,rgb}=PDFLib;const doc=await PDFDocument.create();const font=await doc.embedFont(StandardFonts.Helvetica);const bold=await doc.embedFont(StandardFonts.HelveticaBold);const margin=48;const size=11;const lineH=16;const width=595;const height=842;let page=doc.addPage([width,height]);let y=height-margin;const lines=[];for(const para of plainForPdf(text).split(/\n+/)){const words=para.trim().split(/\s+/);if(!words.length)continue;let line="";for(const w of words){const test=line?line+" "+w:w;if(font.widthOfTextAtSize(test,size)>width-margin*2){if(line)lines.push(line);line=w;}else line=test;}if(line)lines.push(line);lines.push("");}for(const line of lines){if(y<margin+lineH){page=doc.addPage([width,height]);y=height-margin;}if(line){page.drawText(line,{x:margin,y,size,font,color:rgb(.12,.14,.18),maxWidth:width-margin*2});}y-=lineH;}return await doc.save();}
@@ -1125,6 +1125,55 @@ function renderDataTable(table){
   wrap.appendChild(acts);
   return wrap;
 }
+// ---- OCR réel (Tesseract.js chargé à la demande) ----
+let _tesseractPromise=null;
+function loadTesseract(){
+  if(window.Tesseract)return Promise.resolve(window.Tesseract);
+  if(_tesseractPromise)return _tesseractPromise;
+  _tesseractPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.async=true;
+    s.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error("Le moteur OCR n’a pas pu être initialisé."));
+    s.onerror=()=>{_tesseractPromise=null;reject(new Error("Impossible de charger le moteur OCR (vérifiez la connexion Internet)."));};
+    document.head.appendChild(s);
+  });
+  return _tesseractPromise;
+}
+// Un contexte documentaire est « vide » si, une fois les marqueurs de page retirés, il ne reste pas de texte.
+function isScannedContext(ctx){return !String(ctx||"").replace(/---\s*Page\s*\d+\s*---/gi,"").replace(/\s+/g," ").trim();}
+function looksDocIntent(msg){return /\b(document|pdf|page|texte|r[ée]sum|analys|extrai|convert|transform|cherch|trouv|compar|lis|lire|scann|caviard|tableau|donn[ée]es|facture|contrat|clause|montant|date)\b/i.test(String(msg||""));}
+// Rasterise chaque page du PDF et lance la reconnaissance de texte.
+async function ocrPdfTab(t,onProgress){
+  if(!t||!t.pdf)throw new Error("Aucun PDF à reconnaître.");
+  const T=await loadTesseract();
+  const out=[];
+  for(let i=1;i<=t.pdf.numPages;i++){
+    if(onProgress)onProgress(i,t.pdf.numPages);
+    const page=await t.pdf.getPage(i);
+    const v1=page.getViewport({scale:1});
+    const scale=Math.max(1,Math.min(2.5,2200/v1.width,3100/v1.height));
+    const vp=page.getViewport({scale});
+    const cv=document.createElement("canvas");cv.width=Math.ceil(vp.width);cv.height=Math.ceil(vp.height);
+    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    const {data}=await T.recognize(cv,"fra+eng");
+    out.push(`--- Page ${i} ---\n`+String((data&&data.text)||"").trim());
+  }
+  return out.join("\n\n");
+}
+function buildOcrProgress(){
+  const root=el("div","ai19-plan");
+  root.innerHTML='<div class="ai19-plan-head">Reconnaissance optique (OCR)</div><div class="ai19-step running"><span class="ai19-step-ic"><span class="spin"></span></span><span class="lbl"><b class="ocr-line">Préparation du moteur…</b><small>Cela peut prendre un moment sur un document numérisé.</small></span></div>';
+  return {root,set:(txt)=>{const b=root.querySelector(".ocr-line");if(b)b.textContent=txt;},done:(txt)=>{const st=root.querySelector(".ai19-step");if(st)st.className="ai19-step done";const ic=root.querySelector(".ai19-step-ic");if(ic)ic.textContent="✓";const b=root.querySelector(".ocr-line");if(b)b.textContent=txt||"Reconnaissance terminée";const sm=root.querySelector(".lbl small");if(sm)sm.remove();}};
+}
+// Relance automatiquement la question de l'utilisateur après OCR (le contexte contient désormais le texte).
+function resubmitCopilot(question){
+  requestAnimationFrame(()=>{
+    const q=document.querySelector(".ai10-query"),send=document.querySelector(".ai10-send");
+    if(q&&send){q.value=question;q.dispatchEvent(new Event("input"));send.click();}
+    else toast("Texte reconnu. Reposez votre question pour l’analyser.","ok");
+  });
+}
 async function executeCopilotAction(a,ctx={}){const type=a&&a.type;if(!type)return {ok:false,message:"Action vide."};
   if(type==="create_pdf"){const name=((a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix");const fname=name.endsWith(".pdf")?name:name+".pdf";return {ok:true,message:`J'ai préparé « ${fname} ». Cliquez sur Télécharger quand vous êtes prêt.`,file:{kind:"pdf",name:fname,content:String(a.content||ctx.answer||"")}};}
   if(type==="create_docx"){const name=((a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix");const fname=name.endsWith(".docx")?name:name+".docx";return {ok:true,message:`J'ai préparé « ${fname} ». Cliquez sur Télécharger quand vous êtes prêt.`,file:{kind:"docx",name:fname,content:String(a.content||ctx.answer||"")}};}
@@ -1164,6 +1213,17 @@ async function executeCopilotAction(a,ctx={}){const type=a&&a.type;if(!type)retu
     if(!cols.length||!rows.length)return {ok:false,message:"Je n’ai pas trouvé de données structurées à extraire dans ce document. Précisez ce que vous cherchez (dates, montants, personnes…)."};
     return {ok:true,message:a.title||"Données extraites",table:{title:a.title||"Données extraites",columns:cols,rows}};
   }
+  if(type==="ocr_document"){
+    const t=activeTab();if(!t||!t.pdf)return {ok:false,message:"Ouvrez un PDF dans l’onglet actif pour lancer la reconnaissance de texte."};
+    if(t.ocrText)return {ok:true,message:"Le texte de ce document a déjà été reconnu. Vous pouvez poser votre question."};
+    const feedEl=document.querySelector(".ai10-feed");const prog=buildOcrProgress();if(feedEl){feedEl.appendChild(prog.root);feedEl.scrollTop=feedEl.scrollHeight;}
+    try{
+      const text=await ocrPdfTab(t,(i,n)=>{prog.set(`Reconnaissance de texte — page ${i} / ${n}`);if(feedEl)feedEl.scrollTop=feedEl.scrollHeight;});
+      t.ocrText=text||"";prog.done(`Texte reconnu sur ${t.pdf.numPages} page(s)`);
+      if(isScannedContext(t.ocrText))return {ok:false,message:"L’OCR n’a pas détecté de texte lisible sur ce document."};
+      return {ok:true,message:`OCR terminé : le texte de ${t.pdf.numPages} page(s) est maintenant disponible. Reposez votre question pour l’analyser.`};
+    }catch(e){if(prog.root)prog.root.remove();return {ok:false,message:(e&&e.message)||"OCR impossible."};}
+  }
   if(type==="search_document"||type==="summarize")return {ok:true,message:`Action « ${copilotActionLabel(a)} » comprise. Utilisez le résultat de l’analyse ci-dessus.`};
   return {ok:false,message:`Action « ${type} » non implémentée dans cette version.`};
 }
@@ -1175,14 +1235,45 @@ function renderCopilotPanel(body){
   const main=el("section","ai10-chat-main");shell.appendChild(main);const chat=activeCopilotChat()||COPILOT_STATE.chats[0];
   const top=el("div","ai10-chat-top");const title=el("div","ai10-chat-title",chat?chat.title:"Nouvelle discussion");const meta=el("div","ai10-chat-meta",chat?`${chat.messages.length} message${chat.messages.length>1?"s":""}`:"0 message");top.append(title,meta);main.appendChild(top);
   const feed=el("div","ai10-feed");main.appendChild(feed);
-  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&Array.isArray(m.plan)&&m.plan.length){msg.appendChild(renderPlanStatic(m.plan));}if(m.role==="assistant"&&m.table&&Array.isArray(m.table.columns)){msg.appendChild(renderDataTable(m.table));}if(m.role==="assistant"&&m.file){const fc=el("div","ai19-filecard");fc.innerHTML=fileCardHTML(m.file.kind)+`<div class="fmeta"><div class="fname">${String(m.file.name||"Document").replace(/[&<>]/g,"")}</div><div class="fkind">${(m.file.kind||"pdf").toUpperCase()} · prêt à télécharger</div></div>`;const dlb=el("button","btn sm","Télécharger");dlb.onclick=()=>downloadCopilotFile(m.file,dlb);fc.appendChild(dlb);msg.appendChild(fc);}if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
+  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&Array.isArray(m.plan)&&m.plan.length){msg.appendChild(renderPlanStatic(m.plan));}if(m.role==="assistant"&&m.table&&Array.isArray(m.table.columns)){msg.appendChild(renderDataTable(m.table));}
+if(m.role==="assistant"&&m.ocrOffer&&!m.ocrOffer.done){
+  const bar=el("div","ai19-confirm-row");bar.style.marginTop="9px";
+  bar.innerHTML='<button data-o="yes" class="danger">Lancer l’OCR</button><button data-o="no">Continuer sans OCR</button>';
+  bar.querySelector('[data-o="yes"]').onclick=async()=>{
+    m.ocrOffer.done=true;await saveCopilotChat(chat);
+    const tab=(APP.tabs||[]).find(x=>x.id===m.ocrOffer.tabId)||activeTab();
+    const feedEl=document.querySelector(".ai10-feed");const prog=buildOcrProgress();if(feedEl){feedEl.appendChild(prog.root);feedEl.scrollTop=feedEl.scrollHeight;}
+    try{
+      const text=await ocrPdfTab(tab,(i,n)=>{prog.set(`Reconnaissance de texte — page ${i} / ${n}`);if(feedEl)feedEl.scrollTop=feedEl.scrollHeight;});
+      tab.ocrText=text||"";
+      if(isScannedContext(tab.ocrText)){if(prog.root)prog.root.remove();chat.messages.push({role:"assistant",content:"⚠️ L’OCR n’a pas détecté de texte lisible sur ce document. Il est peut-être de très mauvaise qualité."});await saveCopilotChat(chat);renderAIFloating();return;}
+      prog.done("Texte reconnu ✓");
+      chat.messages.push({role:"assistant",content:"✓ OCR terminé — je poursuis votre demande à partir du texte reconnu."});await saveCopilotChat(chat);renderAIFloating();
+      resubmitCopilot(m.ocrOffer.question);
+    }catch(e){if(prog.root)prog.root.remove();chat.messages.push({role:"assistant",content:"⚠️ "+((e&&e.message)||"OCR impossible.")});await saveCopilotChat(chat);renderAIFloating();}
+  };
+  bar.querySelector('[data-o="no"]').onclick=async()=>{
+    m.ocrOffer.done=true;const tab=(APP.tabs||[]).find(x=>x.id===m.ocrOffer.tabId)||activeTab();if(tab)tab._skipOcr=true;
+    await saveCopilotChat(chat);renderAIFloating();resubmitCopilot(m.ocrOffer.question);
+  };
+  msg.appendChild(bar);
+}
+if(m.role==="assistant"&&m.file){const fc=el("div","ai19-filecard");fc.innerHTML=fileCardHTML(m.file.kind)+`<div class="fmeta"><div class="fname">${String(m.file.name||"Document").replace(/[&<>]/g,"")}</div><div class="fkind">${(m.file.kind||"pdf").toUpperCase()} · prêt à télécharger</div></div>`;const dlb=el("button","btn sm","Télécharger");dlb.onclick=()=>downloadCopilotFile(m.file,dlb);fc.appendChild(dlb);msg.appendChild(fc);}if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
   const draft=el("div","ai10-draft");COPILOT_STATE.draftAttachments.forEach((a,i)=>{const card=el("div","ai10-draft-card");card.innerHTML=`${a.thumb?`<img src="${a.thumb}" alt="">`:"<span>PDF</span>"}<span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(a.name||"PDF").replace(/[&<>]/g,"")}</span><button title="Retirer">×</button>`;card.querySelector("button").onclick=()=>{COPILOT_STATE.draftAttachments.splice(i,1);renderAIFloating();};draft.appendChild(card);});if(COPILOT_STATE.draftAttachments.length)main.appendChild(draft);
   const cw=el("div","ai10-composer-wrap");const composer=el("div","ai10-composer");const plusWrap=el("div","ai10-plus-wrap");const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter un fichier ou un contexte";plus.textContent="+";const menu=el("div","ai10-plus-menu");menu.innerHTML='<button data-ctx="pdf"><span class="pm-ic">📎</span><span><b>Joindre un PDF</b><span>Le PDF sera attaché uniquement à cette question.</span></span></button><button data-ctx="doc"><span class="pm-ic">📄</span><span><b>Joindre le document ouvert</b><span>Créer une pièce jointe à partir de l’onglet actif.</span></span></button><button data-ctx="page"><span class="pm-ic">⌖</span><span><b>Joindre la page actuelle</b><span>Envoyer seulement la page affichée avec votre question.</span></span></button>' ;plusWrap.append(plus,menu);const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Message à Readix Copilot…";q.setAttribute("aria-label","Message à Readix Copilot");const mic=el("button","ai10-mic");mic.type="button";mic.title="Saisie vocale";mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';composer.append(plusWrap,q,mic,send);cw.appendChild(composer);const note=el("div","ai10-context-note","Les PDF joints sont indépendants : ils accompagnent le message qui les contient et restent visibles dans l’historique de cette discussion.");cw.appendChild(note);main.appendChild(cw);
   const closeMenu=()=>menu.classList.remove("open");plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;closeMenu();const t=activeTab();try{if(b.dataset.ctx==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.multiple=true;input.onchange=async()=>{for(const f of [...(input.files||[])]){const a=await makePdfAttachment(f);COPILOT_STATE.draftAttachments.push(a);}renderAIFloating();};input.click();}else if(b.dataset.ctx==="doc"){const a=await attachmentFromCurrentTab(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}else if(b.dataset.ctx==="page"){const a=await attachmentFromCurrentPage(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}}catch(err){toast("Impossible d’ajouter ce contexte : "+err.message,"err");}};
   const submit=async()=>{const question=q.value.trim();if(!question&&!COPILOT_STATE.draftAttachments.length)return;if(!APP.user){toast("Connectez-vous pour utiliser Readix Copilot.","warn");openAuth("login");return;}let c=activeCopilotChat();if(!c){await createCopilotChat();c=activeCopilotChat();}const attachments=COPILOT_STATE.draftAttachments.slice();const content=question||"Analyse les documents joints et indique-moi ce qui est important.";const userMsg={role:"user",content,attachments};c.messages.push(userMsg);if(c.messages.length===1)c.title=content.slice(0,48)+(content.length>48?"…":"");COPILOT_STATE.draftAttachments=[];await saveCopilotChat(c);renderAIFloating();
     const currentHistory=c.messages.slice(0,-1).slice(-16).map(m=>({role:m.role,content:m.content,attachments:(m.attachments||[]).map(a=>({name:a.name,text:a.text,type:a.type,page:a.page}))}));
     const pending=document.querySelector('.ai10-feed')?.lastElementChild;const sendBtn=document.querySelector('.ai10-send');if(sendBtn)sendBtn.disabled=true;
-    try{const current=activeTab();let documentContext="";if(current&&current.pdf){documentContext=await extractPdfText(current);}
+    try{const current=activeTab();let documentContext="";if(current&&current.pdf){documentContext=current.ocrText||await extractPdfText(current);}
+      // OCR proactif : PDF numérisé (sans texte) + intention documentaire → proposer la reconnaissance avant d'envoyer.
+      if(current&&current.pdf&&!current.ocrText&&!current._skipOcr&&isScannedContext(documentContext)&&looksDocIntent(content)){
+        c.messages.push({role:"assistant",content:"Ce document semble être un PDF numérisé : je n’y trouve pas de texte exploitable. Voulez-vous que je lance la reconnaissance de texte (OCR) pour pouvoir l’analyser ?",ocrOffer:{tabId:current.id,question:content}});
+        await saveCopilotChat(c);renderAIFloating();
+        const sbx=document.querySelector('.ai10-send');if(sbx)sbx.disabled=false;
+        return;
+      }
+      if(current)current._skipOcr=false;
       let d;
       const actionPayload={message:content,history:currentHistory,attachments:attachments.map(a=>({name:a.name,text:a.text,type:a.type,page:a.page})),documentContext:documentContext.slice(0,45000),page:current?.page||1,documentName:current?.name||""};
       try {
