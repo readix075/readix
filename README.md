@@ -158,3 +158,37 @@ La mise en page de base comprend aussi les sauts de page, les marges normales/é
 - Chaque clic ouvre un nouvel onglet Document Word indépendant.
 - Volet de navigation des titres H1/H2/H3 dans Document Studio.
 - Navigation locale par titres avec défilement vers la section choisie.
+
+
+## Phase 18 — IA avancée fonctionnelle
+- Les modules IA avancés disposent maintenant d’un sélecteur de source explicite : PDF ouvert ou téléversement direct.
+- Workspace, Recherche intelligente et Extraction structurée peuvent fonctionner sans document PDF déjà ouvert dans un onglet.
+- Comparaison intelligente accepte un PDF A (ouvert/téléversé) et un PDF B téléversé.
+- Ajout de `/api/ai/status` pour diagnostiquer l’authentification, le plan, le quota et la configuration de la clé IA avant une requête.
+- Les erreurs IA sont affichées directement à l’utilisateur au lieu de laisser une interface inerte.
+
+## Phase 19 — Readix Copilot Action Engine 1.0
+- Copilot passe d’un assistant purement conversationnel à un moteur d’actions Readix.
+- Ajout de `/api/copilot/action` : l’IA renvoie un plan d’actions JSON contrôlé plutôt qu’une simple réponse textuelle.
+- Actions locales prises en charge : création réelle de PDF, création réelle de DOCX, création/ouverture dans Document Studio, ouverture d’outils Readix, extraction de pages, suppression de pages avec confirmation, rotation de pages.
+- Le Copilot transmet désormais le contexte du PDF ouvert au moteur d’actions.
+- Les pièces jointes PDF restent liées au message et leurs contenus sont disponibles au moteur d’actions.
+- Création PDF côté navigateur avec pdf-lib et création DOCX avec le moteur DOCX existant.
+- Les opérations destructives demandent une confirmation avant exécution.
+- Les actions exécutées retournent un état explicite dans la conversation.
+- Ajout/rétablissement de `/api/ai/status` pour diagnostiquer clé Anthropic, plan et quota.
+- Les modules IA avancés affichent un bouton de téléversement PDF avec icône SVG et acceptent aussi le glisser-déposer.
+- Le bouton de téléversement ne remplace pas le PDF ouvert : l’utilisateur peut choisir explicitement sa source.
+
+## Phase 19.1 — Copilot Action Engine hotfix
+
+Cette version corrige le flux d'exécution du Copilot et ajoute des diagnostics plus explicites.
+
+- alias API `/api/copilot/action/` et `/api/copilot/actions` ;
+- endpoint public `/api/health` pour vérifier la version réellement déployée ;
+- le client détecte un 404 du moteur et affiche une erreur de déploiement explicite ;
+- les erreurs Anthropic indiquent désormais le code HTTP et le modèle utilisé ;
+- si une ancienne valeur `ANTHROPIC_MODEL` provoque un 404, le serveur retente avec `claude-sonnet-5` ;
+- le moteur d'action reste compatible avec le plan Pro/Studio et le quota existant.
+
+Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "19.1"` et `actionEngine: true`.
