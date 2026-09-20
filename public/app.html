@@ -363,6 +363,52 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 @media print{body>*:not(.body){display:none!important}.body{height:auto!important;overflow:visible!important}.lrail,.rrail,.rpanel,.ai-float,.tabbar,.menubar,.topbar{display:none!important}.stage{overflow:visible!important;background:#fff!important}.docstudio-top,.docstudio-bottom{display:none!important}.docstudio-main{padding:0!important}.doc-layout-zones{width:100%!important}.doc-zone{border:0!important;background:#fff!important;padding:0!important}.doc-zone strong{display:none!important}.docpage{box-shadow:none!important;border:0!important;width:100%!important;min-height:auto!important;padding:24mm 20mm!important}.doceditor{min-height:0!important}}
 @media(max-width:700px){.docstudio-main{padding:14px 7px 55px}.docpage{padding:42px 28px;min-height:900px}.docstudio-tools{overflow-x:auto;flex-wrap:nowrap}.docstudio-title input{width:190px}}
 
+/* ===== Phase 20 — Améliorations UX (agrandir, historique, vocal, téléchargement) ===== */
+/* Agrandir le panneau IA flottant */
+.ai-float.maximized{left:10px;right:10px;top:10px;bottom:10px}
+.ai-float.maximized .ai-float-card{width:min(1600px,100%)}
+.ai-float-actions button:hover{background:var(--surface-2);color:var(--ink)}
+.ai-float-actions button svg{width:16px;height:16px;display:block;margin:auto}
+
+/* Historique : menu « … » par discussion */
+.ai10-chat-item{position:relative}
+.ai10-chat-item .ct{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai10-chat-menu-btn{flex:none;width:24px;height:24px;border:0;background:transparent;color:var(--ink-faint);border-radius:7px;cursor:pointer;font-size:16px;line-height:1;display:grid;place-items:center;opacity:0;transition:opacity .12s}
+.ai10-chat-item:hover .ai10-chat-menu-btn,.ai10-chat-item.on .ai10-chat-menu-btn{opacity:1}
+.ai10-chat-menu-btn:hover{background:rgba(99,82,255,.12);color:var(--brand)}
+.ai10-chat-menu{position:absolute;right:8px;top:34px;z-index:60;min-width:150px;padding:6px;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 14px 38px rgba(20,24,45,.16);display:none}
+.ai10-chat-menu.open{display:block}
+.ai10-chat-menu button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:8px;font:inherit;font-size:12px;color:#b42318;cursor:pointer}
+.ai10-chat-menu button:hover{background:#fff0ef}
+.ai10-chat-menu button svg{width:15px;height:15px;flex:none}
+
+/* Saisie vocale : onde animée + bouton stop/valider + spinner */
+.ai10-voice{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:4px 6px}
+.ai10-wave{display:flex;align-items:center;gap:3px;height:26px;flex:1;min-width:0}
+.ai10-wave span{width:3px;height:6px;border-radius:3px;background:linear-gradient(180deg,var(--brand),var(--brand-2));animation:ai10wave 1s ease-in-out infinite}
+.ai10-wave span:nth-child(2){animation-delay:.08s}.ai10-wave span:nth-child(3){animation-delay:.16s}.ai10-wave span:nth-child(4){animation-delay:.24s}.ai10-wave span:nth-child(5){animation-delay:.32s}.ai10-wave span:nth-child(6){animation-delay:.4s}.ai10-wave span:nth-child(7){animation-delay:.48s}.ai10-wave span:nth-child(8){animation-delay:.56s}.ai10-wave span:nth-child(9){animation-delay:.64s}.ai10-wave span:nth-child(10){animation-delay:.72s}.ai10-wave span:nth-child(11){animation-delay:.8s}.ai10-wave span:nth-child(12){animation-delay:.88s}
+@keyframes ai10wave{0%,100%{height:5px;opacity:.5}50%{height:22px;opacity:1}}
+.ai10-voice-txt{font-size:11.5px;color:var(--ink-soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai10-voice-cancel{width:30px;height:30px;flex:none;border:0;border-radius:50%;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:17px;display:grid;place-items:center}
+.ai10-voice-cancel:hover{background:rgba(224,70,70,.09);color:var(--danger)}
+.ai10-voice-ok{width:34px;height:34px;flex:none;border:0;border-radius:50%;background:#151515;color:#fff;cursor:pointer;display:grid;place-items:center}
+.ai10-voice-ok svg{width:17px;height:17px}
+.ai10-voice-ok.busy{background:#151515;pointer-events:none}
+.ai10-voice-ok.busy svg{display:none}
+.ai10-voice-ok .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ai10spin .7s linear infinite}
+@keyframes ai10spin{to{transform:rotate(360deg)}}
+.ai10-mic.listening{color:var(--danger)}
+.ai10-composer.recording .ai10-plus-wrap,.ai10-composer.recording .ai10-query,.ai10-composer.recording .ai10-mic,.ai10-composer.recording .ai10-send{display:none}
+
+/* Carte de fichier généré par le Copilot (téléchargement à la demande) */
+.ai19-filecard{display:flex;align-items:center;gap:11px;margin-top:10px;padding:11px 13px;border:1px solid #e2e5ec;border-radius:13px;background:#fafbfc}
+.ai19-filecard .ic{width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;background:#f0edff;color:var(--brand)}
+.ai19-filecard .ic svg{width:19px;height:19px}
+.ai19-filecard .fmeta{flex:1;min-width:0}
+.ai19-filecard .fname{font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai19-filecard .fkind{font-size:10px;color:var(--ink-faint);margin-top:2px}
+.ai19-filecard .btn{flex:none}
+
 </style>
 </head>
 <body>
@@ -443,7 +489,7 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
     <div class="ai-float-head">
       <div class="ai-float-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg></div>
       <div><div class="ai-float-title" id="aiFloatTitle">Readix · IA avancée</div><div class="ai-float-sub" id="aiFloatSub">Espace IA flottant — votre onglet reste ouvert derrière.</div></div>
-      <div class="ai-float-actions"><button id="aiFloatMin" title="Réduire">−</button><button id="aiFloatClose" title="Fermer">×</button></div>
+      <div class="ai-float-actions"><button id="aiFloatMin" title="Réduire">−</button><button id="aiFloatMax" title="Agrandir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"/></svg></button><button id="aiFloatClose" title="Fermer">×</button></div>
     </div>
     <div class="ai-float-body" id="aiFloatBody"></div>
   </div>
@@ -782,7 +828,7 @@ async function runAI9(btn,res,feature,text,question,target){
   try{const d=await api('/api/ai/'+feature,{text:text.slice(0,60000),question,target});res.dataset.raw=d.answer||"";showAI9Result(res,d.answer);}
   catch(e){showAI9Error(res,e)}finally{btn.disabled=false;btn.textContent=old;}
 }
-const AI_FLOAT_STATE={open:false,minimized:false,mode:"advanced",feature:"workspace"};
+const AI_FLOAT_STATE={open:false,minimized:false,maximized:false,mode:"advanced",feature:"workspace"};
 const COPILOT_STATE={chats:[],activeId:null,draftAttachments:[],loaded:false};
 function chatId(){return "c"+Date.now()+Math.floor(Math.random()*1e4);}
 function newCopilotChat(){const now=Date.now();return {id:chatId(),title:"Nouvelle discussion",messages:[],createdAt:now,updatedAt:now};}
@@ -797,15 +843,52 @@ function messageHTML(m){const text=pageAwareHTML(m.content||"");const att=(m.att
 async function makePdfAttachment(file,nameOverride){const bytes=new Uint8Array(await file.arrayBuffer());const doc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;let thumb="";try{const pg=await doc.getPage(1);const vp=pg.getViewport({scale:.34});const cv=document.createElement("canvas");cv.width=Math.max(90,Math.round(vp.width));cv.height=Math.max(120,Math.round(vp.height));await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;thumb=cv.toDataURL("image/jpeg",.72);}catch(e){}const text=await extractPdfText({pdf:doc});return {id:"a"+Date.now()+Math.floor(Math.random()*1e4),name:nameOverride||file.name||"Document.pdf",text:text.slice(0,60000),thumb,type:"pdf",pages:doc.numPages,bytes};}
 async function attachmentFromCurrentTab(t){if(!t||!t.pdf)return null;const blob=new Blob([u8(t.bytes)],{type:"application/pdf"});const f=new File([blob],t.name||"Document.pdf",{type:"application/pdf"});return await makePdfAttachment(f,t.name||"Document.pdf");}
 async function attachmentFromCurrentPage(t){if(!t||!t.pdf)return null;const pn=t.page||1;const pg=await t.pdf.getPage(pn);const c=await pg.getTextContent();let thumb="";try{const vp=pg.getViewport({scale:.34});const cv=document.createElement("canvas");cv.width=Math.max(90,Math.round(vp.width));cv.height=Math.max(120,Math.round(vp.height));await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;thumb=cv.toDataURL("image/jpeg",.72);}catch(e){}return {id:"p"+Date.now(),name:`${t.name||"Document.pdf"} — page ${pn}`,text:`[Page ${pn}]\n`+c.items.map(x=>x.str).join(" "),thumb,type:"page",page:pn,pages:1};}
-function renderCopilotHistory(side){side.innerHTML='<div class="ai10-history-title">Historique</div>';COPILOT_STATE.chats.forEach(c=>{const b=el("button","ai10-chat-item"+(c.id===COPILOT_STATE.activeId?" on":""));b.innerHTML=`<span class="dot"></span><span class="ct">${String(c.title||"Nouvelle discussion").replace(/[&<>]/g,"")}</span>`;b.onclick=()=>switchCopilotChat(c.id);side.appendChild(b);});}
+async function deleteCopilotChat(id){
+  const idx=COPILOT_STATE.chats.findIndex(c=>c.id===id);if(idx<0)return;
+  const wasActive=(COPILOT_STATE.activeId===id);
+  COPILOT_STATE.chats.splice(idx,1);
+  try{await idbChatDel(id);}catch(e){}
+  if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];COPILOT_STATE.activeId=c.id;await idbChatSave(c);}
+  else if(wasActive){COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.draftAttachments=[];}
+  if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
+  toast("Discussion supprimée.","ok");
+}
+function renderCopilotHistory(side){
+  side.innerHTML='<div class="ai10-history-title">Historique</div>';
+  COPILOT_STATE.chats.forEach(c=>{
+    const row=el("div","ai10-chat-item"+(c.id===COPILOT_STATE.activeId?" on":""));
+    const title=String(c.title||"Nouvelle discussion").replace(/[&<>]/g,"");
+    row.innerHTML=`<span class="dot"></span><span class="ct" title="${title}">${title}</span>`+
+      `<button class="ai10-chat-menu-btn" title="Options" aria-label="Options de la discussion">⋯</button>`+
+      `<div class="ai10-chat-menu"><button data-del="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Supprimer</button></div>`;
+    const menuBtn=row.querySelector(".ai10-chat-menu-btn");
+    const menu=row.querySelector(".ai10-chat-menu");
+    row.querySelector(".ct").onclick=()=>switchCopilotChat(c.id);
+    row.querySelector(".dot").onclick=()=>switchCopilotChat(c.id);
+    menuBtn.onclick=(e)=>{e.stopPropagation();const wasOpen=menu.classList.contains("open");document.querySelectorAll(".ai10-chat-menu.open").forEach(m=>m.classList.remove("open"));if(!wasOpen)menu.classList.add("open");};
+    menu.querySelector("[data-del]").onclick=(e)=>{e.stopPropagation();menu.classList.remove("open");if(window.confirm("Supprimer définitivement cette discussion ?\n\n« "+title+" »"))deleteCopilotChat(c.id);};
+    side.appendChild(row);
+  });
+}
 function copilotActionLabel(a){const m={create_pdf:"Création du PDF",create_docx:"Création du document Word",create_docstudio:"Ouverture dans Document Studio",delete_pages:"Suppression de pages",extract_pages:"Extraction de pages",rotate_pages:"Rotation des pages",open_tool:"Ouverture d’un outil",search_document:"Recherche dans le document",extract_data:"Extraction structurée",summarize:"Résumé du document"};return m[a.type]||"Action Readix";}
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 function plainForPdf(text){return String(text||"").replace(/```[\s\S]*?```/g,m=>m.replace(/```/g,"")).replace(/\*\*(.*?)\*\*/g,"$1").replace(/^#{1,6}\s*/gm,"").replace(/^[-*]\s+/gm,"• ");}
 async function createPdfFromText(text,title){const {PDFDocument,StandardFonts,rgb}=PDFLib;const doc=await PDFDocument.create();const font=await doc.embedFont(StandardFonts.Helvetica);const bold=await doc.embedFont(StandardFonts.HelveticaBold);const margin=48;const size=11;const lineH=16;const width=595;const height=842;let page=doc.addPage([width,height]);let y=height-margin;const lines=[];for(const para of plainForPdf(text).split(/\n+/)){const words=para.trim().split(/\s+/);if(!words.length)continue;let line="";for(const w of words){const test=line?line+" "+w:w;if(font.widthOfTextAtSize(test,size)>width-margin*2){if(line)lines.push(line);line=w;}else line=test;}if(line)lines.push(line);lines.push("");}for(const line of lines){if(y<margin+lineH){page=doc.addPage([width,height]);y=height-margin;}if(line){page.drawText(line,{x:margin,y,size,font,color:rgb(.12,.14,.18),maxWidth:width-margin*2});}y-=lineH;}return await doc.save();}
 function htmlFromCopilotContent(text){const safe=String(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");const parts=safe.split(/\n+/).filter(Boolean);return parts.map(p=>{if(/^#{1,3}\s/.test(p)){const n=Math.min(3,(p.match(/^#+/)[0]||"").length);return `<h${n}>${p.replace(/^#{1,3}\s*/,"")}</h${n}>`;}return `<p>${p.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>")}</p>`;}).join("")||defaultDocHTML();}
+async function downloadCopilotFile(file,btn){
+  if(!file)return;
+  const label=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Préparation…";}
+  try{
+    if(file.kind==="pdf"){const bytes=await createPdfFromText(file.content||"",(file.name||"Document").replace(/\.pdf$/i,""));downloadBlob(new Blob([bytes],{type:"application/pdf"}),file.name||"Document.pdf");}
+    else if(file.kind==="docx"){const blob=await buildDocxBlob(htmlFromCopilotContent(file.content||""),(file.name||"Document").replace(/\.docx$/i,""));downloadBlob(blob,file.name||"Document.docx");}
+    toast("Téléchargement lancé.","ok");
+  }catch(e){toast("Échec de la génération : "+(e.message||e),"err");}
+  finally{if(btn){btn.disabled=false;btn.textContent=label||"Télécharger";}}
+}
+function fileCardHTML(kind){const ic=kind==="docx"?'<path d="M6 2h9l5 5v15H6z"/><path d="M9 13l1.5 4 1.5-4 1.5 4L16 13"/>':'<path d="M6 2h9l5 5v15H6z"/><path d="M9 13h6M9 16h6M9 10h3"/>';return `<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></div>`;}
 async function executeCopilotAction(a,ctx={}){const type=a&&a.type;if(!type)return {ok:false,message:"Action vide."};
-  if(type==="create_pdf"){const bytes=await createPdfFromText(a.content||ctx.answer||"",a.title||"Document Readix");const name=(a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix";downloadBlob(new Blob([bytes],{type:"application/pdf"}),name.endsWith(".pdf")?name:name+".pdf");return {ok:true,message:`PDF « ${name.endsWith(".pdf")?name:name+".pdf"} » créé et téléchargé.`};}
-  if(type==="create_docx"){const blob=await buildDocxBlob(htmlFromCopilotContent(a.content||ctx.answer||""),a.title||"Document Readix");const name=(a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix";downloadBlob(blob,name.endsWith(".docx")?name:name+".docx");return {ok:true,message:`Document Word « ${name.endsWith(".docx")?name:name+".docx"} » créé et téléchargé.`};}
+  if(type==="create_pdf"){const name=((a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix");const fname=name.endsWith(".pdf")?name:name+".pdf";return {ok:true,message:`J'ai préparé « ${fname} ». Cliquez sur Télécharger quand vous êtes prêt.`,file:{kind:"pdf",name:fname,content:String(a.content||ctx.answer||"")}};}
+  if(type==="create_docx"){const name=((a.title||"Document Readix").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Document Readix");const fname=name.endsWith(".docx")?name:name+".docx";return {ok:true,message:`J'ai préparé « ${fname} ». Cliquez sur Télécharger quand vous êtes prêt.`,file:{kind:"docx",name:fname,content:String(a.content||ctx.answer||"")}};}
   if(type==="create_docstudio"){const t=createTab((a.title||"Nouveau document")+".docx");t.tool="docstudio";t.doc=htmlFromCopilotContent(a.content||ctx.answer||"");APP.tool="docstudio";pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();return {ok:true,message:`Document « ${t.name} » créé et ouvert dans Document Studio.`};}
   if(type==="open_tool"){const allowed=["view","editpdf","fillsign","organize","merge","split","redact","compare","text","shield","meta","compress","aiadvanced","docstudio"];if(!allowed.includes(a.tool))return {ok:false,message:"Outil non disponible."};openTool(a.tool);return {ok:true,message:`Outil « ${a.tool} » ouvert.`};}
   const t=activeTab();if(["delete_pages","extract_pages","rotate_pages"].includes(type)&&(!t||!t.pdf||!t.bytes))return {ok:false,message:"Ouvrez d’abord un PDF dans l’onglet actif."};
@@ -823,7 +906,7 @@ function renderCopilotPanel(body){
   const main=el("section","ai10-chat-main");shell.appendChild(main);const chat=activeCopilotChat()||COPILOT_STATE.chats[0];
   const top=el("div","ai10-chat-top");const title=el("div","ai10-chat-title",chat?chat.title:"Nouvelle discussion");const meta=el("div","ai10-chat-meta",chat?`${chat.messages.length} message${chat.messages.length>1?"s":""}`:"0 message");top.append(title,meta);main.appendChild(top);
   const feed=el("div","ai10-feed");main.appendChild(feed);
-  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
+  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&m.file){const fc=el("div","ai19-filecard");fc.innerHTML=fileCardHTML(m.file.kind)+`<div class="fmeta"><div class="fname">${String(m.file.name||"Document").replace(/[&<>]/g,"")}</div><div class="fkind">${(m.file.kind||"pdf").toUpperCase()} · prêt à télécharger</div></div>`;const dlb=el("button","btn sm","Télécharger");dlb.onclick=()=>downloadCopilotFile(m.file,dlb);fc.appendChild(dlb);msg.appendChild(fc);}if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
   const draft=el("div","ai10-draft");COPILOT_STATE.draftAttachments.forEach((a,i)=>{const card=el("div","ai10-draft-card");card.innerHTML=`${a.thumb?`<img src="${a.thumb}" alt="">`:"<span>PDF</span>"}<span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(a.name||"PDF").replace(/[&<>]/g,"")}</span><button title="Retirer">×</button>`;card.querySelector("button").onclick=()=>{COPILOT_STATE.draftAttachments.splice(i,1);renderAIFloating();};draft.appendChild(card);});if(COPILOT_STATE.draftAttachments.length)main.appendChild(draft);
   const cw=el("div","ai10-composer-wrap");const composer=el("div","ai10-composer");const plusWrap=el("div","ai10-plus-wrap");const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter un fichier ou un contexte";plus.textContent="+";const menu=el("div","ai10-plus-menu");menu.innerHTML='<button data-ctx="pdf"><span class="pm-ic">📎</span><span><b>Joindre un PDF</b><span>Le PDF sera attaché uniquement à cette question.</span></span></button><button data-ctx="doc"><span class="pm-ic">📄</span><span><b>Joindre le document ouvert</b><span>Créer une pièce jointe à partir de l’onglet actif.</span></span></button><button data-ctx="page"><span class="pm-ic">⌖</span><span><b>Joindre la page actuelle</b><span>Envoyer seulement la page affichée avec votre question.</span></span></button>' ;plusWrap.append(plus,menu);const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Message à Readix Copilot…";q.setAttribute("aria-label","Message à Readix Copilot");const mic=el("button","ai10-mic");mic.type="button";mic.title="Saisie vocale";mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';composer.append(plusWrap,q,mic,send);cw.appendChild(composer);const note=el("div","ai10-context-note","Les PDF joints sont indépendants : ils accompagnent le message qui les contient et restent visibles dans l’historique de cette discussion.");cw.appendChild(note);main.appendChild(cw);
   const closeMenu=()=>menu.classList.remove("open");plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;closeMenu();const t=activeTab();try{if(b.dataset.ctx==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.multiple=true;input.onchange=async()=>{for(const f of [...(input.files||[])]){const a=await makePdfAttachment(f);COPILOT_STATE.draftAttachments.push(a);}renderAIFloating();};input.click();}else if(b.dataset.ctx==="doc"){const a=await attachmentFromCurrentTab(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}else if(b.dataset.ctx==="page"){const a=await attachmentFromCurrentPage(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}}catch(err){toast("Impossible d’ajouter ce contexte : "+err.message,"err");}};
@@ -848,10 +931,61 @@ function renderCopilotPanel(body){
       if(destructive.length){answer+="\n\n⚠️ Readix demande confirmation avant la suppression de pages.";}
       c.messages.push({role:"assistant",content:answer,actions});await saveCopilotChat(c);renderAIFloating();
       const results=await runCopilotActionPlan(d,{answer,content,attachments});
-      if(results.length){const ok=results.filter(x=>x.ok).map(x=>"✓ "+x.message);const bad=results.filter(x=>!x.ok&&!x.confirm).map(x=>"⚠ "+x.message);if(ok.length||bad.length){c.messages.push({role:"assistant",content:[...ok,...bad].join("\n")});await saveCopilotChat(c);renderAIFloating();}}
+      if(results.length){
+        const files=results.filter(x=>x.ok&&x.file);
+        const ok=results.filter(x=>x.ok&&!x.file).map(x=>"✓ "+x.message);
+        const bad=results.filter(x=>!x.ok&&!x.confirm).map(x=>"⚠ "+x.message);
+        if(ok.length||bad.length){c.messages.push({role:"assistant",content:[...ok,...bad].join("\n")});}
+        files.forEach(f=>{c.messages.push({role:"assistant",content:f.message||"Fichier prêt à télécharger.",file:f.file});});
+        if(ok.length||bad.length||files.length){await saveCopilotChat(c);renderAIFloating();}
+      }
     }catch(e){c.messages.push({role:"assistant",content:"Erreur : "+e.message});await saveCopilotChat(c);renderAIFloating();}finally{const sb=document.querySelector('.ai10-send');if(sb)sb.disabled=false;}};
   send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const rec=new SR();rec.lang=(APP.lang||"fr")==="en"?"en-US":"fr-FR";rec.interimResults=true;rec.continuous=false;rec.onstart=()=>{mic.classList.add("listening");};rec.onresult=e=>{let txt="";for(let i=e.resultIndex;i<e.results.length;i++)txt+=e.results[i][0].transcript;if(txt){q.value=txt;q.dispatchEvent(new Event("input"));}};rec.onend=()=>mic.classList.remove("listening");rec.onerror=()=>mic.classList.remove("listening");mic.onclick=()=>{try{mic.classList.contains("listening")?rec.stop():rec.start();}catch(e){}};}else mic.onclick=()=>toast("La saisie vocale n’est pas prise en charge par ce navigateur.","warn");
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){
+    // État local de la session vocale : le micro reste actif tant que l'utilisateur parle.
+    const VS={rec:null,recording:false,finishing:false,cancelled:false,finalText:"",bar:null};
+    const waveBars=Array.from({length:12}).map(()=>"<span></span>").join("");
+    function buildVoiceBar(){
+      const bar=el("div","ai10-voice");
+      bar.innerHTML=`<div class="ai10-wave" aria-hidden="true">${waveBars}</div>`+
+        `<div class="ai10-voice-txt"></div>`+
+        `<button class="ai10-voice-cancel" title="Annuler" aria-label="Annuler l'enregistrement">×</button>`+
+        `<button class="ai10-voice-ok" title="Terminer et transcrire" aria-label="Terminer et transcrire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></button>`;
+      return bar;
+    }
+    function setInterim(t){if(VS.bar){const el2=VS.bar.querySelector(".ai10-voice-txt");if(el2)el2.textContent=t||"";}}
+    function stopRecordingUI(){composer.classList.remove("recording");if(VS.bar){VS.bar.remove();VS.bar=null;}mic.classList.remove("listening");}
+    function startRecording(){
+      if(VS.recording)return;
+      VS.recording=true;VS.finishing=false;VS.cancelled=false;VS.finalText="";
+      const rec=new SR();VS.rec=rec;rec.lang=(APP.lang||"fr")==="en"?"en-US":"fr-FR";rec.interimResults=true;rec.continuous=true;
+      rec.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)VS.finalText+=r[0].transcript;else interim+=r[0].transcript;}setInterim((VS.finalText+" "+interim).trim().slice(-90));};
+      rec.onerror=(ev)=>{if(ev&&ev.error==="not-allowed"){toast("Micro refusé par le navigateur. Autorisez l'accès au micro.","err");VS.cancelled=true;VS.finishing=true;}};
+      rec.onend=()=>{
+        // Le navigateur peut couper après un silence : on relance tant que l'utilisateur n'a pas terminé.
+        if(VS.recording&&!VS.finishing){try{rec.start();return;}catch(e){}}
+        VS.recording=false;
+        const okBtn=VS.bar?VS.bar.querySelector(".ai10-voice-ok"):null;
+        if(VS.cancelled){stopRecordingUI();return;}
+        const finalTxt=VS.finalText.trim();
+        // Petit délai « transcription » pour un retour visuel de traitement, puis on affiche le texte.
+        setTimeout(()=>{
+          stopRecordingUI();
+          if(finalTxt){const base=q.value.trim();q.value=base?(base+" "+finalTxt):finalTxt;q.dispatchEvent(new Event("input"));q.focus();}
+          else toast("Aucune parole détectée. Réessayez.","warn");
+        },500);
+      };
+      composer.classList.add("recording");mic.classList.add("listening");
+      const bar=buildVoiceBar();VS.bar=bar;composer.insertBefore(bar,composer.firstChild);
+      bar.querySelector(".ai10-voice-cancel").onclick=()=>{VS.cancelled=true;VS.finishing=true;try{VS.rec&&VS.rec.stop();}catch(e){}if(!VS.recording)stopRecordingUI();};
+      bar.querySelector(".ai10-voice-ok").onclick=(ev)=>{const b=ev.currentTarget;b.classList.add("busy");b.innerHTML='<span class="spin"></span>';VS.finishing=true;try{VS.rec&&VS.rec.stop();}catch(e){}};
+      try{rec.start();}catch(e){VS.recording=false;stopRecordingUI();toast("Impossible de démarrer le micro.","err");}
+    }
+    mic.onclick=()=>{if(VS.recording){VS.finishing=true;try{VS.rec&&VS.rec.stop();}catch(e){}}else startRecording();};
+  } else mic.onclick=()=>toast("La saisie vocale n’est pas prise en charge par ce navigateur.","warn");
+  // Défilement automatique vers le dernier message à l'ouverture / après rendu.
+  requestAnimationFrame(()=>{const fd=main.querySelector(".ai10-feed");if(fd)fd.scrollTop=fd.scrollHeight;});
 }
 function aiFeatureCardHTML(f){return `<div class="ai9-icon">${f.icon}</div><b>${f.name}</b><span>${f.desc}</span><small>${f.plan} · IA premium</small>`;}
 async function buildAI9ToolPanel(feature,t,panel){
@@ -963,7 +1097,7 @@ async function buildAI9ToolPanel(feature,t,panel){
   }
   if(feature==="copilot"){renderCopilotPanel(panel);return;}
 }
-async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
+async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("maximized",AI_FLOAT_STATE.maximized&&!AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");const _mx=$("#aiFloatMax");if(_mx)_mx.title=AI_FLOAT_STATE.maximized?"Rétablir la taille":"Agrandir";root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
   if(AI_FLOAT_STATE.mode==="copilot"){await initCopilotHistory();body.innerHTML="";renderCopilotPanel(body);return;}
   body.innerHTML="";const selected=AI_FLOAT_STATE.feature;
   if(!selected||selected==="__home"){const home=el("div","ai9-float-home");home.innerHTML='<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Comprendre, rechercher, extraire et comparer vos documents PDF avec les moteurs IA de Readix.</div></div><div class="ai9-status">Plan : '+(PLAN_LABEL[APP.plan]||"Gratuit")+'</div></div>';const grid=el("div","ai9-grid");AI9_FEATURES.forEach(x=>{const c=el("button","ai9-card");c.innerHTML=aiFeatureCardHTML(x);c.onclick=()=>{AI_FLOAT_STATE.feature=x.id;renderAIFloating();};grid.appendChild(c)});home.appendChild(grid);body.appendChild(home);return;}
@@ -972,7 +1106,8 @@ async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody"
 function openAIFloating(feature){if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot"&&feature==="copilot"){AI_FLOAT_STATE.open=false;return renderAIFloating();}AI_FLOAT_STATE.open=true;AI_FLOAT_STATE.minimized=false;AI_FLOAT_STATE.mode=feature==="copilot"?"copilot":"advanced";AI_FLOAT_STATE.feature=feature||"__home";renderAIFloating();}
 function toggleCopilotFloating(){if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot"){AI_FLOAT_STATE.open=false;renderAIFloating();}else openAIFloating("copilot");}
 function closeAIFloating(){AI_FLOAT_STATE.open=false;renderAIFloating();}
-function toggleAIMin(){if(!AI_FLOAT_STATE.open)return;AI_FLOAT_STATE.minimized=!AI_FLOAT_STATE.minimized;renderAIFloating();}
+function toggleAIMin(){if(!AI_FLOAT_STATE.open)return;AI_FLOAT_STATE.minimized=!AI_FLOAT_STATE.minimized;if(AI_FLOAT_STATE.minimized)AI_FLOAT_STATE.maximized=false;renderAIFloating();}
+function toggleAIMax(){if(!AI_FLOAT_STATE.open)return;AI_FLOAT_STATE.minimized=false;AI_FLOAT_STATE.maximized=!AI_FLOAT_STATE.maximized;renderAIFloating();}
 async function renderAIAdvanced(t,stage){openAIFloating("__home");}
 
 /* ---------- catalogue d'outils (Phase 1 : réels) ---------- */
@@ -1628,8 +1763,10 @@ $('#umPricing').onclick=()=>{openPricing();};
 $("#cbotFab").onclick=()=>toggleCopilotFloating();
 $("#aiFloatClose").onclick=()=>closeAIFloating();
 $("#aiFloatMin").onclick=()=>toggleAIMin();
+$("#aiFloatMax").onclick=()=>toggleAIMax();
 document.addEventListener("click",()=>$$(".menu.open").forEach(m=>m.classList.remove("open")));
 document.addEventListener("click",e=>{$$(".ai10-plus-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
+document.addEventListener("click",e=>{$$(".ai10-chat-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
 $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)return;const a=b.dataset.create;
   if(a==="tab"){createTab();openTool("view");}
   else if(a==="doc"){createTab("Nouveau document.docx");openTool("docstudio");}
