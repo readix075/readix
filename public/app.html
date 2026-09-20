@@ -862,13 +862,38 @@ async function runAI9(btn,res,feature,text,question,target){
   catch(e){showAI9Error(res,e)}finally{btn.disabled=false;btn.textContent=old;}
 }
 const AI_FLOAT_STATE={open:false,minimized:false,maximized:false,mode:"advanced",feature:"workspace"};
-const COPILOT_STATE={chats:[],activeId:null,draftAttachments:[],loaded:false};
+const COPILOT_STATE={chats:[],activeId:null,draftAttachments:[],loaded:false,remote:false};
 function chatId(){return "c"+Date.now()+Math.floor(Math.random()*1e4);}
 function newCopilotChat(){const now=Date.now();return {id:chatId(),title:"Nouvelle discussion",messages:[],createdAt:now,updatedAt:now};}
-async function initCopilotHistory(){if(COPILOT_STATE.loaded)return;COPILOT_STATE.chats=(await idbChatAll()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];await idbChatSave(c);}COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;}
+// ---- Synchronisation Supabase (Phase 6) : le local reste le cache de secours ----
+function copilotAuthed(){return !!(getToken()&&APP.user);}
+async function apiCopilotList(){const d=await api("/api/copilot/conversations");return Array.isArray(d&&d.conversations)?d.conversations:[];}
+async function apiCopilotSave(chat){try{await api("/api/copilot/conversations",{chat});}catch(e){}}
+async function apiCopilotDelete(id){try{await api("/api/copilot/conversations/"+encodeURIComponent(id),null,"DELETE");}catch(e){}}
+const _copilotSyncTimers={};
+function queueCopilotSync(chat){if(!chat||!chat.id||!COPILOT_STATE.remote)return;clearTimeout(_copilotSyncTimers[chat.id]);_copilotSyncTimers[chat.id]=setTimeout(()=>apiCopilotSave(chat),700);}
+async function initCopilotHistory(){
+  if(COPILOT_STATE.loaded)return;
+  const local=(await idbChatAll()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  COPILOT_STATE.chats=local;COPILOT_STATE.remote=false;
+  if(copilotAuthed()){
+    try{
+      const remote=await apiCopilotList();
+      const map=new Map();remote.forEach(c=>{if(c&&c.id)map.set(c.id,c);});
+      const toPush=[];
+      local.forEach(l=>{if(!l||!l.id)return;const r=map.get(l.id);if(!r){map.set(l.id,l);toPush.push(l);}else if((l.updatedAt||0)>(r.updatedAt||0)){map.set(l.id,l);toPush.push(l);}});
+      COPILOT_STATE.chats=[...map.values()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+      COPILOT_STATE.remote=true;
+      remote.forEach(c=>idbChatSave(c)); // cache local
+      toPush.forEach(c=>apiCopilotSave(c)); // migration douce vers le cloud
+    }catch(e){COPILOT_STATE.remote=false;} // hors ligne / non authentifié → on reste en local
+  }
+  if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);}
+  COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;
+}
 function activeCopilotChat(){return COPILOT_STATE.chats.find(c=>c.id===COPILOT_STATE.activeId)||null;}
-async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));}
-async function createCopilotChat(){const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;COPILOT_STATE.draftAttachments=[];await idbChatSave(c);if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
+async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueCopilotSync(chat);}
+async function createCopilotChat(){const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;COPILOT_STATE.draftAttachments=[];await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
 async function switchCopilotChat(id){if(!COPILOT_STATE.chats.some(c=>c.id===id))return;COPILOT_STATE.activeId=id;COPILOT_STATE.draftAttachments=[];if(AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
 function fmtChatDate(ts){try{return new Date(ts).toLocaleDateString("fr-CA",{day:"2-digit",month:"2-digit"});}catch(e){return "";}}
 function attachmentHTML(a){const name=String(a.name||"Document.pdf").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));const thumb=a.thumb?`<img src="${a.thumb}" alt="">`:'<div style="width:34px;height:42px;display:grid;place-items:center;background:#eef0f6;border-radius:4px">PDF</div>';return `<div class="ai10-attachment">${thumb}<div style="min-width:0"><div class="afn">${name}</div><div class="afs">${a.type==="page"?"Page "+(a.page||""):"PDF joint"}</div></div></div>`;}
@@ -881,7 +906,8 @@ async function deleteCopilotChat(id){
   const wasActive=(COPILOT_STATE.activeId===id);
   COPILOT_STATE.chats.splice(idx,1);
   try{await idbChatDel(id);}catch(e){}
-  if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];COPILOT_STATE.activeId=c.id;await idbChatSave(c);}
+  if(COPILOT_STATE.remote)apiCopilotDelete(id);
+  if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];COPILOT_STATE.activeId=c.id;await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);}
   else if(wasActive){COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.draftAttachments=[];}
   if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
   toast("Discussion supprimée.","ok");
@@ -2172,12 +2198,13 @@ function openAuth(mode){
       try{const path=mode==="signup"?"/api/signup":"/api/login";
         const d=await api(path,mode==="signup"?{name,email,password:pass}:{email,password:pass});
         setToken(d.token);APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();dl.close();
+        COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
         toast("Bienvenue "+(d.user.name||d.user.email)+" !","ok");
       }catch(ex){err.textContent=ex.message;b.disabled=false;}
     }
   };
 }
-function logout(){clearToken();APP.user=null;APP.plan="free";updateAccount();toast("Vous êtes déconnecté.","ok");}
+function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;updateAccount();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
 $("#umAuth").onclick=()=>{$("#acctMenu").classList.remove("open");openAuth("login");};
 $("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 /* ---------- en-tête, thème, menus, init ---------- */
