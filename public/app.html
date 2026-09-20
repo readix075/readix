@@ -409,6 +409,27 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .ai19-filecard .fkind{font-size:10px;color:var(--ink-faint);margin-top:2px}
 .ai19-filecard .btn{flex:none}
 
+/* ===== Phase 21 — Planner : plan d'étapes + progression en direct ===== */
+.ai19-plan{margin-top:10px;border:1px solid #e3e6ee;border-radius:13px;background:#fff;padding:11px 13px;box-shadow:0 5px 16px rgba(20,24,45,.05)}
+.ai19-plan-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:9px}
+.ai19-step{display:flex;align-items:flex-start;gap:10px;padding:6px 2px;font-size:12px;color:var(--ink)}
+.ai19-step+.ai19-step{border-top:1px dashed #eef0f5}
+.ai19-step-ic{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:12px;line-height:1;margin-top:1px;background:#f1f2f6;color:var(--ink-faint)}
+.ai19-step .lbl{flex:1;min-width:0}
+.ai19-step .lbl b{font-weight:600;color:var(--ink)}
+.ai19-step .lbl small{display:block;color:var(--ink-faint);font-size:10.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai19-step.pending{opacity:.7}
+.ai19-step.running .ai19-step-ic{background:var(--brand-soft);color:var(--brand)}
+.ai19-step.done .ai19-step-ic{background:#e7f6ec;color:#188a42}
+.ai19-step.error .ai19-step-ic{background:#fdeceb;color:#c0392b}
+.ai19-step.skipped .ai19-step-ic{background:#f1f2f6;color:var(--ink-faint)}
+.ai19-step.confirm .ai19-step-ic{background:#fff6e6;color:#b8860b}
+.ai19-step-ic .spin{width:13px;height:13px;border:2px solid rgba(99,82,255,.3);border-top-color:var(--brand);border-radius:50%;animation:ai10spin .7s linear infinite}
+.ai19-confirm-row{display:flex;gap:7px;margin-top:7px}
+.ai19-confirm-row button{font:inherit;font-size:11px;border-radius:8px;padding:6px 11px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.ai19-confirm-row button.danger{background:#c0392b;border-color:#c0392b;color:#fff}
+.ai19-confirm-row button:hover{filter:brightness(.97)}
+
 </style>
 </head>
 <body>
@@ -870,6 +891,59 @@ function renderCopilotHistory(side){
     side.appendChild(row);
   });
 }
+function stepIconHTML(status){
+  if(status==="running")return '<span class="spin"></span>';
+  if(status==="done")return "✓";
+  if(status==="error")return "✕";
+  if(status==="skipped")return "—";
+  if(status==="confirm")return "?";
+  return "○";
+}
+// Panneau de progression EN DIRECT : construit le DOM, expose setStatus() et confirm().
+function buildPlanPanel(steps,multi){
+  const root=el("div","ai19-plan");
+  const head=el("div","ai19-plan-head",multi?"Je vais effectuer ces étapes":"Action en cours");
+  root.appendChild(head);
+  const rows=steps.map((s,i)=>{
+    const row=el("div","ai19-step pending");
+    row.innerHTML=`<span class="ai19-step-ic">${stepIconHTML("pending")}</span>`+
+      `<span class="lbl"><b>${String(s.label||"Étape").replace(/[&<>]/g,"")}</b>${s.title?`<small>${String(s.title).replace(/[&<>]/g,"")}</small>`:""}</span>`;
+    root.appendChild(row);
+    return row;
+  });
+  function setStatus(i,status,detail){
+    if(!rows[i])return;steps[i].status=status;
+    rows[i].className="ai19-step "+status;
+    const ic=rows[i].querySelector(".ai19-step-ic");if(ic)ic.innerHTML=stepIconHTML(status);
+    if(detail){const lbl=rows[i].querySelector(".lbl");let sm=lbl.querySelector("small");if(!sm){sm=document.createElement("small");lbl.appendChild(sm);}sm.textContent=detail;}
+  }
+  function confirm(i,a){
+    return new Promise(resolve=>{
+      setStatus(i,"confirm");
+      const pages=Array.isArray(a.pages)?a.pages.join(", "):"";
+      const lbl=rows[i].querySelector(".lbl");
+      const bar=document.createElement("div");bar.className="ai19-confirm-row";
+      bar.innerHTML=`<span style="flex:1;font-size:11px;color:#8c3030">Opération définitive${pages?` (pages ${pages})`:""}. Confirmer ?</span>`+
+        `<button data-c="no">Annuler</button><button data-c="yes" class="danger">Confirmer</button>`;
+      lbl.appendChild(bar);
+      bar.querySelector('[data-c="yes"]').onclick=()=>{bar.remove();resolve(true);};
+      bar.querySelector('[data-c="no"]').onclick=()=>{bar.remove();resolve(false);};
+    });
+  }
+  return {root,setStatus,confirm};
+}
+// Rendu STATIQUE (persistant) d'un plan terminé, rechargé depuis l'historique.
+function renderPlanStatic(plan){
+  const root=el("div","ai19-plan");
+  root.appendChild(el("div","ai19-plan-head",plan.length>1?"Étapes exécutées":"Action"));
+  plan.forEach(s=>{
+    const row=el("div","ai19-step "+(s.status||"done"));
+    row.innerHTML=`<span class="ai19-step-ic">${stepIconHTML(s.status||"done")}</span>`+
+      `<span class="lbl"><b>${String(s.label||"Étape").replace(/[&<>]/g,"")}</b>${s.title?`<small>${String(s.title).replace(/[&<>]/g,"")}</small>`:""}</span>`;
+    root.appendChild(row);
+  });
+  return root;
+}
 function copilotActionLabel(a){const m={create_pdf:"Création du PDF",create_docx:"Création du document Word",create_docstudio:"Ouverture dans Document Studio",delete_pages:"Suppression de pages",extract_pages:"Extraction de pages",rotate_pages:"Rotation des pages",open_tool:"Ouverture d’un outil",search_document:"Recherche dans le document",extract_data:"Extraction structurée",summarize:"Résumé du document"};return m[a.type]||"Action Readix";}
 function downloadBlob(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 function plainForPdf(text){return String(text||"").replace(/```[\s\S]*?```/g,m=>m.replace(/```/g,"")).replace(/\*\*(.*?)\*\*/g,"$1").replace(/^#{1,6}\s*/gm,"").replace(/^[-*]\s+/gm,"• ");}
@@ -906,7 +980,7 @@ function renderCopilotPanel(body){
   const main=el("section","ai10-chat-main");shell.appendChild(main);const chat=activeCopilotChat()||COPILOT_STATE.chats[0];
   const top=el("div","ai10-chat-top");const title=el("div","ai10-chat-title",chat?chat.title:"Nouvelle discussion");const meta=el("div","ai10-chat-meta",chat?`${chat.messages.length} message${chat.messages.length>1?"s":""}`:"0 message");top.append(title,meta);main.appendChild(top);
   const feed=el("div","ai10-feed");main.appendChild(feed);
-  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&m.file){const fc=el("div","ai19-filecard");fc.innerHTML=fileCardHTML(m.file.kind)+`<div class="fmeta"><div class="fname">${String(m.file.name||"Document").replace(/[&<>]/g,"")}</div><div class="fkind">${(m.file.kind||"pdf").toUpperCase()} · prêt à télécharger</div></div>`;const dlb=el("button","btn sm","Télécharger");dlb.onclick=()=>downloadCopilotFile(m.file,dlb);fc.appendChild(dlb);msg.appendChild(fc);}if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
+  if(!chat||!chat.messages.length){const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Votre espace de discussion Readix</b><span>Posez une question, joignez un PDF avec le bouton + et poursuivez la conversation. Chaque pièce jointe reste liée au message qui l’a envoyée.</span></div>';feed.appendChild(empty);} else {chat.messages.forEach(m=>{const msg=el("div","ai10-msg "+m.role);msg.innerHTML=messageHTML(m);if(m.role==="assistant"&&Array.isArray(m.plan)&&m.plan.length){msg.appendChild(renderPlanStatic(m.plan));}if(m.role==="assistant"&&m.file){const fc=el("div","ai19-filecard");fc.innerHTML=fileCardHTML(m.file.kind)+`<div class="fmeta"><div class="fname">${String(m.file.name||"Document").replace(/[&<>]/g,"")}</div><div class="fkind">${(m.file.kind||"pdf").toUpperCase()} · prêt à télécharger</div></div>`;const dlb=el("button","btn sm","Télécharger");dlb.onclick=()=>downloadCopilotFile(m.file,dlb);fc.appendChild(dlb);msg.appendChild(fc);}if(m.role==="assistant"&&Array.isArray(m.actions)&&m.actions.length){const acts=el("div","ai19-action-list");m.actions.forEach(a=>{const card=el("div","ai19-action");card.innerHTML=`<span class="aic">⚡</span><span><b>${String(copilotActionLabel(a)).replace(/[&<>]/g,"")}</b><small>${String(a.title||"Action Readix").replace(/[&<>]/g,"")}</small></span>`;acts.appendChild(card);});msg.appendChild(acts);}feed.appendChild(msg);bindPageRefs(msg);});}
   const draft=el("div","ai10-draft");COPILOT_STATE.draftAttachments.forEach((a,i)=>{const card=el("div","ai10-draft-card");card.innerHTML=`${a.thumb?`<img src="${a.thumb}" alt="">`:"<span>PDF</span>"}<span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(a.name||"PDF").replace(/[&<>]/g,"")}</span><button title="Retirer">×</button>`;card.querySelector("button").onclick=()=>{COPILOT_STATE.draftAttachments.splice(i,1);renderAIFloating();};draft.appendChild(card);});if(COPILOT_STATE.draftAttachments.length)main.appendChild(draft);
   const cw=el("div","ai10-composer-wrap");const composer=el("div","ai10-composer");const plusWrap=el("div","ai10-plus-wrap");const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter un fichier ou un contexte";plus.textContent="+";const menu=el("div","ai10-plus-menu");menu.innerHTML='<button data-ctx="pdf"><span class="pm-ic">📎</span><span><b>Joindre un PDF</b><span>Le PDF sera attaché uniquement à cette question.</span></span></button><button data-ctx="doc"><span class="pm-ic">📄</span><span><b>Joindre le document ouvert</b><span>Créer une pièce jointe à partir de l’onglet actif.</span></span></button><button data-ctx="page"><span class="pm-ic">⌖</span><span><b>Joindre la page actuelle</b><span>Envoyer seulement la page affichée avec votre question.</span></span></button>' ;plusWrap.append(plus,menu);const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Message à Readix Copilot…";q.setAttribute("aria-label","Message à Readix Copilot");const mic=el("button","ai10-mic");mic.type="button";mic.title="Saisie vocale";mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';composer.append(plusWrap,q,mic,send);cw.appendChild(composer);const note=el("div","ai10-context-note","Les PDF joints sont indépendants : ils accompagnent le message qui les contient et restent visibles dans l’historique de cette discussion.");cw.appendChild(note);main.appendChild(cw);
   const closeMenu=()=>menu.classList.remove("open");plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open")};menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;closeMenu();const t=activeTab();try{if(b.dataset.ctx==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.multiple=true;input.onchange=async()=>{for(const f of [...(input.files||[])]){const a=await makePdfAttachment(f);COPILOT_STATE.draftAttachments.push(a);}renderAIFloating();};input.click();}else if(b.dataset.ctx==="doc"){const a=await attachmentFromCurrentTab(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}else if(b.dataset.ctx==="page"){const a=await attachmentFromCurrentPage(t);if(!a){toast("Ouvrez un PDF dans l’onglet actif.","warn");return;}COPILOT_STATE.draftAttachments.push(a);renderAIFloating();}}catch(err){toast("Impossible d’ajouter ce contexte : "+err.message,"err");}};
@@ -928,19 +1002,42 @@ function renderCopilotPanel(body){
           }
         } else throw firstErr;
       }
-      let answer=d.answer||"Je n’ai pas trouvé de réponse correspondante.";
+      const answer=d.answer||"Je n’ai pas trouvé de réponse correspondante.";
       const actions=Array.isArray(d.actions)?d.actions:[];
-      const destructive=actions.filter(a=>a&&a.type==="delete_pages");
-      if(destructive.length){answer+="\n\n⚠️ Readix demande confirmation avant la suppression de pages.";}
-      c.messages.push({role:"assistant",content:answer,actions});await saveCopilotChat(c);renderAIFloating();
-      const results=await runCopilotActionPlan(d,{answer,content,attachments});
-      if(results.length){
-        const files=results.filter(x=>x.ok&&x.file);
-        const ok=results.filter(x=>x.ok&&!x.file).map(x=>"✓ "+x.message);
-        const bad=results.filter(x=>!x.ok&&!x.confirm).map(x=>"⚠ "+x.message);
-        if(ok.length||bad.length){c.messages.push({role:"assistant",content:[...ok,...bad].join("\n")});}
+      // 1) On affiche d'abord la réponse (le texte, l'explication).
+      const answerMsg={role:"assistant",content:answer};
+      c.messages.push(answerMsg);await saveCopilotChat(c);renderAIFloating();
+
+      // 2) S'il y a des actions, on les exécute UNE PAR UNE, avec progression visible.
+      if(actions.length){
+        const steps=actions.map(a=>({label:copilotActionLabel(a),title:a.title||"",status:"pending"}));
+        const feedEl=document.querySelector(".ai10-feed");
+        const live=buildPlanPanel(steps,actions.length>1);
+        if(feedEl){feedEl.appendChild(live.root);feedEl.scrollTop=feedEl.scrollHeight;}
+        const files=[];const badMsgs=[];const okMsgs=[];
+        for(let i=0;i<actions.length;i++){
+          let a=actions[i];
+          live.setStatus(i,"running");
+          if(feedEl)feedEl.scrollTop=feedEl.scrollHeight;
+          // Confirmation intégrée pour les actions destructives (jamais exécutées sans accord).
+          if(a&&a.requiresConfirmation&&!a.approved){
+            const yes=await live.confirm(i,a);
+            if(!yes){live.setStatus(i,"skipped","Annulée par l’utilisateur");badMsgs.push("Étape annulée : "+(a.title||copilotActionLabel(a)));continue;}
+            a={...a,approved:true};live.setStatus(i,"running");
+          }
+          let res;
+          try{res=await executeCopilotAction(a,{answer,content,attachments});}
+          catch(err){res={ok:false,message:(err&&err.message)||"Échec de l’action."};}
+          if(res&&res.ok){live.setStatus(i,"done");if(res.file)files.push({file:res.file,message:res.message});else if(res.message)okMsgs.push(res.message);}
+          else if(res&&res.confirm){live.setStatus(i,"skipped");}
+          else {live.setStatus(i,"error",(res&&res.message)||"Échec");badMsgs.push((res&&res.message)||"Échec de l’action.");}
+          if(feedEl)feedEl.scrollTop=feedEl.scrollHeight;
+        }
+        // 3) On fige le plan terminé sur le message (persistance), puis on rend proprement.
+        answerMsg.plan=steps.map(s=>({label:s.label,title:s.title,status:s.status||"done"}));
         files.forEach(f=>{c.messages.push({role:"assistant",content:f.message||"Fichier prêt à télécharger.",file:f.file});});
-        if(ok.length||bad.length||files.length){await saveCopilotChat(c);renderAIFloating();}
+        if(badMsgs.length){c.messages.push({role:"assistant",content:"⚠️ "+badMsgs.join("\n⚠️ ")});}
+        await saveCopilotChat(c);renderAIFloating();
       }
     }catch(e){
       let hint="";
