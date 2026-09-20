@@ -289,6 +289,18 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .ai10-query{flex:1;min-width:0;min-height:34px;max-height:120px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:inherit;font-size:13px;line-height:1.45;padding:7px 2px}
 .ai10-query::placeholder{color:#8b8fa1}
 .ai10-hint{font-size:10px;color:var(--ink-faint);text-align:center;margin-top:8px}
+.ai10-context{position:relative;margin:0 auto 8px;width:min(100%,790px);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ai10-context-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid rgba(99,82,255,.18);border-radius:999px;background:rgba(99,82,255,.06);color:var(--brand-ink);font-size:10.5px}
+.ai10-context-badge button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;line-height:1;padding:0 0 0 2px}
+.ai10-plus-wrap{position:relative;flex:none}
+.ai10-plus-menu{position:absolute;left:0;bottom:44px;width:250px;padding:7px;border:1px solid rgba(110,115,150,.25);border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 16px 40px rgba(28,31,55,.16);display:none;z-index:20}
+.ai10-plus-menu.open{display:block}
+.ai10-plus-menu button{width:100%;display:flex;align-items:flex-start;gap:10px;border:0;background:transparent;border-radius:10px;padding:9px;text-align:left;color:var(--ink);cursor:pointer}
+.ai10-plus-menu button:hover{background:var(--surface-2)}
+.ai10-plus-menu .pm-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:15px;flex:none}
+.ai10-plus-menu b{font-size:11.5px;display:block;margin-bottom:2px}.ai10-plus-menu span{font-size:10px;line-height:1.35;color:var(--ink-soft);display:block}
+.ai10-context-empty{font-size:10px;color:var(--ink-faint);margin-left:2px}
+
 @keyframes ai10pulse{50%{transform:scale(1.08)}}
 @media(max-width:1050px){.ai9-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.ai9-wrap{padding:18px 12px 34px}.ai9-grid{grid-template-columns:1fr 1fr}.ai9-head{align-items:flex-start;flex-direction:column}.ai9-head h2{font-size:23px}.ai9-panel{padding:15px;border-radius:17px}.ai10-msg{max-width:94%}}
@@ -652,7 +664,7 @@ async function renderAIAdvanced(t,stage){
   wrap.innerHTML=`<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Un espace d’intelligence documentaire pensé pour les PDF : comprendre, rechercher, extraire, comparer et être guidé, dans une interface Readix plus visuelle et plus futuriste.</div></div><div class="ai9-status">Plan : ${PLAN_LABEL[APP.plan]||"Gratuit"}</div></div>`;
   const grid=el("div","ai9-grid");wrap.appendChild(grid);
   const panel=el("div","ai9-panel");wrap.appendChild(panel);
-  let selected="workspace";
+  let selected=window.__readixAI9Selected||"workspace"; window.__readixAI9Selected=null;
   const draw=()=>{
     grid.innerHTML="";
     AI9_FEATURES.forEach(f=>{const c=el("button","ai9-card"+(f.id===selected?" on":""));c.innerHTML=`<div class="ai9-icon">${f.icon}</div><b>${f.name}</b><span>${f.desc}</span><small>${f.plan} · IA premium</small>`;c.onclick=()=>{selected=f.id;draw();drawPanel();};grid.appendChild(c);});
@@ -697,23 +709,46 @@ async function renderAIAdvanced(t,stage){
     if(selected==="copilot"){
       const box=el("div","ai10-copilot");panel.appendChild(box);
       const feed=el("div","ai10-feed");box.appendChild(feed);
-      const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Comment puis-je vous guider dans Readix ?</b><span>Posez votre question sur l’utilisation d’un outil, une étape ou le meilleur chemin pour réaliser une opération PDF.</span></div>';feed.appendChild(empty);
-      const composer=el("div","ai10-composer");
-      const plus=el("button","ai10-plus");plus.type="button";plus.title="Ouvrir les outils IA";plus.textContent="+";
-      const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Poser une question sur Readix…";q.setAttribute("aria-label","Question au Copilot Readix");
+      const empty=el("div","ai10-empty");empty.innerHTML='<div><div class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M8 7V5.5M16 7V5.5M12 3v3M8.5 12h.01M15.5 12h.01M9 16h6"/></svg></div><b>Comment puis-je vous guider dans Readix ?</b><span>Posez une question comme dans ChatGPT. Le Copilot peut comprendre votre document, la page actuelle et les outils Readix pour vous indiquer quoi faire, étape par étape.</span></div>';feed.appendChild(empty);
+      const context=el("div","ai10-context");box.appendChild(context);
+      const contextEmpty=el("span","ai10-context-empty","Aucun contexte ajouté — le document ouvert reste disponible comme contexte de base.");context.appendChild(contextEmpty);
+      const composer=el("div","ai10-composer");box.appendChild(composer);
+      const plusWrap=el("div","ai10-plus-wrap");
+      const plus=el("button","ai10-plus");plus.type="button";plus.title="Ajouter du contexte";plus.setAttribute("aria-label","Ajouter du contexte");plus.textContent="+";
+      const menu=el("div","ai10-plus-menu");menu.innerHTML=`
+        <button type="button" data-ctx="doc"><span class="pm-ic">📄</span><span><b>Document ouvert</b><span>Ajouter le texte du PDF comme contexte.</span></span></button>
+        <button type="button" data-ctx="page"><span class="pm-ic">⌖</span><span><b>Page actuelle</b><span>Concentrer la question sur la page affichée.</span></span></button>
+        <button type="button" data-ctx="selection"><span class="pm-ic">✦</span><span><b>Texte sélectionné</b><span>Utiliser le texte sélectionné dans le document.</span></span></button>
+        <button type="button" data-ctx="pdf"><span class="pm-ic">＋</span><span><b>Ajouter un PDF</b><span>Ajouter un second document comme contexte.</span></span></button>`;
+      plusWrap.append(plus,menu);
+      const q=el("textarea","ai10-query");q.rows=1;q.placeholder="Posez une question sur votre document ou sur Readix…";q.setAttribute("aria-label","Question au Copilot Readix");
       const mic=el("button","ai10-mic");mic.type="button";mic.title="Recherche vocale";mic.setAttribute("aria-label","Recherche vocale");mic.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
       const send=el("button","ai10-send");send.type="button";send.title="Envoyer";send.setAttribute("aria-label","Envoyer la question");send.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8 3-8z"/><path d="M7 12h13"/></svg>';
-      composer.append(plus,q,mic,send);box.appendChild(composer);
-      const hint=el("div","ai10-hint","Le Copilot vous explique les outils Readix. Il ne crée ni ne modifie vos fichiers.");box.appendChild(hint);
-      plus.onclick=()=>{selected="workspace";draw();drawPanel();};
+      composer.append(plusWrap,q,mic,send);
+      const hint=el("div","ai10-hint","Le Copilot est le guide intelligent de Readix. Il explique, contextualise et oriente ; il ne modifie pas vos fichiers tout seul.");box.appendChild(hint);
+      const ctxState={doc:false,page:false,selection:false,extraPdf:""};
+      const addBadge=(label,key)=>{const b=el("span","ai10-context-badge");b.innerHTML=`${label}<button type="button" aria-label="Retirer le contexte">×</button>`;b.querySelector("button").onclick=()=>{ctxState[key]=key==="extraPdf"?"":false;refreshContext();};context.appendChild(b);};
+      const refreshContext=()=>{context.innerHTML="";let n=0;if(ctxState.doc){addBadge("📄 Document ouvert","doc");n++;}if(ctxState.page){addBadge("⌖ Page "+(t.page||1),"page");n++;}if(ctxState.selection){addBadge("✦ Sélection","selection");n++;}if(ctxState.extraPdf){addBadge("＋ PDF ajouté","extraPdf");n++;}if(!n){const e=el("span","ai10-context-empty","Aucun contexte ajouté — le document ouvert reste disponible comme contexte de base.");context.appendChild(e);}};
+      const closeMenu=()=>menu.classList.remove("open");
+      plus.onclick=e=>{e.stopPropagation();menu.classList.toggle("open");};
+      menu.onclick=async e=>{const b=e.target.closest("[data-ctx]");if(!b)return;const type=b.dataset.ctx;closeMenu();
+        if(type==="doc"){if(!t.pdf){toast("Ouvrez d'abord un PDF.","warn");return;}ctxState.doc=!ctxState.doc;refreshContext();}
+        else if(type==="page"){if(!t.pdf){toast("Ouvrez d'abord un PDF.","warn");return;}ctxState.page=!ctxState.page;refreshContext();}
+        else if(type==="selection"){const sel=(window.getSelection&&window.getSelection().toString()||"").trim();if(!sel){toast("Sélectionnez d'abord du texte dans le document.","warn");return;}ctxState.selection=sel;refreshContext();}
+        else if(type==="pdf"){const input=document.createElement("input");input.type="file";input.accept="application/pdf";input.onchange=async()=>{const f=input.files&&input.files[0];if(!f)return;try{const bdoc=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;ctxState.extraPdf=await extractPdfText({pdf:bdoc});refreshContext();toast("PDF ajouté au contexte du Copilot.","ok");}catch(err){toast("Impossible de lire ce PDF : "+err.message,"err");}};input.click();}
+      };
       const addMsg=(role,html)=>{const m=el("div","ai10-msg "+role);m.innerHTML=html;feed.appendChild(m);feed.scrollTop=feed.scrollHeight;return m;};
-      const submit=async()=>{const question=q.value.trim();if(!question)return;if(!APP.user){toast("Connectez-vous pour utiliser le Copilot.","warn");openAuth("login");return;}q.value="";q.style.height="34px";empty.remove();addMsg("user",pageAwareHTML(question));const pending=addMsg("bot",'<span class="spin"></span> Recherche dans le guide Readix…');send.disabled=true;try{const d=await api('/api/ai/chatbot',{message:question,history:CHAT_HISTORY.slice(-8)});pending.innerHTML=pageAwareHTML(d.answer||"Je n’ai pas trouvé d’instruction correspondante.");bindPageRefs(pending);CHAT_HISTORY.push({role:"user",content:question},{role:"assistant",content:d.answer||""});}catch(e){pending.textContent="Erreur : "+e.message;}finally{send.disabled=false;q.focus();}};
+      const buildContext=async()=>{let parts=[];if(t.pdf&&(!ctxState.doc&&!ctxState.page&&!ctxState.selection)){parts.push("DOCUMENT OUVERT : "+t.name+"\nPAGE ACTUELLE : "+(t.page||1));}
+        if(ctxState.doc&&t.pdf)parts.push("DOCUMENT OUVERT (texte extrait) :\n"+(await extractPdfText(t)).slice(0,45000));
+        if(ctxState.page&&t.pdf){const pn=t.page||1;const pg=await t.pdf.getPage(pn);const c=await pg.getTextContent();parts.push("PAGE ACTUELLE [Page "+pn+"] :\n"+c.items.map(x=>x.str).join(" "));}
+        if(ctxState.selection)parts.push("TEXTE SÉLECTIONNÉ :\n"+String(ctxState.selection).slice(0,12000));
+        if(ctxState.extraPdf)parts.push("PDF AJOUTÉ AU CONTEXTE :\n"+String(ctxState.extraPdf).slice(0,30000));
+        return parts.join("\n\n");};
+      const submit=async()=>{const question=q.value.trim();if(!question)return;if(!APP.user){toast("Connectez-vous pour utiliser le Copilot.","warn");openAuth("login");return;}q.value="";q.style.height="34px";empty.remove();addMsg("user",pageAwareHTML(question));const pending=addMsg("bot",'<span class="spin"></span> Analyse du contexte Readix…');send.disabled=true;try{const documentContext=await buildContext();const d=await api('/api/copilot',{message:question,history:CHAT_HISTORY.slice(-10),documentContext,page:t.page||1,documentName:t.name||""});pending.innerHTML=pageAwareHTML(d.answer||"Je n’ai pas trouvé de réponse correspondante.");bindPageRefs(pending);CHAT_HISTORY.push({role:"user",content:question},{role:"assistant",content:d.answer||""});}catch(e){pending.textContent="Erreur : "+e.message;}finally{send.disabled=false;q.focus();}};
       send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
-      // Recherche vocale via Web Speech API, sans envoyer l'audio au serveur.
-      let recognition=null;
-      const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-      if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang=(APP.lang||"fr").toLowerCase()==="en"?"en-US":"fr-FR";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{mic.classList.add("listening");mic.title="Écoute en cours…";};recognition.onresult=e=>{let finalText="";for(let i=e.resultIndex;i<e.results.length;i++)finalText+=e.results[i][0].transcript;if(finalText){q.value=finalText;q.dispatchEvent(new Event("input"));}};recognition.onerror=e=>{mic.classList.remove("listening");mic.title="Recherche vocale";if(e.error!=="aborted")toast("La recherche vocale n’est pas disponible : "+e.error,"warn");};recognition.onend=()=>{mic.classList.remove("listening");mic.title="Recherche vocale";};mic.onclick=()=>{try{if(mic.classList.contains("listening")){recognition.stop();}else{recognition.start();}}catch(e){}};
-      }else{mic.onclick=()=>toast("La recherche vocale n’est pas prise en charge par ce navigateur.","warn");}
+      let recognition=null;const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(SpeechRecognition){recognition=new SpeechRecognition();recognition.lang=(APP.lang||"fr").toLowerCase()==="en"?"en-US":"fr-FR";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{mic.classList.add("listening");mic.title="Écoute en cours…";};recognition.onresult=e=>{let finalText="";for(let i=e.resultIndex;i<e.results.length;i++)finalText+=e.results[i][0].transcript;if(finalText){q.value=finalText;q.dispatchEvent(new Event("input"));}};recognition.onerror=e=>{mic.classList.remove("listening");mic.title="Recherche vocale";if(e.error!=="aborted")toast("La recherche vocale n’est pas disponible : "+e.error,"warn");};recognition.onend=()=>{mic.classList.remove("listening");mic.title="Recherche vocale";};mic.onclick=()=>{try{if(mic.classList.contains("listening")){recognition.stop();}else{recognition.start();}}catch(e){}};}else{mic.onclick=()=>toast("La recherche vocale n’est pas prise en charge par ce navigateur.","warn");}
+      document.addEventListener("click",e=>{if(!plusWrap.contains(e.target))closeMenu();},{once:false});
       return;
     }
   };
@@ -1372,7 +1407,7 @@ window.addEventListener("resize",fixMob);fixMob();
 function bindMenu(btn,menu){btn.onclick=e=>{e.stopPropagation();const open=menu.classList.contains("open");$$(".menu.open").forEach(m=>m.classList.remove("open"));if(!open)menu.classList.add("open");};}
 bindMenu($("#createBtn"),$("#createMenu"));bindMenu($("#acctBtn"),$("#acctMenu"));
 $('#umPricing').onclick=()=>{openPricing();};
-$('#cbotFab').onclick=()=>$('#cbot').classList.toggle('open');
+$("#cbotFab").onclick=()=>{ $("#cbot").classList.remove("open"); window.__readixAI9Selected="copilot"; openTool("aiadvanced"); };
 $('#cbotClose').onclick=()=>$('#cbot').classList.remove('open');
 $('#cbotSend').onclick=()=>sendChat($('#cbotInput').value);
 $('#cbotInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat(e.target.value);});
@@ -1402,7 +1437,7 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- init ---------- */
-$("#rAi").onclick=()=>{ $("#cbot").classList.remove("open"); openTool("aiadvanced"); };
+$("#rAi").onclick=()=>{ $("#cbot").classList.remove("open"); window.__readixAI9Selected="workspace"; openTool("aiadvanced"); };
 (async function init(){
   createTab();switchTab(APP.active,false);
   try{await restoreSession();}catch(e){}
