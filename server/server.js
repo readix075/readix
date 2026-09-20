@@ -55,7 +55,18 @@ async function initDb() {
       PRIMARY KEY (email, ym)
     );`);
   await pool.query(`ALTER TABLE usage ADD COLUMN IF NOT EXISTS op_count INTEGER NOT NULL DEFAULT 0;`);
-  console.log("✅ Base de données prête (tables users, usage).");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      email      TEXT NOT NULL,
+      id         TEXT NOT NULL,
+      title      TEXT NOT NULL DEFAULT 'Nouvelle discussion',
+      data       JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at BIGINT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS conversations_email_idx ON conversations(email, updated_at DESC);`);
+  console.log("✅ Base de données prête (tables users, usage, conversations).");
 }
 async function getUser(email) {
   const r = await pool.query("SELECT email, name, pass_hash, plan FROM users WHERE email=$1", [email]);
@@ -198,6 +209,49 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.get("/api/me", auth, (req, res) => res.json({ user: req.user }));
+
+// ---- Readix Copilot : persistance des discussions (Phase 6) ----
+// Liste les discussions de l'utilisateur (les plus récentes d'abord).
+app.get("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query(
+      "SELECT id, title, data, updated_at FROM conversations WHERE email=$1 ORDER BY updated_at DESC LIMIT 200",
+      [req.user.email]
+    );
+    const conversations = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, title: x.title, updatedAt: Number(x.updated_at) };
+    });
+    res.json({ conversations });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour une discussion (upsert par id, propre à l'utilisateur).
+app.post("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const chat = req.body && req.body.chat;
+  if (!chat || !chat.id) return res.status(400).json({ error: "Discussion invalide" });
+  const id = String(chat.id).slice(0, 80);
+  const title = String(chat.title || "Nouvelle discussion").slice(0, 200);
+  const updatedAt = Number(chat.updatedAt) || Date.now();
+  try {
+    await pool.query(
+      `INSERT INTO conversations(email,id,title,data,updated_at,created_at)
+       VALUES($1,$2,$3,$4,$5,now())
+       ON CONFLICT (email,id) DO UPDATE SET title=EXCLUDED.title, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
+      [req.user.email, id, title, JSON.stringify(chat), updatedAt]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime une discussion.
+app.delete("/api/copilot/conversations/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    await pool.query("DELETE FROM conversations WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // Quota IA de l'utilisateur (pour l'affichage du compteur côté site)
 app.get("/api/usage", auth, async (req, res) => {
