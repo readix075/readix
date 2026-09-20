@@ -920,9 +920,12 @@ function renderCopilotPanel(body){
         d=await api('/api/copilot/action',actionPayload);
       } catch(firstErr) {
         // Compatibilité avec certains déploiements/reverse-proxy qui ne publient pas encore l'alias /action.
-        if(String(firstErr.message||"").includes("404")) {
+        if(firstErr && firstErr.status===404) {
           try { d=await api('/api/copilot/actions',actionPayload); }
-          catch(secondErr) { throw new Error(`Le serveur Readix ne publie pas le moteur Copilot (404). Redéployez le dossier server de la Phase 19.1. Détail: ${secondErr.message}`); }
+          catch(secondErr) {
+            if(secondErr && secondErr.status===404){const e=new Error("Le moteur Copilot n’est pas disponible sur le serveur pour le moment. Réessayez plus tard.");e.status=404;e.technical=secondErr.technical;throw e;}
+            throw secondErr;
+          }
         } else throw firstErr;
       }
       let answer=d.answer||"Je n’ai pas trouvé de réponse correspondante.";
@@ -939,7 +942,14 @@ function renderCopilotPanel(body){
         files.forEach(f=>{c.messages.push({role:"assistant",content:f.message||"Fichier prêt à télécharger.",file:f.file});});
         if(ok.length||bad.length||files.length){await saveCopilotChat(c);renderAIFloating();}
       }
-    }catch(e){c.messages.push({role:"assistant",content:"Erreur : "+e.message});await saveCopilotChat(c);renderAIFloating();}finally{const sb=document.querySelector('.ai10-send');if(sb)sb.disabled=false;}};
+    }catch(e){
+      let hint="";
+      if(e&&e.status===401)hint="\n\nReconnectez-vous depuis le menu de compte, puis réessayez.";
+      else if(e&&e.status===402)hint="\n\nActivez un plan Pro ou Studio pour utiliser Readix Copilot.";
+      else if(e&&e.status===429)hint="\n\nVotre quota IA du mois est épuisé.";
+      c.messages.push({role:"assistant",content:"⚠️ "+((e&&e.message)||"Impossible d’exécuter l’action.")+hint});
+      await saveCopilotChat(c);renderAIFloating();
+    }finally{const sb=document.querySelector('.ai10-send');if(sb)sb.disabled=false;}};
   send.onclick=submit;q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});q.addEventListener("input",()=>{q.style.height="34px";q.style.height=Math.min(q.scrollHeight,120)+"px";});
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(SR){
@@ -1685,12 +1695,55 @@ const API_BASE="";
 function getToken(){try{return localStorage.getItem("readix_token");}catch(e){return null;}}
 function setToken(t){try{if(t&&t!=="undefined")localStorage.setItem("readix_token",t);}catch(e){}}
 function clearToken(){try{localStorage.removeItem("readix_token");}catch(e){}}
+// Phase 20.5 — Traduit un code HTTP / message serveur en message clair pour l'utilisateur.
+function humanizeError(status,serverMsg,ctx){
+  const s=Number(status)||0;
+  // Panne réseau : toujours un message clair (on ignore le texte technique du navigateur).
+  if(s===0)return "Impossible de joindre le serveur Readix. Vérifiez votre connexion Internet, puis réessayez.";
+  const raw=(serverMsg&&String(serverMsg).trim())||"";
+  // Un message serveur déjà lisible est conservé tel quel (ex. « Quota IA mensuel atteint »).
+  const looksRaw=!raw||/^erreur\s*\d+$/i.test(raw)||/^\d{3}$/.test(raw)||/^not found$/i.test(raw)||/^cannot (get|post)/i.test(raw);
+  if(!looksRaw)return raw;
+  switch(s){
+    case 0:   return "Impossible de joindre le serveur Readix. Vérifiez votre connexion Internet, puis réessayez.";
+    case 400: return "La demande est incomplète ou mal formée. Vérifiez les informations saisies.";
+    case 401: return "Votre session a expiré. Reconnectez-vous pour continuer.";
+    case 402: return "Cette fonction nécessite un abonnement supérieur (Pro ou Studio).";
+    case 403: return "Vous n’avez pas l’autorisation d’effectuer cette action.";
+    case 404: return "Cette fonction n’est pas disponible sur le serveur (moteur non publié ou route introuvable). Réessayez plus tard.";
+    case 408: return "La demande a expiré. Réessayez.";
+    case 413: return "Le document est trop volumineux pour être traité.";
+    case 415: return "Ce format de fichier n’est pas pris en charge.";
+    case 429: return "Quota IA mensuel atteint. Il se réinitialisera le mois prochain, ou passez à un plan supérieur.";
+    case 500: return "Une erreur interne est survenue pendant le traitement. Réessayez.";
+    case 502: return "Le service IA est momentanément indisponible. Réessayez dans un instant.";
+    case 503: return "Le service Readix est momentanément indisponible (configuration ou maintenance). Réessayez dans un instant.";
+    case 504: return "Le serveur a mis trop de temps à répondre. Réessayez.";
+    default:  return "Impossible d’exécuter l’action (code "+s+"). Réessayez.";
+  }
+}
+function makeApiError(status,serverMsg,ctx,code){
+  const e=new Error(humanizeError(status,serverMsg,ctx));
+  e.status=status;e.endpoint=ctx&&ctx.endpoint;e.method=ctx&&ctx.method;e.code=code||null;
+  e.serverMessage=serverMsg||"";
+  e.technical={status,endpoint:e.endpoint,method:e.method,code:e.code||undefined,serverMessage:serverMsg||undefined,at:new Date().toISOString()};
+  try{console.error("[Readix API]",e.technical,"→",e.message);}catch(_){}
+  return e;
+}
 async function api(path,body,method){
-  const opt={method:method||(body?"POST":"GET"),headers:{"content-type":"application/json"}};
+  const m=method||(body?"POST":"GET");
+  const opt={method:m,headers:{"content-type":"application/json"}};
   const t=getToken();if(t)opt.headers.authorization="Bearer "+t;
   if(body)opt.body=JSON.stringify(body);
-  const r=await fetch(API_BASE+path,opt);let data={};try{data=await r.json();}catch(e){}
-  if(!r.ok)throw new Error((data&&data.error)||("Erreur "+r.status));
+  let r;
+  try{r=await fetch(API_BASE+path,opt);}
+  catch(netErr){throw makeApiError(0,netErr&&netErr.message,{endpoint:path,method:m});}
+  let data={};try{data=await r.json();}catch(e){}
+  if(!r.ok){
+    const serverMsg=(data&&(typeof data.error==="string"?data.error:(data.error&&data.error.message)))||data.message||"";
+    const code=(data&&data.error&&data.error.code)||data.code||null;
+    throw makeApiError(r.status,serverMsg,{endpoint:path,method:m},code);
+  }
   return data;
 }
 const PLAN_LABEL={free:"Gratuit",standard:"Standard",pro:"Pro",studio:"Studio"};
