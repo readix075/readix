@@ -118,6 +118,11 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
     const email = s.client_reference_id || s.customer_email;
     const plan = (s.metadata && s.metadata.plan) || "pro";
     if (email && pool) { try { await setPlan(email, plan); } catch (e) { console.error(e); } }
+  } else if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    const sub = event.data.object;
+    const email = sub.metadata && sub.metadata.readix_email;
+    const plan = sub.status === "active" || sub.status === "trialing" ? ((sub.metadata && sub.metadata.plan) || "pro") : "free";
+    if (email && pool) { try { await setPlan(email, plan); } catch (e) { console.error(e); } }
   }
   res.json({ received: true });
 });
@@ -216,7 +221,8 @@ app.post("/api/billing/checkout", auth, async (req, res) => {
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: req.user.email,
     customer_email: req.user.email,
-    metadata: { plan },
+    metadata: { plan, readix_email: req.user.email },
+    subscription_data: { metadata: { plan, readix_email: req.user.email } },
     success_url: `${CLIENT_URL}/?upgrade=success`,
     cancel_url: `${CLIENT_URL}/?upgrade=cancel`,
   });
@@ -225,23 +231,13 @@ app.post("/api/billing/checkout", auth, async (req, res) => {
 
 // ---- Fonctions IA premium ----
 const AI_PROMPTS = {
-  lens: "Tu es un assistant qui lit des documents. Résume le texte fourni et réponds à la question de l'utilisateur en citant les passages pertinents. Clair et concis, en français.",
-  dialogue: "Mets en scène un court débat entre deux experts — un sceptique et un défenseur — sur le document fourni, pour révéler ses failles et ses points forts. En français.",
-  compareai: "Compare les deux versions de texte fournies et explique ce qui change dans le SENS (pas seulement les mots). En français.",
-  factcheck: "Identifie les affirmations non sourcées ou douteuses et explique pourquoi. En français.",
-  negociateur: "Analyse ce contrat clause par clause : note le risque (faible/moyen/élevé), explique clairement, propose une contre-formulation plus sûre. En français.",
-  conformite: "Vérifie ce document au regard du RGPD et des bonnes pratiques ; liste les points non conformes avec une recommandation. En français.",
-  extract: "Extrais les données structurées (tableaux, montants, dates, entités) et renvoie un JSON propre.",
-  study: "Génère un quiz de 5 questions et 8 fiches de révision (question/réponse) à partir du document. En français.",
-  access: "Rédige des descriptions alternatives claires et un résumé simplifié adapté à la dyslexie. En français.",
-  podcast: "Écris un script de podcast à deux voix (Hôte A / Hôte B) qui explique ce document. En français.",
-  generate: "Rédige le document demandé par l'utilisateur, prêt à l'emploi, en français.",
-  translate: "Traduis fidèlement le texte fourni dans la langue demandée, en conservant le sens et le ton.",
+  workspace: `Tu es Readix AI Workspace, un assistant d'intelligence documentaire. Analyse le document fourni. Réponds en français, de façon structurée et factuelle. Pour chaque information importante, indique la page sous la forme [Page N], en te basant sur les marqueurs --- Page N --- présents dans le texte. Si l'information n'est pas dans le document, dis-le clairement. Si une question est posée, réponds d'abord directement puis donne les éléments du document qui justifient la réponse. Ne fabrique aucune citation.`,
+  smartsearch: `Tu es le moteur de recherche sémantique de Readix. La demande de l'utilisateur est une recherche dans un PDF. Identifie les passages réellement pertinents même si les mots employés diffèrent. Retourne une liste courte des résultats les plus pertinents avec [Page N], un titre court et un extrait fidèle du document. Si aucun passage pertinent n'est trouvé, indique-le. Ne fabrique aucune citation.`,
+  extractdata: `Tu es le moteur d'extraction structurée de Readix. Transforme le document en données exploitables. Retourne UNIQUEMENT un JSON valide, sans markdown ni commentaire. Adapte les champs au contenu : dates, montants, devises, personnes, organisations, références, numéros, adresses, échéances, tableaux, etc. Chaque élément important doit comporter une source de page sous la clé page quand elle est identifiable. Si aucune donnée d'une catégorie n'existe, ne l'invente pas.`,
+  compareai: `Tu es le moteur de comparaison intelligente de Readix. Compare DOCUMENT A et DOCUMENT B, pas seulement les mots mais aussi le contenu et le sens. Présente les ajouts, suppressions et modifications significatives. Pour chaque différence, indique la source avec [Page N] lorsqu'elle est identifiable. Distingue les changements certains des interprétations. Réponds en français.`,
+  copilot: `Tu es Readix Copilot, l'assistant contextuel de Readix Reader. Tu connais le document fourni et aides l'utilisateur à comprendre son contenu et à utiliser les outils Readix. Réponds en français. Pour les informations provenant du document, utilise [Page N]. Tu peux expliquer comment réaliser une action dans Readix (fusionner, diviser, signer, organiser, caviarder, etc.), mais n'affirme pas avoir exécuté une opération que le serveur ne t'a pas réellement demandé d'exécuter. Si la demande concerne le document, privilégie le document ouvert comme source.`,
 };
-const AI_MIN_LEVEL = { // niveau minimum requis par fonction
-  lens: 2, compareai: 2, factcheck: 2, extract: 2, study: 2, access: 2, translate: 2,
-  dialogue: 3, negociateur: 3, conformite: 3, podcast: 3, generate: 3,
-};
+const AI_MIN_LEVEL = { workspace:2, smartsearch:2, extractdata:2, compareai:2, copilot:2 };
 
 async function callAnthropic(system, userContent) {
   if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquante");
@@ -254,6 +250,111 @@ async function callAnthropic(system, userContent) {
   const data = await r.json();
   return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
 }
+
+app.post("/api/ai/chatbot", auth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-10) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 40000);
+  if (!message) return res.status(400).json({ error: "Message vide" });
+  const manual = `Tu es l'Assistant Readix Reader, un GUIDE D'UTILISATION intégré à l'interface. Ta mission est uniquement d'expliquer comment utiliser Readix et d'orienter l'utilisateur vers les bons outils et les bonnes étapes.
+Règles : réponds en français sauf demande contraire; sois concret, court et structuré; n'invente jamais un outil ou une fonction qui n'existe pas; si une fonction dépend d'un compte, d'un plan, de Stripe ou d'une clé IA, indique-le clairement.
+Tu ne dois pas générer de contenu de document, de texte à insérer, de PDF, de fichier, de signature, de contrat, de code ou de résultat créatif. Tu ne dois pas exécuter une opération à la place de l'utilisateur. Tu expliques seulement quoi cliquer, dans quel ordre, et pourquoi.
+Outils disponibles : Lecteur, Modifier, Remplir & Signer, Organiser, Fusionner, Diviser/Extraire, Caviarder, Comparer, Extraire le texte, OCR, Protection, Métadonnées, et les fonctions IA premium.
+Remplir & Signer permet de déplacer/redimensionner une signature puis de la désélectionner en cliquant dans le document.
+Les opérations PDF locales sont réalisées dans le navigateur. Les comptes, abonnements et fonctions IA utilisent le serveur Readix.
+Plans : Gratuit, Standard, Pro, Studio. Les quotas IA premium dépendent du plan.
+Quand l'utilisateur demande comment faire une action, donne les étapes exactes dans l'interface et signale les prérequis. Si la demande concerne une fonction IA avancée, indique quel module choisir et explique son rôle sans produire le résultat à sa place.`;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 900, system: manual, messages: [...history.filter(x=>x && (x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||'').slice(0,4000)})), { role:'user', content:(documentContext ? 'CONTEXTE DU DOCUMENT OUVERT:\n'+documentContext+'\n\nDEMANDE UTILISATEUR:\n' : '')+message.slice(0,6000) }] }),
+    });
+    if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
+    const data = await r.json();
+    const answer = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join("\n");
+    res.json({ answer });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/copilot", auth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-16) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 50000);
+  const attachments = Array.isArray(req.body && req.body.attachments) ? req.body.attachments.slice(0, 5) : [];
+  const page = Number(req.body && req.body.page) || 1;
+  const documentName = String((req.body && req.body.documentName) || "").slice(0, 180);
+  if (!message) return res.status(400).json({ error: "Message vide" });
+  const cleanAttachment = (a) => ({
+    name: String((a && a.name) || "Document.pdf").slice(0, 180),
+    type: String((a && a.type) || "pdf").slice(0, 20),
+    page: Number((a && a.page) || 0) || 0,
+    text: String((a && a.text) || "").slice(0, 45000)
+  });
+  const currentAttachments = attachments.map(cleanAttachment).filter(a => a.text);
+  const historyForModel = history.filter(x => x && (x.role === "user" || x.role === "assistant")).map(x => {
+    let content = String(x.content || "").slice(0, 6000);
+    const atts = Array.isArray(x.attachments) ? x.attachments.slice(0, 4).map(cleanAttachment).filter(a => a.text) : [];
+    if (atts.length) content += "\n\nPIÈCES JOINTES DE CE MESSAGE :\n" + atts.map(a => `--- ${a.name}${a.page ? ` — page ${a.page}` : ""} ---\n${a.text}`).join("\n\n");
+    return { role: x.role, content: content.slice(0, 30000) };
+  });
+
+  const need = AI_MIN_LEVEL.copilot ?? 2;
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Readix Copilot est disponible avec le plan Pro ou supérieur." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+
+  const system = `Tu es Readix Copilot, l’assistant intelligent intégré à Readix Reader.
+
+MISSION : être le guide intelligent de Readix. Tu aides l’utilisateur à comprendre son document et à utiliser l’application. Tu fonctionnes comme un assistant conversationnel moderne, dans le cadre spécifique de Readix et des PDF.
+
+RÈGLES FONDAMENTALES :
+- Réponds en français sauf demande contraire.
+- Réponds de façon naturelle, claire, structurée et concise.
+- Tu peux expliquer le contenu du document fourni dans le contexte.
+- Pour toute information tirée du document, cite les pages avec [Page N] lorsque la page est identifiable.
+- Tu connais les outils Readix : Lecteur, Modifier, Remplir & Signer, Organiser, Fusionner, Diviser/Extraire, Caviarder, Comparer, Extraire le texte, OCR, Protection, Métadonnées, Compresser et les modules IA avancés.
+- Quand l’utilisateur veut accomplir une opération dans Readix, explique-lui exactement quel outil utiliser et les étapes à suivre.
+- Tu peux proposer un bouton ou une action à effectuer ensuite dans l’interface, mais tu ne dois jamais prétendre avoir exécuté une opération si elle n’a pas réellement été exécutée par Readix.
+- Tu ne modifies, ne signes, ne fusionnes, ne supprimes et ne télécharges jamais un fichier de toi-même.
+- Tu ne fabriques jamais une information absente du document.
+- Si le document ne permet pas de répondre, dis-le clairement.
+- Si l’utilisateur demande une fonctionnalité qui n’existe pas dans Readix, ne l’invente pas.
+- Tu peux garder le fil de la conversation et comprendre des formulations comme « ce document », « cette page », « l’autre version » ou « cette information » en utilisant le contexte fourni.
+- Le document ouvert, la page actuelle et les éléments ajoutés via le bouton + sont des contextes. Ils ne doivent pas être confondus avec une demande de modification du fichier.
+
+CONTEXTE D’INTERFACE :
+Document : ${documentName || "aucun nom communiqué"}
+Page actuelle : ${page}
+
+${documentContext ? "CONTEXTE FOURNI PAR READIX :\n" + documentContext : "Aucun contenu de document supplémentaire n’a été ajouté à cette demande."}`;
+
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1800,
+        system,
+        messages: [
+          ...historyForModel,
+          { role: "user", content: ((currentAttachments.length ? "PIÈCES JOINTES À CETTE QUESTION :\n" + currentAttachments.map(a => `--- ${a.name}${a.page ? ` — page ${a.page}` : ""} ---\n${a.text}`).join("\n\n") + "\n\n" : "") + message).slice(0, 60000) }
+        ]
+      })
+    });
+    if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
+    const data = await r.json();
+    const answer = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+    await incUsage(req.user.email);
+    res.json({ answer, used: used + 1, quota });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 app.post("/api/ai/:feature", auth, async (req, res) => {
   console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!ANTHROPIC_API_KEY);
@@ -293,7 +394,7 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 initDb()
   .catch(e => console.error("⚠️  Init base de données échouée :", e.message))
   .finally(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`Readix serveur démarré sur ${CLIENT_URL} (port ${PORT})`);
       if (!DATABASE_URL) console.log("⚠️  DATABASE_URL absente : comptes désactivés.");
       if (!ANTHROPIC_API_KEY) console.log("⚠️  ANTHROPIC_API_KEY absente : fonctions IA indisponibles.");
