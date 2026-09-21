@@ -128,6 +128,25 @@ button{cursor:pointer}
 .tool.tool-ai .lb{line-height:1.15}
 .tool-ai-sub{display:block;font-size:9.5px;font-weight:600;opacity:.9;margin-top:1px}
 .lrail.mini .tool.tool-ai{box-shadow:0 4px 12px rgba(99,82,255,.3)}
+/* Sélecteur de projet (Étape A2) */
+.proj-btn{display:inline-flex;align-items:center;gap:6px;max-width:220px}
+.proj-btn svg{width:15px;height:15px;flex:none}
+#projBtnLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.proj-caret{opacity:.6;font-size:10px}
+.proj-btn.has-project{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
+#projMenu .proj-sec{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:8px 12px 4px}
+#projMenu .proj-item{display:flex;align-items:center;gap:9px}
+#projMenu .proj-item .pi-body{flex:1;min-width:0}
+#projMenu .proj-item .pi-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#projMenu .proj-item .pi-meta{font-size:10px;color:var(--ink-faint);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#projMenu .proj-item .pi-check{color:var(--brand);font-weight:700;flex:none}
+#projMenu .proj-new{color:var(--brand);font-weight:600}
+#projMenu .proj-del{flex:none;opacity:0;border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:14px;border-radius:6px;padding:2px 6px}
+#projMenu .proj-item:hover .proj-del{opacity:1}
+#projMenu .proj-del:hover{background:#fff0ef;color:#b42318}
+.proj-domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.proj-domain-grid button{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-1);cursor:pointer;font:inherit;font-size:12.5px;text-align:left}
+.proj-domain-grid button.sel{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -469,6 +488,10 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
       <button data-create="img2pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-3 4 4"/></svg>Images → PDF</button>
     </div>
   </div>
+  <div class="menuwrap" id="projWrap">
+    <button class="btn ghost sm proj-btn" id="projBtn" title="Projet actif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span id="projBtnLabel">Projet : Aucun</span><span class="proj-caret">▾</span></button>
+    <div class="menu" id="projMenu" style="min-width:250px;max-height:60vh;overflow:auto"></div>
+  </div>
   <div class="spring"></div>
   <span class="docname" id="docName"></span>
   <div class="save-dot" id="saveDot" style="display:none"><span class="d"></span><span class="t">Enregistré</span></div>
@@ -606,7 +629,7 @@ function renderTabs(){
   const add=el("button","tab-new","+");add.title="Nouvel onglet";add.onclick=()=>{createTab();};
   bar.appendChild(add);
 }
-function createTab(name){const t=newTabObj(name);APP.tabs.push(t);switchTab(t.id,true);return t;}
+function createTab(name){const t=newTabObj(name);t.projectId=(typeof PROJECT_STATE!=="undefined"&&PROJECT_STATE.activeId)||null;APP.tabs.push(t);switchTab(t.id,true);return t;}
 function switchTab(id,push){
   APP.active=id;const t=activeTab();if(!t)return;
   APP.tool=t.tool||"home";
@@ -900,7 +923,7 @@ async function initCopilotHistory(){
     }catch(e){COPILOT_STATE.remote=false;} // hors ligne / non authentifié → on reste en local
   }
   if(!COPILOT_STATE.chats.length){const c=newCopilotChat();COPILOT_STATE.chats=[c];await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);}
-  COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;
+  COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;ensureCopilotScope();
 }
 function activeCopilotChat(){return COPILOT_STATE.chats.find(c=>c.id===COPILOT_STATE.activeId)||null;}
 
@@ -957,6 +980,85 @@ async function createProject(opts={}){const p=newProject(opts);PROJECT_STATE.pro
 async function deleteProject(id){const idx=PROJECT_STATE.projects.findIndex(p=>p.id===id);if(idx<0)return;PROJECT_STATE.projects.splice(idx,1);try{await idbProjectDel(id);}catch(e){}if(PROJECT_STATE.remote)apiProjectDelete(id);if(PROJECT_STATE.activeId===id)PROJECT_STATE.activeId=null;}
 function activeProject(){return PROJECT_STATE.projects.find(p=>p.id===PROJECT_STATE.activeId)||null;}
 // ================= fin Project Engine A1 =================
+
+// ================= Project Engine — Étape A2 (interface) =================
+const PROJECT_DOMAINS=["Général","CV / Recrutement","Livre / Écriture","Génie civil / Ingénierie","Juridique","Finance / Comptabilité","Autre"];
+// Portée des conversations : un projet actif ne montre que SES discussions ; sinon les discussions libres.
+function chatInScope(c){return PROJECT_STATE.activeId?(!!c&&c.projectId===PROJECT_STATE.activeId):!(c&&c.projectId);}
+function visibleCopilotChats(){return COPILOT_STATE.chats.filter(chatInScope);}
+function ensureCopilotScope(){
+  const cur=activeCopilotChat();
+  if(cur&&chatInScope(cur))return;
+  const vis=visibleCopilotChats();
+  if(vis.length){COPILOT_STATE.activeId=vis[0].id;}
+  else{const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);}
+  COPILOT_STATE.draftAttachments=[];
+}
+function updateProjectButton(){const lbl=$("#projBtnLabel"),btn=$("#projBtn");if(!lbl||!btn)return;const p=activeProject();lbl.textContent=p?("Projet : "+p.name):"Projet : Aucun";btn.classList.toggle("has-project",!!p);}
+function projectDocCount(p){try{return APP.tabs.filter(t=>t.projectId===p.id&&(t.pdf||t.doc)).length;}catch(e){return 0;}}
+function renderProjectMenu(){
+  const m=$("#projMenu");if(!m)return;m.innerHTML="";
+  const none=el("button","proj-item");
+  none.innerHTML=`<span class="pi-body"><span class="pi-name">Aucun projet</span><span class="pi-meta">Mode libre — Readix standard</span></span>`+(PROJECT_STATE.activeId?"":'<span class="pi-check">✓</span>');
+  none.onclick=()=>setActiveProject(null);m.appendChild(none);
+  if(PROJECT_STATE.projects.length)m.appendChild(el("div","proj-sec","Mes projets"));
+  PROJECT_STATE.projects.forEach(p=>{
+    const it=el("button","proj-item");
+    const docs=projectDocCount(p);
+    const meta=[p.domain||"",docs?(docs+" doc"+(docs>1?"s":"")):""].filter(Boolean).join(" · ")||"Projet";
+    it.innerHTML=`<span class="pi-body"><span class="pi-name">${String(p.name||"Projet").replace(/[&<>]/g,"")}</span><span class="pi-meta">${String(meta).replace(/[&<>]/g,"")}</span></span>`+(p.id===PROJECT_STATE.activeId?'<span class="pi-check">✓</span>':'')+`<button class="proj-del" title="Supprimer le projet">🗑</button>`;
+    it.onclick=(e)=>{if(e.target.closest(".proj-del")){e.stopPropagation();confirmDeleteProject(p);return;}setActiveProject(p.id);};
+    m.appendChild(it);
+  });
+  m.appendChild(el("div","sep"));
+  const nw=el("button","proj-item proj-new");nw.innerHTML='<span class="pi-body"><span class="pi-name">+ Nouveau projet</span></span>';nw.onclick=()=>openNewProjectDialog();m.appendChild(nw);
+}
+function setActiveProject(id){
+  PROJECT_STATE.activeId=id||null;
+  try{if(id)localStorage.setItem("readix_active_project",id);else localStorage.removeItem("readix_active_project");}catch(e){}
+  updateProjectButton();renderProjectMenu();
+  if(COPILOT_STATE.loaded){ensureCopilotScope();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
+  const p=activeProject();toast(p?("Projet actif : "+p.name):"Mode libre — aucun projet actif.","ok");
+}
+function confirmDeleteProject(p){
+  const dl=dialog(`<h3>Supprimer le projet ?</h3><p>« ${String(p.name||"").replace(/[&<>]/g,"")} » sera supprimé. Les discussions liées ne sont pas supprimées : elles redeviennent des discussions libres.</p><div class="row"><button class="btn ghost sm" data-a="cancel">Annuler</button><button class="btn sm" data-a="ok" style="background:#c0392b;border-color:#c0392b">Supprimer</button></div>`);
+  dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;dl.close();if(a.dataset.a!=="ok")return;
+    const wasActive=PROJECT_STATE.activeId===p.id;
+    COPILOT_STATE.chats.forEach(c=>{if(c.projectId===p.id){c.projectId=null;idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);}});
+    await deleteProject(p.id);
+    if(wasActive)setActiveProject(null);else{renderProjectMenu();updateProjectButton();}
+    toast("Projet supprimé.","ok");
+  };
+}
+function openNewProjectDialog(){
+  let picked="Général";
+  const dl=dialog(`<h3>Nouveau projet</h3>
+    <div style="font-size:12px;color:var(--ink-soft);margin:2px 0 4px">Nom du projet</div>
+    <input id="npName" class="rp-input" placeholder="Ex. Maison Dupont · Mon CV · Mon roman" maxlength="120">
+    <div style="font-size:12px;color:var(--ink-soft);margin:12px 0 4px">Description (facultatif)</div>
+    <textarea id="npDesc" class="rp-input" rows="2" placeholder="En quelques mots…" maxlength="500" style="resize:vertical"></textarea>
+    <div style="font-size:12px;color:var(--ink-soft);margin:12px 0 2px">Domaine</div>
+    <div class="proj-domain-grid" id="npDom">${PROJECT_DOMAINS.map(d=>`<button type="button" data-d="${d}"${d===picked?' class="sel"':''}>${d}</button>`).join("")}</div>
+    <div class="row"><button class="btn ghost sm" data-a="cancel">Annuler</button><button class="btn sm" data-a="ok">Créer le projet</button></div>`);
+  const grid=dl.root.querySelector("#npDom");
+  grid.onclick=e=>{const b=e.target.closest("[data-d]");if(!b)return;picked=b.dataset.d;grid.querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));};
+  setTimeout(()=>{const n=dl.root.querySelector("#npName");if(n)n.focus();},60);
+  dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;
+    if(a.dataset.a==="cancel"){dl.close();return;}
+    if(a.dataset.a==="ok"){const name=(dl.root.querySelector("#npName").value||"").trim();if(!name){toast("Donnez un nom au projet.","warn");return;}
+      const description=(dl.root.querySelector("#npDesc").value||"").trim();
+      const p=await createProject({name,description,domain:picked});
+      dl.close();setActiveProject(p.id);
+    }
+  };
+}
+async function initProjectUI(){
+  try{const saved=localStorage.getItem("readix_active_project");if(saved)PROJECT_STATE.activeId=saved;}catch(e){}
+  try{await initProjects();}catch(e){}
+  if(PROJECT_STATE.activeId&&!PROJECT_STATE.projects.some(p=>p.id===PROJECT_STATE.activeId)){PROJECT_STATE.activeId=null;try{localStorage.removeItem("readix_active_project");}catch(e){}}
+  renderProjectMenu();updateProjectButton();
+}
+// ================= fin Project Engine A2 =================
 async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueCopilotSync(chat);}
 async function createCopilotChat(){const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;COPILOT_STATE.draftAttachments=[];await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
 async function switchCopilotChat(id){if(!COPILOT_STATE.chats.some(c=>c.id===id))return;COPILOT_STATE.activeId=id;COPILOT_STATE.draftAttachments=[];if(AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
@@ -979,7 +1081,7 @@ async function deleteCopilotChat(id){
 }
 function renderCopilotHistory(side){
   side.innerHTML='<div class="ai10-history-title">Historique</div>';
-  COPILOT_STATE.chats.forEach(c=>{
+  visibleCopilotChats().forEach(c=>{
     const row=el("div","ai10-chat-item"+(c.id===COPILOT_STATE.activeId?" on":""));
     const title=String(c.title||"Nouvelle discussion").replace(/[&<>]/g,"");
     row.innerHTML=`<span class="dot"></span><span class="ct" title="${title}">${title}</span>`+
@@ -2270,12 +2372,13 @@ function openAuth(mode){
         const d=await api(path,mode==="signup"?{name,email,password:pass}:{email,password:pass});
         setToken(d.token);APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();dl.close();
         COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
+        initProjectUI();
         toast("Bienvenue "+(d.user.name||d.user.email)+" !","ok");
       }catch(ex){err.textContent=ex.message;b.disabled=false;}
     }
   };
 }
-function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;PROJECT_STATE.projects=[];PROJECT_STATE.activeId=null;updateAccount();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
+function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;PROJECT_STATE.projects=[];PROJECT_STATE.activeId=null;try{localStorage.removeItem("readix_active_project");}catch(e){}updateAccount();try{renderProjectMenu();updateProjectButton();}catch(e){}if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
 $("#umAuth").onclick=()=>{$("#acctMenu").classList.remove("open");openAuth("login");};
 $("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 /* ---------- en-tête, thème, menus, init ---------- */
@@ -2294,6 +2397,7 @@ window.addEventListener("resize",fixMob);fixMob();
 /* menus déroulants (Créer, Compte) */
 function bindMenu(btn,menu){btn.onclick=e=>{e.stopPropagation();const open=menu.classList.contains("open");$$(".menu.open").forEach(m=>m.classList.remove("open"));if(!open)menu.classList.add("open");};}
 bindMenu($("#createBtn"),$("#createMenu"));bindMenu($("#acctBtn"),$("#acctMenu"));
+(function(){const pb=$("#projBtn"),pm=$("#projMenu");if(pb&&pm){pb.onclick=e=>{e.stopPropagation();const open=pm.classList.contains("open");$$(".menu.open").forEach(m=>m.classList.remove("open"));if(!open){renderProjectMenu();pm.classList.add("open");}};}})();
 $('#umPricing').onclick=()=>{openPricing();};
 $("#cbotFab").onclick=()=>toggleCopilotFloating();
 $("#aiFloatClose").onclick=()=>closeAIFloating();
@@ -2334,6 +2438,7 @@ $("#rAi").onclick=()=>openAIFloating("__home");
   try{await offerResume();}catch(e){}
   if(new URLSearchParams(location.search).get("pricing")==="1") setTimeout(openPricing,250);
   updateNavBtns();
+  try{await initProjectUI();}catch(e){}
   await initCopilotHistory();
 })();
 </script>
