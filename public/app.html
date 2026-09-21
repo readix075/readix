@@ -424,6 +424,20 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 /* Agrandir le panneau IA flottant */
 .ai-float.maximized{left:10px;right:10px;top:10px;bottom:10px}
 .ai-float.maximized .ai-float-card{width:min(1600px,100%)}
+/* Fenêtre Copilot : déplaçable + redimensionnable */
+.ai-float-card.floating{position:fixed;margin:0}
+.ai-float-card.floating .ai-float-head{cursor:move;user-select:none}
+.ai-rz{position:absolute;z-index:6}
+.ai-float-card:not(.floating) .ai-rz{display:none}
+.ai-rz-n{top:0;left:12px;right:12px;height:6px;cursor:ns-resize}
+.ai-rz-s{bottom:0;left:12px;right:12px;height:6px;cursor:ns-resize}
+.ai-rz-e{right:0;top:12px;bottom:12px;width:6px;cursor:ew-resize}
+.ai-rz-w{left:0;top:12px;bottom:12px;width:6px;cursor:ew-resize}
+.ai-rz-ne{top:0;right:0;width:15px;height:15px;cursor:nesw-resize}
+.ai-rz-nw{top:0;left:0;width:15px;height:15px;cursor:nwse-resize}
+.ai-rz-se{bottom:0;right:0;width:18px;height:18px;cursor:nwse-resize}
+.ai-rz-sw{bottom:0;left:0;width:15px;height:15px;cursor:nesw-resize}
+.ai-rz-se::after{content:"";position:absolute;right:3px;bottom:3px;width:9px;height:9px;border-right:2px solid var(--ink-faint);border-bottom:2px solid var(--ink-faint);border-bottom-right-radius:3px;opacity:.55}
 .ai-float-actions button:hover{background:var(--surface-2);color:var(--ink)}
 .ai-float-actions button svg{width:16px;height:16px;display:block;margin:auto}
 
@@ -1784,7 +1798,42 @@ async function buildAI9ToolPanel(feature,t,panel){
   }
   if(feature==="copilot"){renderCopilotPanel(panel);return;}
 }
-async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("maximized",AI_FLOAT_STATE.maximized&&!AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");const _mx=$("#aiFloatMax");if(_mx)_mx.title=AI_FLOAT_STATE.maximized?"Rétablir la taille":"Agrandir";root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
+// ---- Fenêtre Copilot : géométrie déplaçable + redimensionnable (mémorisée) ----
+let AI_FLOAT_GEO=null;
+function aiGeoDefault(){const w=Math.min(600,innerWidth-40);const h=Math.min(760,innerHeight-110);return {width:w,height:h,left:Math.max(20,innerWidth-w-24),top:78};}
+function loadAiGeo(){try{const s=localStorage.getItem("readix_ai_geo");if(s){const g=JSON.parse(s);if(g&&g.width&&g.height)return g;}}catch(e){}return aiGeoDefault();}
+function saveAiGeo(){try{localStorage.setItem("readix_ai_geo",JSON.stringify(AI_FLOAT_GEO));}catch(e){}}
+function clampAiGeo(){const g=AI_FLOAT_GEO;g.width=Math.max(340,Math.min(g.width,innerWidth-16));g.height=Math.max(320,Math.min(g.height,innerHeight-16));g.left=Math.max(8,Math.min(g.left,innerWidth-g.width-8));g.top=Math.max(8,Math.min(g.top,innerHeight-g.height-8));}
+function applyAiGeo(){const card=$(".ai-float-card");if(!card||!AI_FLOAT_GEO)return;clampAiGeo();const g=AI_FLOAT_GEO;card.style.left=g.left+"px";card.style.top=g.top+"px";card.style.width=g.width+"px";card.style.height=g.height+"px";}
+function startAiDrag(e){if(e.button!==0)return;e.preventDefault();const g=AI_FLOAT_GEO;const sx=e.clientX,sy=e.clientY,ol=g.left,ot=g.top;
+  const mv=ev=>{g.left=ol+(ev.clientX-sx);g.top=ot+(ev.clientY-sy);applyAiGeo();};
+  const up=()=>{document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);saveAiGeo();};
+  document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up);}
+function startAiResize(e,dir){if(e.button!==0)return;e.preventDefault();e.stopPropagation();const g=AI_FLOAT_GEO;const sx=e.clientX,sy=e.clientY,o={left:g.left,top:g.top,width:g.width,height:g.height};
+  const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;
+    if(dir.indexOf("e")>=0)g.width=o.width+dx;
+    if(dir.indexOf("s")>=0)g.height=o.height+dy;
+    if(dir.indexOf("w")>=0){g.width=o.width-dx;g.left=o.left+dx;}
+    if(dir.indexOf("n")>=0){g.height=o.height-dy;g.top=o.top+dy;}
+    if(g.width<340){if(dir.indexOf("w")>=0)g.left=o.left+o.width-340;g.width=340;}
+    if(g.height<320){if(dir.indexOf("n")>=0)g.top=o.top+o.height-320;g.height=320;}
+    applyAiGeo();};
+  const up=()=>{document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);saveAiGeo();};
+  document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up);}
+function ensureAiHandles(card){
+  if(card._rzBound)return;card._rzBound=true;
+  const head=card.querySelector(".ai-float-head");
+  if(head)head.addEventListener("mousedown",e=>{if(e.target.closest("button"))return;if(!card.classList.contains("floating"))return;startAiDrag(e);});
+  ["n","s","e","w","ne","nw","se","sw"].forEach(dir=>{const h=el("div","ai-rz ai-rz-"+dir);h.addEventListener("mousedown",ev=>startAiResize(ev,dir));card.appendChild(h);});
+}
+async function renderAIFloating(){const root=$("#aiFloat"),body=$("#aiFloatBody");if(!AI_FLOAT_STATE.open){root.classList.remove("open");root.setAttribute("aria-hidden","true");return;}root.classList.add("open");root.classList.toggle("minimized",AI_FLOAT_STATE.minimized);root.classList.toggle("maximized",AI_FLOAT_STATE.maximized&&!AI_FLOAT_STATE.minimized);root.classList.toggle("ai-float-copilot",AI_FLOAT_STATE.mode==="copilot");const _mx=$("#aiFloatMax");if(_mx)_mx.title=AI_FLOAT_STATE.maximized?"Rétablir la taille":"Agrandir";
+  const _card=$(".ai-float-card");
+  if(_card){
+    const floating=!AI_FLOAT_STATE.minimized&&!AI_FLOAT_STATE.maximized;
+    _card.classList.toggle("floating",floating);
+    if(floating){if(!AI_FLOAT_GEO)AI_FLOAT_GEO=loadAiGeo();ensureAiHandles(_card);applyAiGeo();}
+    else{_card.style.left=_card.style.top=_card.style.width=_card.style.height="";}
+  }root.setAttribute("aria-hidden","false");$("#aiFloatTitle").textContent=AI_FLOAT_STATE.mode==="copilot"?"Readix Copilot":"Readix · IA avancée";$("#aiFloatSub").textContent=AI_FLOAT_STATE.mode==="copilot"?"Assistant contextuel — vos discussions restent indépendantes des onglets PDF.":"Espace IA flottant — votre onglet reste ouvert derrière.";if(AI_FLOAT_STATE.minimized)return;
   if(AI_FLOAT_STATE.mode==="copilot"){await initCopilotHistory();body.innerHTML="";renderCopilotPanel(body);return;}
   body.innerHTML="";const selected=AI_FLOAT_STATE.feature;
   if(!selected||selected==="__home"){const home=el("div","ai9-float-home");home.innerHTML='<div class="ai9-head"><div><h2>Readix · IA avancée</h2><div class="ai9-sub">Comprendre, rechercher, extraire et comparer vos documents PDF avec les moteurs IA de Readix.</div></div><div class="ai9-status">Plan : '+(PLAN_LABEL[APP.plan]||"Gratuit")+'</div></div>';const grid=el("div","ai9-grid");AI9_FEATURES.forEach(x=>{const c=el("button","ai9-card");c.innerHTML=aiFeatureCardHTML(x);c.onclick=()=>{AI_FLOAT_STATE.feature=x.id;renderAIFloating();};grid.appendChild(c)});home.appendChild(grid);body.appendChild(home);return;}
@@ -2514,6 +2563,7 @@ $("#aiFloatClose").onclick=()=>closeAIFloating();
 $("#aiFloatMin").onclick=()=>toggleAIMin();
 $("#aiFloatMax").onclick=()=>toggleAIMax();
 document.addEventListener("click",()=>$$(".menu.open").forEach(m=>m.classList.remove("open")));
+window.addEventListener("resize",()=>{if(AI_FLOAT_STATE.open&&AI_FLOAT_GEO&&!AI_FLOAT_STATE.minimized&&!AI_FLOAT_STATE.maximized)applyAiGeo();});
 document.addEventListener("click",e=>{$$(".ai10-plus-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
 document.addEventListener("click",e=>{$$(".ai10-chat-menu.open").forEach(m=>{if(!m.parentElement.contains(e.target))m.classList.remove("open");});});
 $("#createMenu").onclick=e=>{const b=e.target.closest("[data-create]");if(!b)return;const a=b.dataset.create;
