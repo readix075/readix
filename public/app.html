@@ -156,6 +156,27 @@ button{cursor:pointer}
 .opener-proj .op-badge{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));padding:3px 10px;border-radius:20px}
 .opener-proj b{font-size:16px;color:var(--ink)}
 .opener-proj span:not(.op-badge){font-size:12px;color:var(--ink-faint);max-width:340px;text-align:center}
+/* Tableau de bord projet (B) */
+.proj-home{max-width:820px;margin:0 auto;padding:38px 26px 60px;width:100%}
+.ph-head{margin-bottom:26px}
+.ph-head .op-badge{display:inline-block;margin-bottom:10px}
+.ph-head h1{font-size:26px;font-weight:800;color:var(--ink);margin:0}
+.ph-head p{font-size:14px;color:var(--ink-soft);margin:7px 0 0;max-width:560px}
+.ph-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px}
+.ph-act{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface-1);cursor:pointer;text-align:left;font:inherit;transition:border-color .14s,box-shadow .14s,transform .05s}
+.ph-act:hover{border-color:var(--brand);box-shadow:0 8px 22px rgba(99,82,255,.12)}
+.ph-act:active{transform:translateY(1px)}
+.ph-act .ic{width:40px;height:40px;flex:none;border-radius:11px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
+.ph-act .ic svg{width:20px;height:20px}
+.ph-act .l{font-size:13.5px;font-weight:600;color:var(--ink)}
+.ph-sec{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:12px}
+.ph-docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.ph-doc{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--surface-1);cursor:pointer;text-align:left;font:inherit}
+.ph-doc:hover{border-color:var(--brand);background:var(--brand-soft)}
+.ph-doc .di{width:34px;height:34px;flex:none;border-radius:9px;display:grid;place-items:center;background:var(--surface-2);color:var(--brand)}
+.ph-doc .di svg{width:17px;height:17px}
+.ph-doc .dn{font-size:12.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph-empty{grid-column:1/-1;padding:22px;border:1px dashed var(--line-strong);border-radius:12px;text-align:center;color:var(--ink-faint);font-size:13px}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -812,6 +833,8 @@ async function renderView(){
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
   if(t&&t.tool==="compare"){ return renderCompare(t,stage); }
   if(!t||!t.pdf){
+    // Tableau de bord projet quand un projet est actif ; sinon écran d'accueil standard (inchangé).
+    if((typeof activeProject==="function")&&activeProject()&&(!t||t.tool==="home"||!t.tool)){return renderProjectHome(stage);}
     stage.classList.add("empty");
     const op=el("div","opener");
     const _p=(typeof activeProject==="function")?activeProject():null;const _sk=(typeof activeSkill==="function")?activeSkill():null;
@@ -1012,14 +1035,48 @@ function ensureCopilotScope(){
 }
 function updateProjectButton(){const lbl=$("#projBtnLabel"),btn=$("#projBtn");if(!lbl||!btn)return;const p=activeProject();lbl.textContent=p?("Projet : "+p.name):"Projet : Aucun";btn.classList.toggle("has-project",!!p);}
 // B — Skill Engine : l'interface s'adapte au domaine du projet (outils mis en avant + repère de contexte).
+const ACT_IC={
+  import:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+  doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h6M9 16h6"/>',
+  ai:'<path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/>',
+  compare:'<path d="M6 3h5v18H6zM13 3h5v18h-5z"/>',
+  text:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>'
+};
+const DEFAULT_PROJECT_ACTIONS=[{label:"Ouvrir un PDF",ic:ACT_IC.import,act:"import"},{label:"Nouveau document",ic:ACT_IC.doc,act:"docstudio"},{label:"Demander à Readix Copilot",ic:ACT_IC.ai,act:"copilot"}];
 const SKILLS={
-  "CV / Recrutement":{label:"Espace CV",hint:"Créez, optimisez et exportez des CV professionnels.",tools:["docstudio","text","aiadvanced","compare"]},
-  "Livre / Écriture":{label:"Espace Écriture",hint:"Rédigez, structurez et mettez en forme votre livre.",tools:["docstudio","merge","split","aiadvanced"]},
-  "Génie civil / Ingénierie":{label:"Espace Ingénierie",hint:"Analysez plans, devis et documents techniques.",tools:["text","compare","meta","aiadvanced"]},
-  "Juridique":{label:"Espace Juridique",hint:"Comparez, extrayez et caviardez vos documents juridiques.",tools:["compare","text","redact","aiadvanced"]},
-  "Finance / Comptabilité":{label:"Espace Finance",hint:"Extrayez et analysez vos données financières.",tools:["text","aiadvanced","compare"]}
+  "CV / Recrutement":{label:"Espace CV",hint:"Créez, optimisez et exportez des CV professionnels.",tools:["docstudio","text","aiadvanced","compare"],
+    actions:[{label:"Créer un CV",ic:ACT_IC.doc,act:"docstudio"},{label:"Importer un CV (PDF)",ic:ACT_IC.import,act:"import"},{label:"Optimiser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
+  "Livre / Écriture":{label:"Espace Écriture",hint:"Rédigez, structurez et mettez en forme votre livre.",tools:["docstudio","merge","split","aiadvanced"],
+    actions:[{label:"Nouveau chapitre",ic:ACT_IC.doc,act:"docstudio"},{label:"Importer un manuscrit",ic:ACT_IC.import,act:"import"},{label:"Écrire avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
+  "Génie civil / Ingénierie":{label:"Espace Ingénierie",hint:"Analysez plans, devis et documents techniques.",tools:["text","compare","meta","aiadvanced"],
+    actions:[{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"},{label:"Comparer deux versions",ic:ACT_IC.compare,act:"tool:compare"}]},
+  "Juridique":{label:"Espace Juridique",hint:"Comparez, extrayez et caviardez vos documents juridiques.",tools:["compare","text","redact","aiadvanced"],
+    actions:[{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Comparer deux versions",ic:ACT_IC.compare,act:"tool:compare"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
+  "Finance / Comptabilité":{label:"Espace Finance",hint:"Extrayez et analysez vos données financières.",tools:["text","aiadvanced","compare"],
+    actions:[{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Extraire des données",ic:ACT_IC.text,act:"tool:text"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]}
 };
 function activeSkill(){const p=activeProject();if(!p||!p.domain)return null;return SKILLS[p.domain]||null;}
+function runProjectAction(act){
+  if(act==="import"){$("#hiddenFile").click();return;}
+  if(act==="docstudio"){openTool("docstudio");return;}
+  if(act==="copilot"){toggleCopilotFloating();return;}
+  if(typeof act==="string"&&act.indexOf("tool:")===0){openTool(act.slice(5));return;}
+}
+// Tableau de bord du projet : remplace l'écran « Ouvrez un document » quand un projet est actif.
+function renderProjectHome(stage){
+  const p=activeProject();const sk=activeSkill();
+  const wrap=el("div","proj-home");
+  wrap.innerHTML=`<div class="ph-head"><span class="op-badge">Projet${p.domain?" · "+String(p.domain).replace(/[&<>]/g,""):""}</span><h1>${String(p.name).replace(/[&<>]/g,"")}</h1>${p.description?`<p>${String(p.description).replace(/[&<>]/g,"")}</p>`:(sk?`<p>${sk.hint}</p>`:"")}</div><div class="ph-actions"></div><div class="ph-sec">Documents du projet</div><div class="ph-docs"></div>`;
+  const actBox=wrap.querySelector(".ph-actions");
+  ((sk&&sk.actions)||DEFAULT_PROJECT_ACTIONS).forEach(a=>{const b=el("button","ph-act");b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${a.ic||""}</svg></span><span class="l">${a.label}</span>`;b.onclick=()=>runProjectAction(a.act);actBox.appendChild(b);});
+  const docBox=wrap.querySelector(".ph-docs");
+  const docs=visibleTabs().filter(t=>t.pdf||t.doc);
+  if(docs.length){docs.forEach(t=>{const c=el("button","ph-doc");c.innerHTML=`<span class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5"/></svg></span><span class="dn">${String(t.name).replace(/[&<>]/g,"")}</span>`;c.onclick=()=>switchTab(t.id);docBox.appendChild(c);});}
+  else{docBox.innerHTML='<div class="ph-empty">Aucun document pour l’instant. Utilisez une action ci-dessus pour commencer.</div>';}
+  stage.appendChild(wrap);
+  stage.ondragover=e=>e.preventDefault();
+  stage.ondrop=async e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==="application/pdf")await openPdfBytes(await readAB(f),f.name);};
+}
 // A3 — espace de travail : chaque projet a ses propres onglets ; « Aucun projet » = espace général.
 function tabInScope(t){return PROJECT_STATE.activeId?(!!t&&t.projectId===PROJECT_STATE.activeId):!(t&&t.projectId);}
 function visibleTabs(){return APP.tabs.filter(tabInScope);}
