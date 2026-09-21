@@ -177,6 +177,32 @@ button{cursor:pointer}
 .ph-doc .di svg{width:17px;height:17px}
 .ph-doc .dn{font-size:12.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ph-empty{grid-column:1/-1;padding:22px;border:1px dashed var(--line-strong);border-radius:12px;text-align:center;color:var(--ink-faint);font-size:13px}
+/* Readix CV — atelier */
+.cv-builder{display:grid;grid-template-columns:minmax(320px,1fr) minmax(340px,1.1fr);gap:0;height:100%;min-height:0}
+.cv-form{overflow:auto;padding:22px 22px 60px;border-right:1px solid var(--line)}
+.cv-sec{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin:20px 0 10px}
+.cv-sec:first-child{margin-top:0}
+.cv-sec-row{display:flex;align-items:center;justify-content:space-between}
+.cv-add{border:1px solid var(--line);background:var(--surface-1);color:var(--brand);border-radius:8px;padding:4px 10px;font:inherit;font-size:11px;font-weight:600;cursor:pointer}
+.cv-add:hover{background:var(--brand-soft)}
+.cv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cvf{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.cvf-l{font-size:11px;color:var(--ink-soft)}
+.cvf .rp-input{width:100%;resize:vertical}
+.cv-item{position:relative;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--surface-1)}
+.cv-rm{position:absolute;top:8px;right:8px;border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:13px;border-radius:6px;padding:2px 6px}
+.cv-rm:hover{background:#fff0ef;color:#b42318}
+.cv-preview-wrap{display:flex;flex-direction:column;min-height:0;background:var(--surface-2)}
+.cv-preview-bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-1);flex-wrap:wrap}
+.cv-pv-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint)}
+.cv-paper-scroll{flex:1;overflow:auto;padding:22px;min-height:0}
+.cv-paper{max-width:640px;margin:0 auto;background:#fff;color:#1b1e28;border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 24px rgba(20,24,45,.08);padding:40px 44px;min-height:400px}
+.cv-paper h1{font-size:24px;margin:0 0 2px}
+.cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--brand);border-bottom:1px solid #e6e8ee;padding-bottom:4px;margin:20px 0 8px}
+.cv-paper p{margin:3px 0;font-size:12.5px;line-height:1.5}
+.cv-paper ul{margin:4px 0;padding-left:18px}
+.cv-paper li{font-size:12.5px;margin:2px 0}
+@media(max-width:820px){.cv-builder{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.cv-form{border-right:0;border-bottom:1px solid var(--line)}}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -701,6 +727,7 @@ let _asTimer=null;
 function scheduleAutosave(){clearTimeout(_asTimer);_asTimer=setTimeout(autosave,900);}
 async function autosave(){
   const t=activeTab();if(!t)return;
+  if(t.tool==="cvbuilder"){if(t.cv){await idbSave(t.id,{name:t.name,tool:"cvbuilder",cv:t.cv});t.dirty=false;}return;}
   if(t.tool==="docstudio"){if(t.doc){await idbSave(t.id,{name:t.name,tool:"docstudio",doc:t.doc,docMeta:t.docMeta||{margin:78,paper:"A4"},dirty:false});t.dirty=false;updateDocStudioStatus(t,false);}return;}
   if(!t.bytes)return;
   const fieldVals=t.fields?t.fields.map(f=>({name:f.name,type:f.type,val:f.el?(f.el.type==="checkbox"||f.el.type==="radio"?f.el.checked:f.el.value):null,ex:f.ex})):[];
@@ -713,7 +740,7 @@ async function offerResume(){
   dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;dl.close();
     if(a.dataset.a==="no"){for(const s of all)await idbDel(s.id);return;}
     for(const s of all){ try{
-      const t=newTabObj(s.name);t.id=s.id;t.bytes=new Uint8Array(s.bytes);t.tool=s.tool||"home";t.doc=s.doc||null;
+      const t=newTabObj(s.name);t.id=s.id;t.bytes=s.bytes?new Uint8Array(s.bytes):null;t.tool=s.tool||"home";t.doc=s.doc||null;t.cv=s.cv||null;
       t._resumeFields=s.fieldVals||[];
       APP.tabs.push(t);
     }catch(e){} }
@@ -842,6 +869,7 @@ async function renderView(){
     await ensurePdf(t);
     stage.innerHTML="";stage.classList.remove("empty");
   }
+  if(t&&t.tool==="cvbuilder"){ return renderCvBuilder(t,stage); }
   if(t&&t.tool==="docstudio"){ return renderDocStudio(t,stage); }
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
@@ -1060,7 +1088,7 @@ const ACT_IC={
 const DEFAULT_PROJECT_ACTIONS=[{label:"Ouvrir un PDF",ic:ACT_IC.import,act:"import"},{label:"Nouveau document",ic:ACT_IC.doc,act:"docstudio"},{label:"Demander à Readix Copilot",ic:ACT_IC.ai,act:"copilot"}];
 const SKILLS={
   "CV / Recrutement":{label:"Espace CV",hint:"Créez, optimisez et exportez des CV professionnels.",tools:["docstudio","text","aiadvanced","compare"],
-    actions:[{label:"Créer un CV",ic:ACT_IC.doc,act:"docstudio"},{label:"Importer un CV (PDF)",ic:ACT_IC.import,act:"import"},{label:"Optimiser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
+    actions:[{label:"Créer un CV",ic:ACT_IC.doc,act:"cv"},{label:"Importer un CV (PDF)",ic:ACT_IC.import,act:"import"},{label:"Optimiser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Livre / Écriture":{label:"Espace Écriture",hint:"Rédigez, structurez et mettez en forme votre livre.",tools:["docstudio","merge","split","aiadvanced"],
     actions:[{label:"Nouveau chapitre",ic:ACT_IC.doc,act:"docstudio"},{label:"Importer un manuscrit",ic:ACT_IC.import,act:"import"},{label:"Écrire avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Génie civil / Ingénierie":{label:"Espace Ingénierie",hint:"Analysez plans, devis et documents techniques.",tools:["text","compare","meta","aiadvanced"],
@@ -1075,7 +1103,94 @@ function runProjectAction(act){
   if(act==="import"){$("#hiddenFile").click();return;}
   if(act==="docstudio"){openTool("docstudio");return;}
   if(act==="copilot"){toggleCopilotFloating();return;}
+  if(act==="cv"){openCvBuilder();return;}
   if(typeof act==="string"&&act.indexOf("tool:")===0){openTool(act.slice(5));return;}
+}
+// ===== Readix CV — premier skill métier : atelier de CV (formulaire + aperçu + exports) =====
+function cvDefault(){return {identity:{name:"",title:"",email:"",phone:"",city:"",links:""},summary:"",experiences:[],education:[],skills:"",languages:""};}
+function cvEsc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function cvToHtml(cv){
+  const id=cv.identity||{};
+  const contact=[id.email,id.phone,id.city,id.links].filter(Boolean).map(cvEsc).join(" · ");
+  let h=`<h1>${cvEsc(id.name||"Votre nom")}</h1>`;
+  if(id.title)h+=`<p><b>${cvEsc(id.title)}</b></p>`;
+  if(contact)h+=`<p>${contact}</p>`;
+  if(cv.summary)h+=`<h2>Profil</h2><p>${cvEsc(cv.summary)}</p>`;
+  if((cv.experiences||[]).length){h+=`<h2>Expérience professionnelle</h2>`;cv.experiences.forEach(x=>{const d=[x.start,x.end].filter(Boolean).join(" – ");h+=`<p><b>${cvEsc(x.role||"")}</b>${x.company?" — "+cvEsc(x.company):""}${d?" ("+cvEsc(d)+")":""}</p>`;if(x.desc)h+=`<p>${cvEsc(x.desc)}</p>`;});}
+  if((cv.education||[]).length){h+=`<h2>Formation</h2>`;cv.education.forEach(x=>{const d=[x.start,x.end].filter(Boolean).join(" – ");h+=`<p><b>${cvEsc(x.degree||"")}</b>${x.school?" — "+cvEsc(x.school):""}${d?" ("+cvEsc(d)+")":""}</p>`;});}
+  const sk=String(cv.skills||"").split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  if(sk.length)h+=`<h2>Compétences</h2><ul>${sk.map(s=>`<li>${cvEsc(s)}</li>`).join("")}</ul>`;
+  if(cv.languages)h+=`<h2>Langues</h2><p>${cvEsc(cv.languages)}</p>`;
+  return h;
+}
+function openCvBuilder(){const t=createTab("Mon CV");t.tool="cvbuilder";t.cv=cvDefault();APP.tool="cvbuilder";pushHist({tool:"cvbuilder",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
+function cvField(label,val,on,kind){
+  const wrap=el("label","cvf");wrap.appendChild(el("span","cvf-l",label));
+  const inp=kind==="area"?el("textarea","rp-input"):el("input","rp-input");
+  if(kind!=="area")inp.type="text";if(kind==="area")inp.rows=2;
+  inp.value=val||"";inp.oninput=()=>on(inp.value);wrap.appendChild(inp);return wrap;
+}
+function buildCvForm(box,cv,touch,rerender){
+  box.innerHTML="";
+  // Identité
+  box.appendChild(el("div","cv-sec","Identité"));
+  const g=el("div","cv-grid");
+  g.appendChild(cvField("Nom complet",cv.identity.name,v=>{cv.identity.name=v;touch();}));
+  g.appendChild(cvField("Titre / poste",cv.identity.title,v=>{cv.identity.title=v;touch();}));
+  g.appendChild(cvField("E-mail",cv.identity.email,v=>{cv.identity.email=v;touch();}));
+  g.appendChild(cvField("Téléphone",cv.identity.phone,v=>{cv.identity.phone=v;touch();}));
+  g.appendChild(cvField("Ville",cv.identity.city,v=>{cv.identity.city=v;touch();}));
+  g.appendChild(cvField("Liens (LinkedIn…)",cv.identity.links,v=>{cv.identity.links=v;touch();}));
+  box.appendChild(g);
+  // Profil
+  box.appendChild(el("div","cv-sec","Profil"));
+  box.appendChild(cvField("Résumé / accroche",cv.summary,v=>{cv.summary=v;touch();},"area"));
+  // Expériences
+  const exH=el("div","cv-sec cv-sec-row");exH.innerHTML='<span>Expériences</span>';const exAdd=el("button","cv-add","+ Ajouter");exAdd.onclick=()=>{cv.experiences.push({role:"",company:"",start:"",end:"",desc:""});touch();rerender();};exH.appendChild(exAdd);box.appendChild(exH);
+  cv.experiences.forEach((x,i)=>{
+    const card=el("div","cv-item");const rm=el("button","cv-rm","✕");rm.title="Supprimer";rm.onclick=()=>{cv.experiences.splice(i,1);touch();rerender();};card.appendChild(rm);
+    const gg=el("div","cv-grid");
+    gg.appendChild(cvField("Poste",x.role,v=>{x.role=v;touch();}));
+    gg.appendChild(cvField("Entreprise",x.company,v=>{x.company=v;touch();}));
+    gg.appendChild(cvField("Début",x.start,v=>{x.start=v;touch();}));
+    gg.appendChild(cvField("Fin",x.end,v=>{x.end=v;touch();}));
+    card.appendChild(gg);
+    card.appendChild(cvField("Description",x.desc,v=>{x.desc=v;touch();},"area"));
+    box.appendChild(card);
+  });
+  // Formation
+  const edH=el("div","cv-sec cv-sec-row");edH.innerHTML='<span>Formation</span>';const edAdd=el("button","cv-add","+ Ajouter");edAdd.onclick=()=>{cv.education.push({degree:"",school:"",start:"",end:""});touch();rerender();};edH.appendChild(edAdd);box.appendChild(edH);
+  cv.education.forEach((x,i)=>{
+    const card=el("div","cv-item");const rm=el("button","cv-rm","✕");rm.onclick=()=>{cv.education.splice(i,1);touch();rerender();};card.appendChild(rm);
+    const gg=el("div","cv-grid");
+    gg.appendChild(cvField("Diplôme",x.degree,v=>{x.degree=v;touch();}));
+    gg.appendChild(cvField("École",x.school,v=>{x.school=v;touch();}));
+    gg.appendChild(cvField("Début",x.start,v=>{x.start=v;touch();}));
+    gg.appendChild(cvField("Fin",x.end,v=>{x.end=v;touch();}));
+    card.appendChild(gg);box.appendChild(card);
+  });
+  // Compétences & langues
+  box.appendChild(el("div","cv-sec","Compétences"));
+  box.appendChild(cvField("Une par ligne ou séparées par des virgules",cv.skills,v=>{cv.skills=v;touch();},"area"));
+  box.appendChild(el("div","cv-sec","Langues"));
+  box.appendChild(cvField("Ex. Français (natif), Anglais (courant)",cv.languages,v=>{cv.languages=v;touch();}));
+}
+function renderCvBuilder(t,stage){
+  if(!t.cv)t.cv=cvDefault();const cv=t.cv;
+  const wrap=el("div","cv-builder");
+  wrap.innerHTML=`<div class="cv-form" id="cvForm"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu</span><span style="flex:1"></span><button class="btn ghost sm" data-x="ds">Ouvrir dans Document Studio</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ai">Aide IA</button></div><div class="cv-paper-scroll"><div class="cv-paper" id="cvPaper"></div></div></div>`;
+  stage.appendChild(wrap);
+  const paper=wrap.querySelector("#cvPaper");
+  const refresh=()=>{paper.innerHTML=cvToHtml(cv);};
+  const touch=()=>{t.dirty=true;t.name=(cv.identity.name?("CV — "+cv.identity.name):"Mon CV");scheduleAutosave();refresh();renderTabs();};
+  buildCvForm(wrap.querySelector("#cvForm"),cv,touch,()=>renderCvBuilder(t,stage));
+  refresh();
+  wrap.querySelector(".cv-preview-bar").onclick=e=>{const b=e.target.closest("[data-x]");if(!b)return;const html=cvToHtml(cv);const nm=(cv.identity.name||"CV").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"CV";
+    if(b.dataset.x==="ds")openDocInTab(nm+".docx",html);
+    else if(b.dataset.x==="pdf")downloadCopilotFile({kind:"pdf",html:true,name:nm+".pdf",content:html});
+    else if(b.dataset.x==="docx")downloadCopilotFile({kind:"docx",html:true,name:nm+".docx",content:html});
+    else if(b.dataset.x==="ai"){toggleCopilotFloating();toast("Demandez au Copilot de rédiger ou d’améliorer une section, puis recopiez le texte dans le formulaire.","ok");}
+  };
 }
 // Tableau de bord du projet : remplace l'écran « Ouvrez un document » quand un projet est actif.
 function renderProjectHome(stage){
