@@ -567,8 +567,8 @@ function confirmSave(){
 /* ---------- IndexedDB (autosave) ---------- */
 let _db=null;
 function idb(){return new Promise((res,rej)=>{ if(_db)return res(_db);
-  const r=indexedDB.open("readix",2);
-  r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("tabs"))db.createObjectStore("tabs",{keyPath:"id"});if(!db.objectStoreNames.contains("copilotChats"))db.createObjectStore("copilotChats",{keyPath:"id"});};
+  const r=indexedDB.open("readix",3);
+  r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains("tabs"))db.createObjectStore("tabs",{keyPath:"id"});if(!db.objectStoreNames.contains("copilotChats"))db.createObjectStore("copilotChats",{keyPath:"id"});if(!db.objectStoreNames.contains("projects"))db.createObjectStore("projects",{keyPath:"id"});};
   r.onsuccess=()=>{_db=r.result;res(_db);};r.onerror=()=>rej(r.error);
 });}
 async function idbSave(id,state){try{const db=await idb();const tx=db.transaction("tabs","readwrite");tx.objectStore("tabs").put({id,...state,ts:Date.now()});}catch(e){}}
@@ -578,6 +578,9 @@ async function idbDel(id){try{const db=await idb();db.transaction("tabs","readwr
 async function idbChatSave(chat){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").put(chat);}catch(e){}}
 async function idbChatAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("copilotChats").objectStore("copilotChats").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
 async function idbChatDel(id){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").delete(id);}catch(e){}}
+async function idbProjectSave(p){try{const db=await idb();db.transaction("projects","readwrite").objectStore("projects").put(p);}catch(e){}}
+async function idbProjectAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("projects").objectStore("projects").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
+async function idbProjectDel(id){try{const db=await idb();db.transaction("projects","readwrite").objectStore("projects").delete(id);}catch(e){}}
 
 /* ---------- état global ---------- */
 const APP={ tabs:[], active:null, tool:"home", theme:"light", lang:"fr",
@@ -872,7 +875,7 @@ async function runAI9(btn,res,feature,text,question,target){
 const AI_FLOAT_STATE={open:false,minimized:false,maximized:false,mode:"advanced",feature:"workspace"};
 const COPILOT_STATE={chats:[],activeId:null,draftAttachments:[],loaded:false,remote:false};
 function chatId(){return "c"+Date.now()+Math.floor(Math.random()*1e4);}
-function newCopilotChat(){const now=Date.now();return {id:chatId(),title:"Nouvelle discussion",messages:[],createdAt:now,updatedAt:now};}
+function newCopilotChat(){const now=Date.now();return {id:chatId(),title:"Nouvelle discussion",messages:[],projectId:(typeof PROJECT_STATE!=="undefined"&&PROJECT_STATE.activeId)||null,createdAt:now,updatedAt:now};}
 // ---- Synchronisation Supabase (Phase 6) : le local reste le cache de secours ----
 function copilotAuthed(){return !!(getToken()&&APP.user);}
 async function apiCopilotList(){const d=await api("/api/copilot/conversations");return Array.isArray(d&&d.conversations)?d.conversations:[];}
@@ -900,6 +903,60 @@ async function initCopilotHistory(){
   COPILOT_STATE.activeId=COPILOT_STATE.chats[0].id;COPILOT_STATE.loaded=true;
 }
 function activeCopilotChat(){return COPILOT_STATE.chats.find(c=>c.id===COPILOT_STATE.activeId)||null;}
+
+// ================= Readix Project Engine — Étape A1 (socle données, sans interface) =================
+// Un projet regroupe des documents, des onglets, des objets générés et des conversations Copilot.
+// Aucune interface n'est encore rendue : cette couche est inerte tant que A2 ne l'active pas.
+const PROJECT_STATE={projects:[],activeId:null,loaded:false,remote:false};
+function projectId(){return "p"+Date.now()+Math.floor(Math.random()*1e4);}
+function newProject(opts={}){const now=Date.now();return {
+  id:projectId(),
+  name:opts.name||"Nouveau projet",
+  description:opts.description||"",
+  domain:opts.domain||"",
+  subDomain:opts.subDomain||"",
+  status:"active",
+  settings:{},
+  skills:[],
+  tabs:[],
+  documents:[],
+  generatedObjects:[],
+  tasks:[],
+  history:[],
+  versions:[],
+  metadata:{},
+  createdAt:now,
+  updatedAt:now
+};}
+// Synchronisation Supabase (best-effort ; le local reste le cache de secours).
+async function apiProjectList(){const d=await api("/api/projects");return Array.isArray(d&&d.projects)?d.projects:[];}
+async function apiProjectSave(p){try{await api("/api/projects",{project:p});}catch(e){}}
+async function apiProjectDelete(id){try{await api("/api/projects/"+encodeURIComponent(id),null,"DELETE");}catch(e){}}
+const _projectSyncTimers={};
+function queueProjectSync(p){if(!p||!p.id||!PROJECT_STATE.remote)return;clearTimeout(_projectSyncTimers[p.id]);_projectSyncTimers[p.id]=setTimeout(()=>apiProjectSave(p),700);}
+async function initProjects(){
+  if(PROJECT_STATE.loaded)return;
+  const local=(await idbProjectAll()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  PROJECT_STATE.projects=local;PROJECT_STATE.remote=false;
+  if(copilotAuthed()){
+    try{
+      const remote=await apiProjectList();
+      const map=new Map();remote.forEach(p=>{if(p&&p.id)map.set(p.id,p);});
+      const toPush=[];
+      local.forEach(l=>{if(!l||!l.id)return;const r=map.get(l.id);if(!r){map.set(l.id,l);toPush.push(l);}else if((l.updatedAt||0)>(r.updatedAt||0)){map.set(l.id,l);toPush.push(l);}});
+      PROJECT_STATE.projects=[...map.values()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+      PROJECT_STATE.remote=true;
+      remote.forEach(p=>idbProjectSave(p));
+      toPush.forEach(p=>apiProjectSave(p));
+    }catch(e){PROJECT_STATE.remote=false;}
+  }
+  PROJECT_STATE.loaded=true;
+}
+async function saveProject(p){if(!p)return;p.updatedAt=Date.now();await idbProjectSave(p);PROJECT_STATE.projects.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueProjectSync(p);}
+async function createProject(opts={}){const p=newProject(opts);PROJECT_STATE.projects.unshift(p);await idbProjectSave(p);if(PROJECT_STATE.remote)apiProjectSave(p);return p;}
+async function deleteProject(id){const idx=PROJECT_STATE.projects.findIndex(p=>p.id===id);if(idx<0)return;PROJECT_STATE.projects.splice(idx,1);try{await idbProjectDel(id);}catch(e){}if(PROJECT_STATE.remote)apiProjectDelete(id);if(PROJECT_STATE.activeId===id)PROJECT_STATE.activeId=null;}
+function activeProject(){return PROJECT_STATE.projects.find(p=>p.id===PROJECT_STATE.activeId)||null;}
+// ================= fin Project Engine A1 =================
 async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueCopilotSync(chat);}
 async function createCopilotChat(){const c=newCopilotChat();COPILOT_STATE.chats.unshift(c);COPILOT_STATE.activeId=c.id;COPILOT_STATE.draftAttachments=[];await idbChatSave(c);if(COPILOT_STATE.remote)apiCopilotSave(c);if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
 async function switchCopilotChat(id){if(!COPILOT_STATE.chats.some(c=>c.id===id))return;COPILOT_STATE.activeId=id;COPILOT_STATE.draftAttachments=[];if(AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
@@ -2212,13 +2269,13 @@ function openAuth(mode){
       try{const path=mode==="signup"?"/api/signup":"/api/login";
         const d=await api(path,mode==="signup"?{name,email,password:pass}:{email,password:pass});
         setToken(d.token);APP.user={name:d.user.name,email:d.user.email};APP.plan=d.user.plan||"free";updateAccount();dl.close();
-        COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
+        COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();
         toast("Bienvenue "+(d.user.name||d.user.email)+" !","ok");
       }catch(ex){err.textContent=ex.message;b.disabled=false;}
     }
   };
 }
-function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;updateAccount();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
+function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;PROJECT_STATE.projects=[];PROJECT_STATE.activeId=null;updateAccount();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
 $("#umAuth").onclick=()=>{$("#acctMenu").classList.remove("open");openAuth("login");};
 $("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 /* ---------- en-tête, thème, menus, init ---------- */
