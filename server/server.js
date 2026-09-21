@@ -66,7 +66,22 @@ async function initDb() {
       PRIMARY KEY (email, id)
     );`);
   await pool.query(`CREATE INDEX IF NOT EXISTS conversations_email_idx ON conversations(email, updated_at DESC);`);
-  console.log("✅ Base de données prête (tables users, usage, conversations).");
+  await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS project_id TEXT;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      email       TEXT NOT NULL,
+      id          TEXT NOT NULL,
+      name        TEXT NOT NULL DEFAULT 'Projet',
+      description TEXT NOT NULL DEFAULT '',
+      domain      TEXT NOT NULL DEFAULT '',
+      status      TEXT NOT NULL DEFAULT 'active',
+      data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at  BIGINT NOT NULL DEFAULT 0,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS projects_email_idx ON projects(email, updated_at DESC);`);
+  console.log("✅ Base de données prête (tables users, usage, conversations, projects).");
 }
 async function getUser(email) {
   const r = await pool.query("SELECT email, name, pass_hash, plan FROM users WHERE email=$1", [email]);
@@ -215,13 +230,22 @@ app.get("/api/me", auth, (req, res) => res.json({ user: req.user }));
 app.get("/api/copilot/conversations", auth, async (req, res) => {
   if (!dbReady(res)) return;
   try {
-    const r = await pool.query(
-      "SELECT id, title, data, updated_at FROM conversations WHERE email=$1 ORDER BY updated_at DESC LIMIT 200",
-      [req.user.email]
-    );
+    const proj = req.query && req.query.project;
+    let r;
+    if (proj) {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 AND project_id=$2 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email, String(proj)]
+      );
+    } else {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email]
+      );
+    }
     const conversations = r.rows.map(x => {
       const base = (x.data && typeof x.data === "object") ? x.data : {};
-      return { ...base, id: x.id, title: x.title, updatedAt: Number(x.updated_at) };
+      return { ...base, id: x.id, title: x.title, updatedAt: Number(x.updated_at), projectId: x.project_id || null };
     });
     res.json({ conversations });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -234,12 +258,13 @@ app.post("/api/copilot/conversations", auth, async (req, res) => {
   const id = String(chat.id).slice(0, 80);
   const title = String(chat.title || "Nouvelle discussion").slice(0, 200);
   const updatedAt = Number(chat.updatedAt) || Date.now();
+  const projectId = chat.projectId ? String(chat.projectId).slice(0, 80) : null;
   try {
     await pool.query(
-      `INSERT INTO conversations(email,id,title,data,updated_at,created_at)
-       VALUES($1,$2,$3,$4,$5,now())
-       ON CONFLICT (email,id) DO UPDATE SET title=EXCLUDED.title, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
-      [req.user.email, id, title, JSON.stringify(chat), updatedAt]
+      `INSERT INTO conversations(email,id,title,data,updated_at,project_id,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,now())
+       ON CONFLICT (email,id) DO UPDATE SET title=EXCLUDED.title, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at, project_id=EXCLUDED.project_id`,
+      [req.user.email, id, title, JSON.stringify(chat), updatedAt, projectId]
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -249,6 +274,64 @@ app.delete("/api/copilot/conversations/:id", auth, async (req, res) => {
   if (!dbReady(res)) return;
   try {
     await pool.query("DELETE FROM conversations WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Readix Project Engine : projets (Étape A1) ----
+// Liste les projets de l'utilisateur (récents d'abord).
+app.get("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query(
+      "SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 ORDER BY updated_at DESC LIMIT 300",
+      [req.user.email]
+    );
+    const projects = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) };
+    });
+    res.json({ projects });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Récupère un projet précis.
+app.get("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query("SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    if (!r.rows.length) return res.status(404).json({ error: "Projet introuvable" });
+    const x = r.rows[0]; const base = (x.data && typeof x.data === "object") ? x.data : {};
+    res.json({ project: { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour un projet (upsert par id, propre à l'utilisateur).
+app.post("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const p = req.body && req.body.project;
+  if (!p || !p.id) return res.status(400).json({ error: "Projet invalide" });
+  const id = String(p.id).slice(0, 80);
+  const name = String(p.name || "Projet").slice(0, 200);
+  const description = String(p.description || "").slice(0, 2000);
+  const domain = String(p.domain || "").slice(0, 120);
+  const status = String(p.status || "active").slice(0, 40);
+  const updatedAt = Number(p.updatedAt) || Date.now();
+  try {
+    await pool.query(
+      `INSERT INTO projects(email,id,name,description,domain,status,data,updated_at,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
+       ON CONFLICT (email,id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, domain=EXCLUDED.domain, status=EXCLUDED.status, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
+      [req.user.email, id, name, description, domain, status, JSON.stringify(p), updatedAt]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime un projet (les conversations liées sont détachées, pas supprimées).
+app.delete("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const id = String(req.params.id);
+  try {
+    await pool.query("UPDATE conversations SET project_id=NULL WHERE email=$1 AND project_id=$2", [req.user.email, id]);
+    await pool.query("DELETE FROM projects WHERE email=$1 AND id=$2", [req.user.email, id]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
