@@ -203,6 +203,13 @@ button{cursor:pointer}
 .cv-paper ul{margin:4px 0;padding-left:18px}
 .cv-paper li{font-size:12.5px;margin:2px 0}
 @media(max-width:820px){.cv-builder{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.cv-form{border-right:0;border-bottom:1px solid var(--line)}}
+/* Entrées IA de la barre du haut */
+.mtab.mtab-ai{color:var(--brand);font-weight:600}
+.mtab.mtab-ai svg{color:var(--brand)}
+.mtab.mtab-cvia{gap:6px;padding-left:12px;padding-right:12px}
+.mtab.mtab-cvia .cv-big{font-size:15px;font-weight:800;letter-spacing:.02em;color:var(--ink)}
+.mtab.mtab-cvia .cv-ia{font-size:9px;font-weight:800;letter-spacing:.04em;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));padding:2px 5px;border-radius:6px;line-height:1}
+.mtab.mtab-cvia:hover .cv-big{color:var(--brand)}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -585,6 +592,8 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 <div class="menubar">
   <div class="mtabs" id="mtabs">
     <button class="mtab on" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Tous les outils</button>
+    <button class="mtab mtab-ai" data-copilot="1" title="Ouvrir Readix Copilot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg>Readix Copilot</button>
+    <button class="mtab mtab-cvia" data-cv="1" title="Créer un CV avec l'IA"><span class="cv-big">CV</span><span class="cv-ia">IA</span></button>
     <button class="mtab" data-tool="fillsign"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 12h8M8 16h5"/></svg>Remplir &amp; Signer</button>
     <button class="mtab" data-tool="merge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 4h8l4 4v12H8z"/><path d="M4 8v12h8"/></svg>Fusionner</button>
     <button class="mtab" data-create-doc="1" title="Ouvrir un nouveau document Word"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h6M9 16h6"/></svg>Document Word</button>
@@ -2004,7 +2013,7 @@ function renderTools(){
     b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${t.ic}</svg></span><span class="lb">${t.name}</span>`;
     b.onclick=()=>openTool(t.id);box.appendChild(b);
   });
-  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool));
+  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")));
 }
 function openTool(id){
   if(id==="aiadvanced"){openAIFloating("__home");return;}
@@ -2014,7 +2023,7 @@ function openTool(id){
   renderTabs();renderTools();renderView();updateHeader();
   $("#floatsig").classList.toggle("show",id==="fillsign"&&!!t.pdf);
 }
-$$(".mtab").forEach(m=>m.onclick=()=>{ if(m.dataset.createDoc){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;} if(m.dataset.view==="home")openTool("view"); else openTool(m.dataset.tool); });
+$$(".mtab").forEach(m=>m.onclick=()=>{ if(m.dataset.copilot){toggleCopilotFloating();return;} if(m.dataset.cv){openCvBuilder();return;} if(m.dataset.createDoc){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;} if(m.dataset.view==="home")openTool("view"); else openTool(m.dataset.tool); });
 
 /* ---------- Remplir & Signer : vrais champs AcroForm ---------- */
 async function renderFillSign(t,stage){
