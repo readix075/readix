@@ -147,6 +147,15 @@ button{cursor:pointer}
 .proj-domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .proj-domain-grid button{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-1);cursor:pointer;font:inherit;font-size:12.5px;text-align:left}
 .proj-domain-grid button.sel{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
+/* Skill Engine (B) : outils du domaine mis en avant */
+.grp.skill-grp{color:var(--brand);display:flex;align-items:center;gap:4px}
+.tool.skill-tool{position:relative}
+.tool.skill-tool::before{content:"";position:absolute;left:2px;top:9px;bottom:9px;width:3px;border-radius:3px;background:linear-gradient(180deg,var(--brand),var(--brand-2))}
+.lrail.mini .tool.skill-tool::before{display:none}
+.opener-proj{display:flex;flex-direction:column;align-items:center;gap:3px;margin-bottom:16px}
+.opener-proj .op-badge{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));padding:3px 10px;border-radius:20px}
+.opener-proj b{font-size:16px;color:var(--ink)}
+.opener-proj span:not(.op-badge){font-size:12px;color:var(--ink-faint);max-width:340px;text-align:center}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -805,7 +814,9 @@ async function renderView(){
   if(!t||!t.pdf){
     stage.classList.add("empty");
     const op=el("div","opener");
-    op.innerHTML=`<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg><h3>Ouvrez un document</h3><p>Glissez un PDF ici, ou cliquez pour le choisir. Tout se passe dans votre navigateur.</p><button class="btn">Ouvrir un PDF</button>`;
+    const _p=(typeof activeProject==="function")?activeProject():null;const _sk=(typeof activeSkill==="function")?activeSkill():null;
+    const _ctx=_p?`<div class="opener-proj"><span class="op-badge">Projet</span><b>${String(_p.name).replace(/[&<>]/g,"")}</b>${_sk?`<span>${_sk.hint}</span>`:(_p.domain?`<span>${String(_p.domain).replace(/[&<>]/g,"")}</span>`:"")}</div>`:"";
+    op.innerHTML=_ctx+`<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg><h3>Ouvrez un document</h3><p>Glissez un PDF ici, ou cliquez pour le choisir. Tout se passe dans votre navigateur.</p><button class="btn">Ouvrir un PDF</button>`;
     op.onclick=()=>$("#hiddenFile").click();
     stage.appendChild(op);
     stage.ondragover=e=>e.preventDefault();
@@ -1000,6 +1011,15 @@ function ensureCopilotScope(){
   COPILOT_STATE.draftAttachments=[];
 }
 function updateProjectButton(){const lbl=$("#projBtnLabel"),btn=$("#projBtn");if(!lbl||!btn)return;const p=activeProject();lbl.textContent=p?("Projet : "+p.name):"Projet : Aucun";btn.classList.toggle("has-project",!!p);}
+// B — Skill Engine : l'interface s'adapte au domaine du projet (outils mis en avant + repère de contexte).
+const SKILLS={
+  "CV / Recrutement":{label:"Espace CV",hint:"Créez, optimisez et exportez des CV professionnels.",tools:["docstudio","text","aiadvanced","compare"]},
+  "Livre / Écriture":{label:"Espace Écriture",hint:"Rédigez, structurez et mettez en forme votre livre.",tools:["docstudio","merge","split","aiadvanced"]},
+  "Génie civil / Ingénierie":{label:"Espace Ingénierie",hint:"Analysez plans, devis et documents techniques.",tools:["text","compare","meta","aiadvanced"]},
+  "Juridique":{label:"Espace Juridique",hint:"Comparez, extrayez et caviardez vos documents juridiques.",tools:["compare","text","redact","aiadvanced"]},
+  "Finance / Comptabilité":{label:"Espace Finance",hint:"Extrayez et analysez vos données financières.",tools:["text","aiadvanced","compare"]}
+};
+function activeSkill(){const p=activeProject();if(!p||!p.domain)return null;return SKILLS[p.domain]||null;}
 // A3 — espace de travail : chaque projet a ses propres onglets ; « Aucun projet » = espace général.
 function tabInScope(t){return PROJECT_STATE.activeId?(!!t&&t.projectId===PROJECT_STATE.activeId):!(t&&t.projectId);}
 function visibleTabs(){return APP.tabs.filter(tabInScope);}
@@ -1026,7 +1046,7 @@ function setActiveProject(id){
   PROJECT_STATE.activeId=id||null;
   try{if(id)localStorage.setItem("readix_active_project",id);else localStorage.removeItem("readix_active_project");}catch(e){}
   updateProjectButton();renderProjectMenu();
-  ensureTabScope();
+  ensureTabScope();renderTools();
   if(COPILOT_STATE.loaded){ensureCopilotScope();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
   const p=activeProject();toast(p?("Projet actif : "+p.name):"Mode libre — aucun projet actif.","ok");
 }
@@ -1735,6 +1755,16 @@ function renderTools(){
   aiBtn.innerHTML='<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg></span><span class="lb">Readix Copilot<span class="tool-ai-sub">Assistant IA · au cœur de Readix</span></span>';
   aiBtn.onclick=()=>toggleCopilotFloating();
   box.appendChild(aiBtn);
+  // Skill Engine : accès rapide aux outils du domaine du projet actif.
+  const sk=(typeof activeSkill==="function")?activeSkill():null;
+  if(sk){
+    box.appendChild(el("div","grp skill-grp","★ "+sk.label));
+    sk.tools.forEach(id=>{const tool=TOOLS.find(x=>x.id===id);if(!tool)return;
+      const b=el("button","tool skill-tool"+(APP.tool===id?" on":""));b.dataset.tool=id;
+      b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${tool.ic}</svg></span><span class="lb">${tool.name}</span>`;
+      b.onclick=()=>openTool(id);box.appendChild(b);
+    });
+  }
   TOOLS.forEach(t=>{ if(t.grp!==g){g=t.grp;box.appendChild(el("div","grp",g));}
     const b=el("button","tool"+(APP.tool===t.id?" on":""));b.dataset.tool=t.id;
     b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${t.ic}</svg></span><span class="lb">${t.name}</span>`;
