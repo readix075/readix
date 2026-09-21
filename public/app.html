@@ -617,7 +617,7 @@ function u8(ab){return ab instanceof Uint8Array?ab:new Uint8Array(ab);}
 /* ---------- onglets ---------- */
 function renderTabs(){
   const bar=$("#tabbar");bar.innerHTML="";
-  APP.tabs.forEach(t=>{
+  visibleTabs().forEach(t=>{
     const w=el("div","wtab"+(t.id===APP.active?" on":""));
     w.append(el("span","nm",t.name));
     const x=el("span","x","✕");x.title="Fermer";
@@ -640,9 +640,14 @@ async function closeTab(id){
   const t=APP.tabs.find(x=>x.id===id);if(!t)return;
   if(t.dirty){const a=await confirmSave();if(a==="cancel")return;if(a==="yes"){APP.active=id;await doSave();}}
   await idbDel(id);
-  const i=APP.tabs.findIndex(x=>x.id===id);APP.tabs.splice(i,1);
-  if(APP.active===id){APP.active=APP.tabs.length?APP.tabs[Math.max(0,i-1)].id:null;}
-  if(!APP.tabs.length){createTab();}else{switchTab(APP.active);}
+  const wasActive=(APP.active===id);
+  const pos=visibleTabs().findIndex(x=>x.id===id);
+  const idx=APP.tabs.findIndex(x=>x.id===id);APP.tabs.splice(idx,1);
+  if(wasActive){
+    const rest=visibleTabs();
+    if(rest.length){APP.active=rest[Math.max(0,pos-1)].id;switchTab(APP.active);}
+    else{createTab();}
+  }else{renderTabs();}
 }
 function markDirty(){const t=activeTab();if(!t)return;t.dirty=true;updateSaveDot();scheduleAutosave();}
 function updateSaveDot(){const t=activeTab();const dot=$("#saveDot");if(!t||!t.bytes){dot.style.display="none";return;}dot.style.display="flex";dot.classList.toggle("dirty",!!t.dirty);$(".t",dot).textContent=t.dirty?"Non enregistré":"Enregistré";}
@@ -995,6 +1000,10 @@ function ensureCopilotScope(){
   COPILOT_STATE.draftAttachments=[];
 }
 function updateProjectButton(){const lbl=$("#projBtnLabel"),btn=$("#projBtn");if(!lbl||!btn)return;const p=activeProject();lbl.textContent=p?("Projet : "+p.name):"Projet : Aucun";btn.classList.toggle("has-project",!!p);}
+// A3 — espace de travail : chaque projet a ses propres onglets ; « Aucun projet » = espace général.
+function tabInScope(t){return PROJECT_STATE.activeId?(!!t&&t.projectId===PROJECT_STATE.activeId):!(t&&t.projectId);}
+function visibleTabs(){return APP.tabs.filter(tabInScope);}
+function ensureTabScope(){const cur=activeTab();if(cur&&tabInScope(cur))return;const vis=visibleTabs();if(vis.length){APP.active=vis[0].id;switchTab(APP.active,false);}else{createTab();}}
 function projectDocCount(p){try{return APP.tabs.filter(t=>t.projectId===p.id&&(t.pdf||t.doc)).length;}catch(e){return 0;}}
 function renderProjectMenu(){
   const m=$("#projMenu");if(!m)return;m.innerHTML="";
@@ -1017,6 +1026,7 @@ function setActiveProject(id){
   PROJECT_STATE.activeId=id||null;
   try{if(id)localStorage.setItem("readix_active_project",id);else localStorage.removeItem("readix_active_project");}catch(e){}
   updateProjectButton();renderProjectMenu();
+  ensureTabScope();
   if(COPILOT_STATE.loaded){ensureCopilotScope();if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();}
   const p=activeProject();toast(p?("Projet actif : "+p.name):"Mode libre — aucun projet actif.","ok");
 }
@@ -1056,7 +1066,7 @@ async function initProjectUI(){
   try{const saved=localStorage.getItem("readix_active_project");if(saved)PROJECT_STATE.activeId=saved;}catch(e){}
   try{await initProjects();}catch(e){}
   if(PROJECT_STATE.activeId&&!PROJECT_STATE.projects.some(p=>p.id===PROJECT_STATE.activeId)){PROJECT_STATE.activeId=null;try{localStorage.removeItem("readix_active_project");}catch(e){}}
-  renderProjectMenu();updateProjectButton();
+  renderProjectMenu();updateProjectButton();ensureTabScope();
 }
 // ================= fin Project Engine A2 =================
 async function saveCopilotChat(chat){if(!chat)return;chat.updatedAt=Date.now();await idbChatSave(chat);COPILOT_STATE.chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueCopilotSync(chat);}
@@ -2378,7 +2388,7 @@ function openAuth(mode){
     }
   };
 }
-function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;PROJECT_STATE.projects=[];PROJECT_STATE.activeId=null;try{localStorage.removeItem("readix_active_project");}catch(e){}updateAccount();try{renderProjectMenu();updateProjectButton();}catch(e){}if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
+function logout(){clearToken();APP.user=null;APP.plan="free";COPILOT_STATE.loaded=false;COPILOT_STATE.remote=false;PROJECT_STATE.loaded=false;PROJECT_STATE.remote=false;PROJECT_STATE.projects=[];PROJECT_STATE.activeId=null;try{localStorage.removeItem("readix_active_project");}catch(e){}updateAccount();try{renderProjectMenu();updateProjectButton();ensureTabScope();}catch(e){}if(AI_FLOAT_STATE.open&&AI_FLOAT_STATE.mode==="copilot")renderAIFloating();toast("Vous êtes déconnecté.","ok");}
 $("#umAuth").onclick=()=>{$("#acctMenu").classList.remove("open");openAuth("login");};
 $("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 /* ---------- en-tête, thème, menus, init ---------- */
