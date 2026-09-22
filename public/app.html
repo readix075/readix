@@ -210,6 +210,45 @@ button{cursor:pointer}
 .mtab.mtab-cvia .cv-big{font-size:15px;font-weight:800;letter-spacing:.02em;color:var(--ink)}
 .mtab.mtab-cvia .cv-ia{font-size:9px;font-weight:800;letter-spacing:.04em;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));padding:2px 5px;border-radius:6px;line-height:1}
 .mtab.mtab-cvia:hover .cv-big{color:var(--brand)}
+/* Book Studio */
+.book-covers{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.book-cov{width:46px;height:60px;border-radius:8px;border:2px solid transparent;cursor:pointer;display:grid;place-items:center;font-weight:800;box-shadow:0 3px 8px rgba(20,24,45,.14)}
+.book-cov.sel{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.book-ch-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.book-ch-n{width:24px;height:24px;border-radius:7px;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.book-mv{width:24px;height:24px;border:1px solid var(--line);background:var(--surface-1);border-radius:7px;cursor:pointer;font-size:12px;color:var(--ink-soft)}
+.book-mv:hover{background:var(--brand-soft);color:var(--brand)}
+.book-cover-pv{max-width:300px;margin:0 auto 22px;aspect-ratio:2/3;border-radius:6px;box-shadow:0 14px 40px rgba(20,24,45,.28);padding:34px 28px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.book-cover-pv .bc-bar{width:56px;height:5px;border-radius:4px;margin-bottom:auto}
+.book-cover-pv .bc-title{font-size:26px;font-weight:800;line-height:1.15;margin-top:auto}
+.book-cover-pv .bc-sub{font-size:13px;margin-top:8px;opacity:.9}
+.book-cover-pv .bc-auth{font-size:13px;margin-top:16px;opacity:.85}
+/* Écran d'accueil — cartes de studios */
+.home-landing .ph-head h1{font-size:28px}
+.studio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.studio-card{display:flex;align-items:center;gap:14px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface-1);cursor:pointer;text-align:left;font:inherit;transition:border-color .14s,box-shadow .14s,transform .05s}
+.studio-card:hover{border-color:var(--brand);box-shadow:0 12px 30px rgba(99,82,255,.14);transform:translateY(-1px)}
+.studio-card .sc-ic{width:48px;height:48px;flex:none;border-radius:13px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
+.studio-card .sc-ic svg{width:24px;height:24px}
+.studio-card .sc-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.studio-card .sc-l{font-size:15px;font-weight:700;color:var(--ink)}
+.studio-card .sc-d{font-size:12px;color:var(--ink-faint)}
+.studio-card.big{grid-column:span 2;background:linear-gradient(135deg,var(--brand),var(--brand-2));border:0}
+.studio-card.big .sc-ic{background:rgba(255,255,255,.2);color:#fff}
+.studio-card.big .sc-l{color:#fff;font-size:18px}
+.studio-card.big .sc-d{color:rgba(255,255,255,.9)}
+.studio-card.big:hover{filter:brightness(1.04)}
+@media(max-width:620px){.studio-card.big{grid-column:span 1}}
+/* Chiffrage ingénierie */
+.eng-disclaimer{padding:8px 14px;background:#fff6e6;color:#8a5a00;font-size:11.5px;border-bottom:1px solid #f0e2c0}
+.eng-row{display:grid;grid-template-columns:1fr 68px 66px 78px 84px 26px;gap:6px;align-items:center;margin-bottom:6px}
+.eng-row .rp-input{width:100%}
+.eng-row .eng-sm{text-align:right}
+.eng-head{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700;margin-bottom:4px}
+.eng-head span{padding:0 2px}
+.eng-tot{font-size:12px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.eng-grand{margin:10px 0 4px;text-align:right;font-size:14px;color:var(--ink)}
+.eng-grand b{font-size:16px;color:var(--brand)}
 /* zone document */
 .stage{flex:1;min-width:0;position:relative;overflow:auto;background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%, #000 4%))}
 .stage.empty{display:grid;place-items:center}
@@ -594,6 +633,8 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
     <button class="mtab on" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Tous les outils</button>
     <button class="mtab mtab-ai" data-copilot="1" title="Ouvrir Readix Copilot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg>Readix Copilot</button>
     <button class="mtab mtab-cvia" data-cv="1" title="Créer un CV avec l'IA"><span class="cv-big">CV</span><span class="cv-ia">IA</span></button>
+    <button class="mtab mtab-cvia" data-book="1" title="Créer un livre avec l'IA"><span class="cv-big">Livre</span><span class="cv-ia">IA</span></button>
+    <button class="mtab mtab-cvia" data-eng="1" title="Chiffrage / ingénierie avec l'IA"><span class="cv-big">Génie</span><span class="cv-ia">IA</span></button>
     <button class="mtab" data-tool="fillsign"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 12h8M8 16h5"/></svg>Remplir &amp; Signer</button>
     <button class="mtab" data-tool="merge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 4h8l4 4v12H8z"/><path d="M4 8v12h8"/></svg>Fusionner</button>
     <button class="mtab" data-create-doc="1" title="Ouvrir un nouveau document Word"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h6M9 16h6"/></svg>Document Word</button>
@@ -737,6 +778,8 @@ function scheduleAutosave(){clearTimeout(_asTimer);_asTimer=setTimeout(autosave,
 async function autosave(){
   const t=activeTab();if(!t)return;
   if(t.tool==="cvbuilder"){if(t.cv){await idbSave(t.id,{name:t.name,tool:"cvbuilder",cv:t.cv});t.dirty=false;}return;}
+  if(t.tool==="bookstudio"){if(t.book){await idbSave(t.id,{name:t.name,tool:"bookstudio",book:t.book});t.dirty=false;}return;}
+  if(t.tool==="engstudio"){if(t.eng){await idbSave(t.id,{name:t.name,tool:"engstudio",eng:t.eng});t.dirty=false;}return;}
   if(t.tool==="docstudio"){if(t.doc){await idbSave(t.id,{name:t.name,tool:"docstudio",doc:t.doc,docMeta:t.docMeta||{margin:78,paper:"A4"},dirty:false});t.dirty=false;updateDocStudioStatus(t,false);}return;}
   if(!t.bytes)return;
   const fieldVals=t.fields?t.fields.map(f=>({name:f.name,type:f.type,val:f.el?(f.el.type==="checkbox"||f.el.type==="radio"?f.el.checked:f.el.value):null,ex:f.ex})):[];
@@ -749,7 +792,7 @@ async function offerResume(){
   dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;dl.close();
     if(a.dataset.a==="no"){for(const s of all)await idbDel(s.id);return;}
     for(const s of all){ try{
-      const t=newTabObj(s.name);t.id=s.id;t.bytes=s.bytes?new Uint8Array(s.bytes):null;t.tool=s.tool||"home";t.doc=s.doc||null;t.cv=s.cv||null;
+      const t=newTabObj(s.name);t.id=s.id;t.bytes=s.bytes?new Uint8Array(s.bytes):null;t.tool=s.tool||"home";t.doc=s.doc||null;t.cv=s.cv||null;t.book=s.book||null;t.eng=s.eng||null;
       t._resumeFields=s.fieldVals||[];
       APP.tabs.push(t);
     }catch(e){} }
@@ -879,6 +922,8 @@ async function renderView(){
     stage.innerHTML="";stage.classList.remove("empty");
   }
   if(t&&t.tool==="cvbuilder"){ return renderCvBuilder(t,stage); }
+  if(t&&t.tool==="bookstudio"){ return renderBookStudio(t,stage); }
+  if(t&&t.tool==="engstudio"){ return renderEngStudio(t,stage); }
   if(t&&t.tool==="docstudio"){ return renderDocStudio(t,stage); }
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
@@ -887,6 +932,7 @@ async function renderView(){
     // Tableau de bord projet quand un projet est actif ; sinon écran d'accueil standard (inchangé).
     if((typeof activeProject==="function")&&activeProject()&&(!t||(!t.doc&&(t.tool==="home"||!t.tool)))){return renderProjectHome(stage);}
     if(t&&t.doc&&(t.tool==="home"||!t.tool)){t.tool="docstudio";return renderDocStudio(t,stage);}
+    if(!t||t.tool==="home"||!t.tool){return renderHomeLanding(stage);}
     stage.classList.add("empty");
     const op=el("div","opener");
     const _p=(typeof activeProject==="function")?activeProject():null;const _sk=(typeof activeSkill==="function")?activeSkill():null;
@@ -1099,9 +1145,9 @@ const SKILLS={
   "CV / Recrutement":{label:"Espace CV",hint:"Créez, optimisez et exportez des CV professionnels.",tools:["docstudio","text","aiadvanced","compare"],
     actions:[{label:"Créer un CV",ic:ACT_IC.doc,act:"cv"},{label:"Importer un CV (PDF)",ic:ACT_IC.import,act:"import"},{label:"Optimiser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Livre / Écriture":{label:"Espace Écriture",hint:"Rédigez, structurez et mettez en forme votre livre.",tools:["docstudio","merge","split","aiadvanced"],
-    actions:[{label:"Nouveau chapitre",ic:ACT_IC.doc,act:"docstudio"},{label:"Importer un manuscrit",ic:ACT_IC.import,act:"import"},{label:"Écrire avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
+    actions:[{label:"Créer un livre",ic:ACT_IC.doc,act:"book"},{label:"Importer un manuscrit",ic:ACT_IC.import,act:"import"},{label:"Écrire avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Génie civil / Ingénierie":{label:"Espace Ingénierie",hint:"Analysez plans, devis et documents techniques.",tools:["text","compare","meta","aiadvanced"],
-    actions:[{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"},{label:"Comparer deux versions",ic:ACT_IC.compare,act:"tool:compare"}]},
+    actions:[{label:"Nouveau chiffrage",ic:ACT_IC.text,act:"eng"},{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Juridique":{label:"Espace Juridique",hint:"Comparez, extrayez et caviardez vos documents juridiques.",tools:["compare","text","redact","aiadvanced"],
     actions:[{label:"Importer un document",ic:ACT_IC.import,act:"import"},{label:"Comparer deux versions",ic:ACT_IC.compare,act:"tool:compare"},{label:"Analyser avec l’IA",ic:ACT_IC.ai,act:"copilot"}]},
   "Finance / Comptabilité":{label:"Espace Finance",hint:"Extrayez et analysez vos données financières.",tools:["text","aiadvanced","compare"],
@@ -1113,6 +1159,8 @@ function runProjectAction(act){
   if(act==="docstudio"){openTool("docstudio");return;}
   if(act==="copilot"){toggleCopilotFloating();return;}
   if(act==="cv"){openCvBuilder();return;}
+  if(act==="book"){openBookStudio();return;}
+  if(act==="eng"){openEngStudio();return;}
   if(typeof act==="string"&&act.indexOf("tool:")===0){openTool(act.slice(5));return;}
 }
 // ===== Readix CV — premier skill métier : atelier de CV (formulaire + aperçu + exports) =====
@@ -1199,6 +1247,241 @@ function renderCvBuilder(t,stage){
     else if(b.dataset.x==="pdf")downloadCopilotFile({kind:"pdf",html:true,name:nm+".pdf",content:html});
     else if(b.dataset.x==="docx")downloadCopilotFile({kind:"docx",html:true,name:nm+".docx",content:html});
     else if(b.dataset.x==="ai"){toggleCopilotFloating();toast("Demandez au Copilot de rédiger ou d’améliorer une section, puis recopiez le texte dans le formulaire.","ok");}
+  };
+}
+// ===== Génération IA (texte) via le serveur Claude =====
+async function aiGenerate(prompt,system,maxTokens){
+  if(!copilotAuthed())throw new Error("Connectez-vous avec un plan Pro ou Studio pour utiliser l’IA.");
+  const d=await api("/api/ai/generate",{prompt,system:system||"",maxTokens:maxTokens||1400});
+  return String((d&&d.text)||"").trim();
+}
+// ===== Studios Readix : cartes d'accueil bien visibles =====
+const STUDIO_IC={
+  book:'<path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2z"/><path d="M8 3v16"/>',
+  cv:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 12h6M9 16h4"/>',
+  eng:'<path d="M3 21h18M6 21V10l6-5 6 5v11M10 21v-6h4v6"/>',
+  doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 13h6M9 16h6"/>',
+  pdf:'<path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/>'
+};
+const STUDIOS=[
+  {id:"book",label:"Book Studio",desc:"Écrivez et publiez un livre avec l’IA",ic:STUDIO_IC.book,act:"book",big:true},
+  {id:"cv",label:"CV IA",desc:"Créez un CV professionnel",ic:STUDIO_IC.cv,act:"cv"},
+  {id:"eng",label:"Ingénierie",desc:"Chiffrage & analyse technique",ic:STUDIO_IC.eng,act:"eng"},
+  {id:"doc",label:"Document Word",desc:"Rédigez un document",ic:STUDIO_IC.doc,act:"docstudio"},
+  {id:"pdf",label:"Ouvrir un PDF",desc:"Lire, éditer, convertir",ic:STUDIO_IC.pdf,act:"import"}
+];
+function renderHomeLanding(stage){
+  const wrap=el("div","proj-home home-landing");
+  wrap.innerHTML=`<div class="ph-head"><span class="op-badge">Readix Studios</span><h1>Que voulez-vous créer aujourd’hui ?</h1><p>Choisissez un studio — l’IA vous accompagne à chaque étape — ou ouvrez un document.</p></div><div class="studio-grid" id="studioGrid"></div>`;
+  const grid=wrap.querySelector("#studioGrid");
+  STUDIOS.forEach(s=>{const b=el("button","studio-card studio-"+s.id+(s.big?" big":""));b.innerHTML=`<span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${s.ic}</svg></span><span class="sc-txt"><span class="sc-l">${s.label}</span><span class="sc-d">${s.desc}</span></span>`;b.onclick=()=>runProjectAction(s.act);grid.appendChild(b);});
+  stage.appendChild(wrap);
+  stage.ondragover=e=>e.preventDefault();
+  stage.ondrop=async e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==="application/pdf")await openPdfBytes(await readAB(f),f.name);};
+}
+// ===== Readix Ingénierie — atelier de chiffrage / métré (avec garde-fous) =====
+function engDefault(){return {title:"",client:"",description:"",items:[],notes:""};}
+function engNum(v){const n=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0;}
+function engLineTotal(it){return engNum(it.qty)*engNum(it.price);}
+function engGrand(eng){return (eng.items||[]).reduce((s,it)=>s+engLineTotal(it),0);}
+function engFmt(n){try{return Number(n).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});}catch(e){return (Math.round(n*100)/100).toFixed(2);}}
+function engToTable(eng){return {title:(eng.title||"Chiffrage").slice(0,28),columns:["Désignation","Quantité","Unité","Prix unitaire","Total"],rows:(eng.items||[]).map(it=>[it.label||"",String(it.qty||""),it.unit||"",String(it.price||""),engFmt(engLineTotal(it))]).concat([["TOTAL","","","",engFmt(engGrand(eng))]])};}
+function engToHtml(eng){
+  const esc=cvEsc;let h=`<h1>${esc(eng.title||"Chiffrage / Métré")}</h1>`;
+  if(eng.client)h+=`<p><b>Client :</b> ${esc(eng.client)}</p>`;
+  if(eng.description)h+=`<p>${esc(eng.description)}</p>`;
+  h+=`<h2>Détail estimatif</h2><table><tr><th>Désignation</th><th>Qté</th><th>Unité</th><th>P.U.</th><th>Total</th></tr>`;
+  (eng.items||[]).forEach(it=>{h+=`<tr><td>${esc(it.label)}</td><td>${esc(it.qty)}</td><td>${esc(it.unit)}</td><td>${esc(it.price)}</td><td>${engFmt(engLineTotal(it))}</td></tr>`;});
+  h+=`<tr><td><b>TOTAL</b></td><td></td><td></td><td></td><td><b>${engFmt(engGrand(eng))}</b></td></tr></table>`;
+  if(eng.notes)h+=`<h2>Notes & hypothèses</h2><p>${esc(eng.notes)}</p>`;
+  h+=`<p><i>Estimation indicative — les quantités, prix et hypothèses doivent être validés par un professionnel. Document non certifié.</i></p>`;
+  return h;
+}
+function openEngStudio(){const t=createTab("Chiffrage");t.tool="engstudio";t.eng=engDefault();APP.tool="engstudio";pushHist({tool:"engstudio",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
+async function engAiSuggest(eng,rerender,btn){
+  const topic=[eng.title,eng.description].filter(Boolean).join(" — ");
+  if(!topic){toast("Décrivez d’abord le projet (titre / description).","warn");return;}
+  const lab=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="L’IA propose…";}
+  try{
+    const txt=await aiGenerate(`Pour ce projet de construction/ingénierie : "${topic}", propose une liste de postes de chiffrage typiques. Réponds UNIQUEMENT avec un tableau JSON d'objets {"label":"...","unit":"m²|m³|u|ml|forfait|h","qty":0,"price":0}, 8 à 15 postes. Laisse qty et price à 0 (à remplir par l'utilisateur).`,"Tu es un métreur / économiste de la construction. Réponds uniquement avec le JSON demandé, sans texte autour.",1200);
+    let items=[];try{const m=txt.match(/\[[\s\S]*\]/);items=JSON.parse(m?m[0]:txt);}catch(e){}
+    if(!Array.isArray(items)||!items.length){toast("L’IA n’a pas renvoyé de postes exploitables.","warn");return;}
+    eng.items=(eng.items||[]).concat(items.slice(0,20).map(x=>({label:String(x.label||"").slice(0,160),unit:String(x.unit||"").slice(0,12),qty:x.qty||"",price:x.price||""})));
+    rerender();toast("Postes proposés ✓ — vérifiez quantités et prix.","ok");
+  }catch(e){toast(e.message||"Échec de la suggestion.","err");}
+  finally{if(btn){btn.disabled=false;btn.textContent=lab;}}
+}
+function buildEngForm(box,eng,touch,rerender){
+  box.innerHTML="";
+  box.appendChild(el("div","cv-sec","Projet"));
+  const g=el("div","cv-grid");
+  g.appendChild(cvField("Intitulé",eng.title,v=>{eng.title=v;touch();}));
+  g.appendChild(cvField("Client / maître d’ouvrage",eng.client,v=>{eng.client=v;touch();}));
+  box.appendChild(g);
+  box.appendChild(cvField("Description du projet",eng.description,v=>{eng.description=v;touch();},"area"));
+  const row=el("div","cv-sec cv-sec-row");row.innerHTML='<span>Détail estimatif</span>';
+  const sug=el("button","cv-add","✨ Suggérer des postes (IA)");sug.onclick=()=>engAiSuggest(eng,rerender,sug);row.appendChild(sug);
+  box.appendChild(row);
+  const head=el("div","eng-row eng-head");head.innerHTML='<span>Désignation</span><span>Qté</span><span>Unité</span><span>P.U.</span><span>Total</span><span></span>';box.appendChild(head);
+  (eng.items||[]).forEach((it,i)=>{
+    const r=el("div","eng-row");
+    const mk=(val,on,cls)=>{const inp=el("input","rp-input"+(cls?" "+cls:""));inp.value=val||"";inp.oninput=()=>{on(inp.value);const tot=r.querySelector(".eng-tot");if(tot)tot.textContent=engFmt(engLineTotal(it));const gt=$("#engGrand");if(gt)gt.textContent=engFmt(engGrand(eng));};return inp;};
+    r.appendChild(mk(it.label,v=>{it.label=v;touch();}));
+    r.appendChild(mk(it.qty,v=>{it.qty=v;touch();},"eng-sm"));
+    r.appendChild(mk(it.unit,v=>{it.unit=v;touch();},"eng-sm"));
+    r.appendChild(mk(it.price,v=>{it.price=v;touch();},"eng-sm"));
+    const tot=el("span","eng-tot",engFmt(engLineTotal(it)));r.appendChild(tot);
+    const rm=el("button","cv-rm","✕");rm.onclick=()=>{eng.items.splice(i,1);touch();rerender();};r.appendChild(rm);
+    box.appendChild(r);
+  });
+  const add=el("button","cv-add","+ Ajouter un poste");add.style.margin="8px 0";add.onclick=()=>{eng.items.push({label:"",qty:"",unit:"",price:""});touch();rerender();};box.appendChild(add);
+  const gt=el("div","eng-grand");gt.innerHTML=`Total estimé : <b id="engGrand">${engFmt(engGrand(eng))}</b>`;box.appendChild(gt);
+  box.appendChild(el("div","cv-sec","Notes & hypothèses"));
+  box.appendChild(cvField("Précisez vos hypothèses (surfaces, ratios, exclusions…)",eng.notes,v=>{eng.notes=v;touch();},"area"));
+}
+function renderEngStudio(t,stage){
+  if(!t.eng)t.eng=engDefault();const eng=t.eng;
+  const wrap=el("div","cv-builder");
+  wrap.innerHTML=`<div class="cv-form" id="engForm"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du chiffrage</span><span style="flex:1"></span><button class="btn ghost sm" data-x="xlsx">Excel</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ds">Document Studio</button><button class="btn ghost sm" data-x="ai">Aide IA</button></div><div class="eng-disclaimer">⚠️ Estimation indicative — à valider par un professionnel. Document non certifié.</div><div class="cv-paper-scroll"><div class="cv-paper" id="engPaper"></div></div></div>`;
+  stage.appendChild(wrap);
+  const paper=wrap.querySelector("#engPaper");
+  const refresh=()=>{paper.innerHTML=engToHtml(eng);};
+  const touch=()=>{t.dirty=true;t.name=(eng.title?("Chiffrage — "+eng.title):"Chiffrage");scheduleAutosave();refresh();renderTabs();};
+  buildEngForm(wrap.querySelector("#engForm"),eng,touch,()=>renderEngStudio(t,stage));
+  refresh();
+  wrap.querySelector(".cv-preview-bar").onclick=async e=>{const b=e.target.closest("[data-x]");if(!b)return;const nm=(eng.title||"Chiffrage").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Chiffrage";const x=b.dataset.x;
+    if(x==="ds"){openDocInTab(nm+".docx",engToHtml(eng));return;}
+    if(x==="ai"){toggleCopilotFloating();return;}
+    const lab=b.textContent;b.disabled=true;b.textContent="…";
+    try{
+      if(x==="xlsx"){const blob=await buildXlsxBlob(engToTable(eng));downloadBlob(blob,nm+".xlsx");}
+      else if(x==="pdf"){const bytes=await pdfFromHtml(engToHtml(eng));downloadBlob(new Blob([bytes],{type:"application/pdf"}),nm+".pdf");}
+      else if(x==="docx"){const blob=await buildDocxBlob(engToHtml(eng),nm);downloadBlob(blob,nm+".docx");}
+      toast("Téléchargement lancé.","ok");
+    }catch(err){toast("Échec : "+(err.message||err),"err");}
+    finally{b.disabled=false;b.textContent=lab;}
+  };
+}
+// ===== Readix Book Studio — atelier de livre guidé par l'IA =====
+const BOOK_COVERS=[
+  {id:"ink",name:"Encre",bg:"#141a2e",fg:"#ffffff",accent:"#8b9bff"},
+  {id:"sun",name:"Soleil",bg:"#b8481f",fg:"#fff7ee",accent:"#ffd9a0"},
+  {id:"forest",name:"Forêt",bg:"#12362b",fg:"#eafff4",accent:"#7fe0b0"},
+  {id:"mono",name:"Minimal",bg:"#f4f4f2",fg:"#1b1e28",accent:"#c0392b"},
+  {id:"violet",name:"Violet",bg:"#3b2a6b",fg:"#f3efff",accent:"#c9b8ff"}
+];
+function bookCover(id){return BOOK_COVERS.find(c=>c.id===id)||BOOK_COVERS[0];}
+function bookDefault(){return {title:"",subtitle:"",author:"",cover:"ink",chapters:[]};}
+function bookToHtml(book){
+  const esc=cvEsc;let h=`<h1>${esc(book.title||"Titre du livre")}</h1>`;
+  if(book.subtitle)h+=`<p><b>${esc(book.subtitle)}</b></p>`;
+  if(book.author)h+=`<p>${esc(book.author)}</p>`;
+  (book.chapters||[]).forEach((c,i)=>{h+=`<h2>${esc((i+1)+". "+(c.title||"Chapitre"))}</h2>`;String(c.content||"").split(/\n{2,}/).forEach(p=>{if(p.trim())h+=`<p>${esc(p.trim())}</p>`;});});
+  return h;
+}
+function _hexRgb(PDFLib,h){h=String(h||"#000").replace("#","");return PDFLib.rgb(parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255);}
+function _bookClean(t){return String(t||"").replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/\u2026/g,"...").replace(/[^\x20-\x7E\u00C0-\u00FF\n]/g," ");}
+async function drawBookCoverPage(doc,book,font,bold){
+  const W=432,H=648,cov=bookCover(book.cover);const p=doc.addPage([W,H]);
+  p.drawRectangle({x:0,y:0,width:W,height:H,color:_hexRgb(PDFLib,cov.bg)});
+  p.drawRectangle({x:54,y:H-150,width:70,height:6,color:_hexRgb(PDFLib,cov.accent)});
+  const cw=(text,size,fnt,y)=>{const maxW=W-108;const words=_bookClean(text).split(/\s+/).filter(Boolean);let line="",lines=[];for(const w of words){const t=line?line+" "+w:w;if(fnt.widthOfTextAtSize(t,size)>maxW){if(line)lines.push(line);line=w;}else line=t;}if(line)lines.push(line);lines.forEach(ln=>{const tw=fnt.widthOfTextAtSize(ln,size);p.drawText(ln,{x:(W-tw)/2,y,size,font:fnt,color:_hexRgb(PDFLib,cov.fg)});y-=size*1.2;});return y;};
+  let y=H-210;y=cw(book.title||"Titre du livre",30,bold,y);
+  if(book.subtitle){y-=14;y=cw(book.subtitle,15,font,y);}
+  if(book.author){const a=_bookClean(book.author);const aw=font.widthOfTextAtSize(a,13);p.drawText(a,{x:(W-aw)/2,y:90,size:13,font,color:_hexRgb(PDFLib,cov.fg)});}
+}
+async function buildCoverPdf(book){const {PDFDocument,StandardFonts}=PDFLib;const doc=await PDFDocument.create();const font=await doc.embedFont(StandardFonts.Helvetica);const bold=await doc.embedFont(StandardFonts.HelveticaBold);await drawBookCoverPage(doc,book,font,bold);return await doc.save();}
+async function buildBookPdf(book){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;const doc=await PDFDocument.create();
+  const font=await doc.embedFont(StandardFonts.Helvetica);const bold=await doc.embedFont(StandardFonts.HelveticaBold);
+  await drawBookCoverPage(doc,book,font,bold);
+  const W=432,H=648,margin=54,bodySize=11,lineH=bodySize*1.5;
+  (book.chapters||[]).forEach((c,ci)=>{
+    let p=doc.addPage([W,H]);let y=H-margin;
+    p.drawText(_bookClean((ci+1)+". "+(c.title||"Chapitre")),{x:margin,y,size:17,font:bold,color:rgb(.12,.14,.18)});y-=30;
+    String(c.content||"").split(/\n{2,}/).forEach(par=>{
+      const words=_bookClean(par).split(/\s+/).filter(Boolean);let line="";const maxW=W-margin*2;
+      const flush=ln=>{if(y<margin+lineH){p=doc.addPage([W,H]);y=H-margin;}p.drawText(ln,{x:margin,y,size:bodySize,font,color:rgb(.15,.17,.2)});y-=lineH;};
+      for(const w of words){const t=line?line+" "+w:w;if(font.widthOfTextAtSize(t,bodySize)>maxW){flush(line);line=w;}else line=t;}
+      if(line)flush(line);y-=lineH*0.6;
+    });
+  });
+  return await doc.save();
+}
+function openBookStudio(){const t=createTab("Mon livre");t.tool="bookstudio";t.book=bookDefault();APP.tool="bookstudio";pushHist({tool:"bookstudio",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
+async function bookAiPlan(book,rerender,btn){
+  const topic=[book.title,book.subtitle].filter(Boolean).join(" — ");
+  if(!topic){toast("Donnez d’abord un titre au livre.","warn");return;}
+  const lab=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="L’IA réfléchit…";}
+  try{
+    const txt=await aiGenerate(`Propose un plan de livre pour : "${topic}". Réponds UNIQUEMENT avec un tableau JSON de 6 à 12 titres de chapitres, sans aucun texte autour. Exemple : ["Introduction","Les fondations", "..."]`,"Tu es un éditeur expert. Réponds uniquement avec le JSON demandé.",700);
+    let titles=[];try{const m=txt.match(/\[[\s\S]*\]/);titles=JSON.parse(m?m[0]:txt);}catch(e){titles=txt.split(/\n+/).map(s=>s.replace(/^[-*\d.\)\s]+/,"").trim()).filter(Boolean);}
+    if(!Array.isArray(titles)||!titles.length){toast("L’IA n’a pas renvoyé de plan exploitable.","warn");return;}
+    book.chapters=titles.slice(0,20).map(t=>({title:String(t).slice(0,140),content:""}));
+    rerender();toast("Plan généré ✓","ok");
+  }catch(e){toast(e.message||"Échec de la génération.","err");}
+  finally{if(btn){btn.disabled=false;btn.textContent=lab;}}
+}
+async function bookAiChapter(book,idx,rerender,btn){
+  const ch=book.chapters[idx];if(!ch)return;if(!ch.title){toast("Donnez un titre au chapitre.","warn");return;}
+  const topic=[book.title,book.subtitle].filter(Boolean).join(" — ");
+  const lab=btn?btn.textContent:"";if(btn){btn.disabled=true;btn.textContent="Rédaction…";}
+  try{
+    const plan=book.chapters.map((c,i)=>`${i+1}. ${c.title}`).join("\n");
+    const txt=await aiGenerate(`Livre : "${topic}".\nPlan des chapitres :\n${plan}\n\nRédige entièrement le chapitre ${idx+1} intitulé « ${ch.title} ». Texte structuré en paragraphes (500 à 900 mots), en français, sans répéter le titre ni ajouter de méta-commentaire.`,"Tu es un auteur professionnel. Rédige un contenu de livre clair, original et engageant.",2600);
+    ch.content=txt;rerender();toast("Chapitre rédigé ✓","ok");
+  }catch(e){toast(e.message||"Échec de la rédaction.","err");}
+  finally{if(btn){btn.disabled=false;btn.textContent=lab;}}
+}
+function buildBookForm(box,book,touch,rerender){
+  box.innerHTML="";
+  box.appendChild(el("div","cv-sec","Le livre"));
+  const g=el("div","cv-grid");
+  g.appendChild(cvField("Titre",book.title,v=>{book.title=v;touch();}));
+  g.appendChild(cvField("Sous-titre",book.subtitle,v=>{book.subtitle=v;touch();}));
+  box.appendChild(g);
+  box.appendChild(cvField("Auteur",book.author,v=>{book.author=v;touch();}));
+  // Couverture
+  box.appendChild(el("div","cv-sec","Couverture"));
+  const cov=el("div","book-covers");
+  BOOK_COVERS.forEach(c=>{const s=el("button","book-cov"+(book.cover===c.id?" sel":""));s.style.background=c.bg;s.title=c.name;s.innerHTML=`<span style="color:${c.fg}">Aa</span>`;s.onclick=()=>{book.cover=c.id;touch();rerender();};cov.appendChild(s);});
+  box.appendChild(cov);
+  // Plan IA
+  const planRow=el("div","cv-sec cv-sec-row");planRow.innerHTML='<span>Chapitres</span>';
+  const planBtn=el("button","cv-add","✨ Proposer un plan (IA)");planBtn.onclick=()=>bookAiPlan(book,rerender,planBtn);planRow.appendChild(planBtn);
+  box.appendChild(planRow);
+  (book.chapters||[]).forEach((ch,i)=>{
+    const card=el("div","cv-item");
+    const rm=el("button","cv-rm","✕");rm.title="Supprimer";rm.onclick=()=>{book.chapters.splice(i,1);touch();rerender();};card.appendChild(rm);
+    const head=el("div","book-ch-head");
+    const up=el("button","book-mv","↑");up.title="Monter";up.onclick=()=>{if(i>0){const x=book.chapters.splice(i,1)[0];book.chapters.splice(i-1,0,x);touch();rerender();}};
+    const dn=el("button","book-mv","↓");dn.title="Descendre";dn.onclick=()=>{if(i<book.chapters.length-1){const x=book.chapters.splice(i,1)[0];book.chapters.splice(i+1,0,x);touch();rerender();}};
+    head.appendChild(el("span","book-ch-n",String(i+1)));head.appendChild(up);head.appendChild(dn);card.appendChild(head);
+    card.appendChild(cvField("Titre du chapitre",ch.title,v=>{ch.title=v;touch();}));
+    card.appendChild(cvField("Contenu",ch.content,v=>{ch.content=v;touch();},"area"));
+    const wb=el("button","cv-add","✨ Rédiger ce chapitre (IA)");wb.onclick=()=>bookAiChapter(book,i,rerender,wb);card.appendChild(wb);
+    box.appendChild(card);
+  });
+  const add=el("button","cv-add","+ Ajouter un chapitre");add.style.marginTop="6px";add.onclick=()=>{book.chapters.push({title:"",content:""});touch();rerender();};box.appendChild(add);
+}
+function renderBookStudio(t,stage){
+  if(!t.book)t.book=bookDefault();const book=t.book;
+  const wrap=el("div","cv-builder");
+  wrap.innerHTML=`<div class="cv-form" id="bkForm"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du livre</span><span style="flex:1"></span><button class="btn ghost sm" data-x="pdf">PDF (livre)</button><button class="btn ghost sm" data-x="cover">Couverture</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ds">Document Studio</button><button class="btn ghost sm" data-x="ai">Aide IA</button></div><div class="cv-paper-scroll" id="bkScroll"></div></div>`;
+  stage.appendChild(wrap);
+  const scroll=wrap.querySelector("#bkScroll");
+  const refresh=()=>{const c=bookCover(book.cover);scroll.innerHTML=`<div class="book-cover-pv" style="background:${c.bg};color:${c.fg}"><div class="bc-bar" style="background:${c.accent}"></div><div class="bc-title">${cvEsc(book.title||"Titre du livre")}</div>${book.subtitle?`<div class="bc-sub">${cvEsc(book.subtitle)}</div>`:""}${book.author?`<div class="bc-auth">${cvEsc(book.author)}</div>`:""}</div><div class="cv-paper">${bookToHtml(book)}</div>`;};
+  const touch=()=>{t.dirty=true;t.name=(book.title?("Livre — "+book.title):"Mon livre");scheduleAutosave();refresh();renderTabs();};
+  buildBookForm(wrap.querySelector("#bkForm"),book,touch,()=>renderBookStudio(t,stage));
+  refresh();
+  wrap.querySelector(".cv-preview-bar").onclick=async e=>{const b=e.target.closest("[data-x]");if(!b)return;const nm=(book.title||"Livre").replace(/[^\wÀ-ÿ ._-]/g,"_").trim()||"Livre";const x=b.dataset.x;
+    if(x==="ds"){openDocInTab(nm+".docx",bookToHtml(book));return;}
+    if(x==="docx"){downloadCopilotFile({kind:"docx",html:true,name:nm+".docx",content:bookToHtml(book)});return;}
+    if(x==="ai"){toggleCopilotFloating();return;}
+    const lab=b.textContent;b.disabled=true;b.textContent="…";
+    try{ if(x==="pdf"){const bytes=await buildBookPdf(book);downloadBlob(new Blob([bytes],{type:"application/pdf"}),nm+".pdf");} else if(x==="cover"){const bytes=await buildCoverPdf(book);downloadBlob(new Blob([bytes],{type:"application/pdf"}),nm+"-couverture.pdf");} toast("Téléchargement lancé.","ok"); }
+    catch(err){toast("Échec : "+(err.message||err),"err");}
+    finally{b.disabled=false;b.textContent=lab;}
   };
 }
 // Tableau de bord du projet : remplace l'écran « Ouvrez un document » quand un projet est actif.
@@ -1998,6 +2281,11 @@ function renderTools(){
   aiBtn.innerHTML='<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.1 5.2L19.3 10l-5.2 2.1L12 17.3l-2.1-5.2L4.7 10l5.2-2.1z"/><path d="M18.5 15.5v5M16 18h5"/></svg></span><span class="lb">Readix Copilot<span class="tool-ai-sub">Assistant IA · au cœur de Readix</span></span>';
   aiBtn.onclick=()=>toggleCopilotFloating();
   box.appendChild(aiBtn);
+  // Studios Readix : toujours accessibles en tête du rail.
+  box.appendChild(el("div","grp","Studios"));
+  [["book","Book Studio",STUDIO_IC.book],["cv","CV IA",STUDIO_IC.cv],["eng","Ingénierie",STUDIO_IC.eng]].forEach(([act,label,ic])=>{
+    const b=el("button","tool");b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></span><span class="lb">${label}</span>`;b.onclick=()=>runProjectAction(act);box.appendChild(b);
+  });
   // Skill Engine : accès rapide aux outils du domaine du projet actif.
   const sk=(typeof activeSkill==="function")?activeSkill():null;
   if(sk){
@@ -2013,7 +2301,7 @@ function renderTools(){
     b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${t.ic}</svg></span><span class="lb">${t.name}</span>`;
     b.onclick=()=>openTool(t.id);box.appendChild(b);
   });
-  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")));
+  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
 }
 function openTool(id){
   if(id==="aiadvanced"){openAIFloating("__home");return;}
@@ -2023,7 +2311,7 @@ function openTool(id){
   renderTabs();renderTools();renderView();updateHeader();
   $("#floatsig").classList.toggle("show",id==="fillsign"&&!!t.pdf);
 }
-$$(".mtab").forEach(m=>m.onclick=()=>{ if(m.dataset.copilot){toggleCopilotFloating();return;} if(m.dataset.cv){openCvBuilder();return;} if(m.dataset.createDoc){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;} if(m.dataset.view==="home")openTool("view"); else openTool(m.dataset.tool); });
+$$(".mtab").forEach(m=>m.onclick=()=>{ if(m.dataset.copilot){toggleCopilotFloating();return;} if(m.dataset.cv){openCvBuilder();return;} if(m.dataset.book){openBookStudio();return;} if(m.dataset.eng){openEngStudio();return;} if(m.dataset.createDoc){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;} if(m.dataset.view==="home")openTool("view"); else openTool(m.dataset.tool); });
 
 /* ---------- Remplir & Signer : vrais champs AcroForm ---------- */
 async function renderFillSign(t,stage){
