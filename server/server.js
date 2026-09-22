@@ -461,6 +461,30 @@ Quand l'utilisateur demande comment faire une action, donne les étapes exactes 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Génération de texte libre (rédaction assistée : plans, chapitres, réécriture…). Auth + plan Pro+ + quota.
+app.post("/api/ai/generate", auth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Fonction IA non configurée sur le serveur." });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  const system = String((req.body && req.body.system) || "").slice(0, 6000);
+  const maxTokens = Math.min(Math.max(Number(req.body && req.body.maxTokens) || 1400, 200), 4000);
+  if (!prompt) return res.status(400).json({ error: "Demande vide" });
+  const need = 2; // Pro ou supérieur
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Cette fonction IA nécessite le plan Pro ou supérieur." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  try {
+    const data = await anthropicMessage({
+      max_tokens: maxTokens,
+      system: system || "Tu es un assistant de rédaction expert. Réponds en français, de façon claire, structurée et complète.",
+      messages: [{ role: "user", content: prompt.slice(0, 14000) }]
+    });
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    await incUsage(req.user.email);
+    res.json({ text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/copilot", auth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
   const message = String((req.body && req.body.message) || "").trim();
