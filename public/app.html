@@ -649,6 +649,44 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .word-engine-v2.we-maximized{position:fixed;inset:0;z-index:9999}.word-engine-v2.we-minimized .we-formatbar,.word-engine-v2.we-minimized .we-ruler-wrap,.word-engine-v2.we-minimized .we-workspace,.word-engine-v2.we-minimized .we-drawbar,.word-engine-v2.we-minimized .we-statusbar{display:none}.word-engine-v2.we-minimized{height:93px;bottom:auto}
 @media(max-width:1200px){.we-global-search{width:290px}.we-menu{padding:0 10px}.we-formatbar{overflow:auto}.we-quickbar{overflow:auto}.we-page{margin-left:20px;margin-right:20px}}
 @media(max-width:900px){.word-engine-v2{min-width:0}.we-brand{min-width:110px}.we-global-search{display:none}.we-menu{padding:0 8px;font-size:12px}.we-document-title{max-width:250px}.we-workspace{padding-left:50px;padding-right:20px}}
+
+/* ===== Readix Word Engine V2.1 — exact reference polish ===== */
+.word-engine-v2{background:#edf2f7!important;color:#172033!important}
+.we-titlebar{height:50px!important;background:linear-gradient(180deg,#0d6fc4,#075eac)!important}
+.we-brand{min-width:145px!important;font-size:20px!important;padding-left:18px!important}
+.we-document-title{font-size:15px!important;font-weight:400!important}
+.we-global-search{width:395px!important;height:36px!important;background:rgba(255,255,255,.18)!important;border:1px solid rgba(255,255,255,.08)!important}
+.we-menubar{height:43px!important;background:#f7fbff!important;padding-left:8px!important}
+.we-menu{font-size:14px!important;padding:0 16px!important;color:#1b3652!important}
+.we-quickbar{height:58px!important;background:linear-gradient(#fff,#f7fafd)!important;padding:0 16px!important}
+.we-icon{width:36px!important;height:36px!important;color:#1d5f94!important}
+.we-icon svg{width:20px!important;height:20px!important;stroke-width:1.45!important}
+.we-formatbar{height:58px!important;padding:0 16px!important;background:#fff!important}
+.we-formatbar .we-fmt-group{height:42px!important}
+.we-select{height:34px!important;font-size:13px!important}
+.we-font{width:224px!important}.we-size{width:72px!important}.we-style{width:136px!important}
+.we-ruler-wrap{height:42px!important;background:#f4f7fa!important}
+.we-workspace{background:linear-gradient(90deg,#e9eef3 0%,#eef2f6 42%,#e8edf2 100%)!important;padding:34px 48px 80px 74px!important}
+.we-page{box-shadow:0 3px 12px rgba(34,48,64,.16)!important;border:1px solid #dbe2e9!important}
+.we-page .doceditor{background:#fff!important;color:#202a35!important;caret-color:#111!important}
+.we-page .doceditor:empty:before{content:""!important}
+.we-drawbar{height:58px!important;background:linear-gradient(#fff,#f5f8fb)!important;padding:0 14px!important}
+.we-draw-label,.we-shape-label{font-size:13px!important;color:#35546e!important}
+.we-draw-icon{border:1px solid transparent!important;color:#285d87!important;background:transparent!important}
+.we-draw-icon:hover{background:#edf5fb!important;border-color:#cad8e5!important}
+.we-color-swatch{background:#172033!important}
+.we-statusbar{height:47px!important;background:#f8fafc!important;color:#536579!important;border-top:1px solid #ccd6e0!important;font-size:12px!important;gap:16px!important}
+.we-status-views button{color:#35698f!important}
+.we-status-views button:hover{background:#eaf3fa!important;border-radius:3px}
+/* Keep the bottom bar readable: no black glyph fallback. */
+.we-drawbar button,.we-statusbar button{font-family:"Segoe UI",Arial,sans-serif!important;font-weight:400!important}
+/* Print is a document operation, never a Readix UI operation. */
+@media print{
+  html,body{background:#fff!important}
+  body>*{display:none!important}
+  body>.readix-print-host{display:block!important;position:static!important;width:100%!important;height:auto!important}
+}
+.we-language{display:inline-flex!important;align-items:center;gap:5px}.we-language svg{width:15px;height:15px;stroke:#2c6a91;fill:none;stroke-width:1.5}
 </style>
 </head>
 <body>
@@ -999,8 +1037,80 @@ function docReplaceAll(){const bar=document.querySelector('.doc-findbar'),ed=doc
 function docRefreshNavigation(){const panel=document.querySelector('.doc-navpanel');const list=document.querySelector('.doc-nav-list');const ed=document.querySelector('.doceditor');if(!panel||!list||!ed)return;list.innerHTML='';const hs=[...ed.querySelectorAll('h1,h2,h3')];if(!hs.length){list.innerHTML='<div style="padding:10px;color:#9aa0a6;font-size:11px">Aucun titre dans ce document.</div>';return;}hs.forEach((h,i)=>{if(!h.id)h.id='doc-heading-'+i;const b=el('button','doc-nav-item '+h.tagName.toLowerCase(),h.innerText||'Sans titre');b.title=h.innerText||'Sans titre';b.onclick=()=>{h.scrollIntoView({behavior:'smooth',block:'center'});};list.appendChild(b);});}
 function docToggleNavigation(){const panel=document.querySelector('.doc-navpanel');if(!panel)return;panel.classList.toggle('open');if(panel.classList.contains('open'))docRefreshNavigation();}
 /* ===== Word Engine command registry: each visible control declares its role ===== */
-const DOC_TOOL_DEFINITIONS={new:{label:'Nouveau',role:'Créer un nouveau document Word indépendant.'},open:{label:'Ouvrir',role:'Importer un document DOCX.'},save:{label:'Enregistrer',role:'Demander un nom au premier enregistrement puis enregistrer le document.'},saveAs:{label:'Enregistrer sous',role:'Toujours demander un nom et enregistrer une nouvelle copie.'},print:{label:'Imprimer',role:'Lancer l’impression avec la mise en page du document.'},undo:{label:'Annuler',role:'Annuler la dernière modification.'},redo:{label:'Rétablir',role:'Rétablir la dernière modification annulée.'},search:{label:'Rechercher',role:'Rechercher et remplacer du texte.'},nav:{label:'Navigation',role:'Afficher le volet de navigation des titres.'},bold:{label:'Gras',role:'Appliquer ou retirer le gras.'},italic:{label:'Italique',role:'Appliquer ou retirer l’italique.'},underline:{label:'Souligné',role:'Appliquer ou retirer le soulignement.'},left:{label:'Aligner à gauche',role:'Aligner le paragraphe à gauche.'},center:{label:'Centrer',role:'Centrer le paragraphe.'},right:{label:'Aligner à droite',role:'Aligner le paragraphe à droite.'},justify:{label:'Justifier',role:'Justifier le paragraphe.'},table:{label:'Tableau',role:'Insérer un tableau éditable.'},image:{label:'Image',role:'Insérer une image.'},link:{label:'Lien',role:'Créer un lien hypertexte.'},pagebreak:{label:'Saut de page',role:'Insérer un saut de page structurel sans texte parasite.'},comment:{label:'Commentaire',role:'Ajouter un commentaire à une sélection.'}};
+const DOC_TOOL_DEFINITIONS={new:{label:'Nouveau',role:'Créer un nouveau document Word indépendant.'},open:{label:'Ouvrir',role:'Importer un document DOCX.'},save:{label:'Enregistrer',role:'Demander un nom au premier enregistrement puis enregistrer le document.'},saveAs:{label:'Enregistrer sous',role:'Toujours demander un nom et enregistrer une nouvelle copie.'},print:{label:'Imprimer',role:'Imprimer uniquement le document actuellement ouvert, jamais l’interface Readix.'},undo:{label:'Annuler',role:'Annuler la dernière modification.'},redo:{label:'Rétablir',role:'Rétablir la dernière modification annulée.'},search:{label:'Rechercher',role:'Rechercher et remplacer du texte.'},nav:{label:'Navigation',role:'Afficher le volet de navigation des titres.'},bold:{label:'Gras',role:'Appliquer ou retirer le gras.'},italic:{label:'Italique',role:'Appliquer ou retirer l’italique.'},underline:{label:'Souligné',role:'Appliquer ou retirer le soulignement.'},left:{label:'Aligner à gauche',role:'Aligner le paragraphe à gauche.'},center:{label:'Centrer',role:'Centrer le paragraphe.'},right:{label:'Aligner à droite',role:'Aligner le paragraphe à droite.'},justify:{label:'Justifier',role:'Justifier le paragraphe.'},table:{label:'Tableau',role:'Insérer un tableau éditable.'},image:{label:'Image',role:'Insérer une image.'},link:{label:'Lien',role:'Créer un lien hypertexte.'},pagebreak:{label:'Saut de page',role:'Insérer un saut de page structurel sans texte parasite.'},comment:{label:'Commentaire',role:'Ajouter un commentaire à une sélection.'}};
 function docDeclareControl(node,key){const d=DOC_TOOL_DEFINITIONS[key];if(!node||!d)return node;node.dataset.docTool=key;node.dataset.docRole=d.role;node.setAttribute('aria-label',d.label);node.title=d.label+' — '+d.role;return node;}
+
+
+/* ===== Document-only printing =====
+   Printing is intentionally detached from the Readix application shell. */
+function escapePrintHTML(v){return String(v??'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<iframe[\s\S]*?<\/iframe>/gi,'');}
+function printDocStudio(t){
+  const ed=document.querySelector('.doceditor');
+  if(ed)t.doc=ed.innerHTML;
+  const w=window.open('','_blank','noopener,noreferrer,width=1100,height=850');
+  if(!w){toast('Le navigateur a bloqué la fenêtre d’impression. Autorisez les fenêtres contextuelles pour Readix.','err');return false;}
+  const meta=t.docMeta||{};
+  const paper=meta.paper==='Letter'?'Letter':'A4';
+  const margin=Math.max(40,Number(meta.margin)||96);
+  const title=String(t.name||'Document.docx').replace(/\.(docx?|pdf)$/i,'')||'Document';
+  const content=escapePrintHTML(t.doc||'');
+  const header=escapePrintHTML(meta.header||'');
+  const footer=escapePrintHTML(meta.footer||'');
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[&<>]/g,'')}</title>
+  <style>
+    @page{size:${paper};margin:0}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:#111;font-family:"Times New Roman",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{padding:0}
+    .print-page{width:${paper==='Letter'?'215.9mm':'210mm'};min-height:${paper==='Letter'?'279.4mm':'297mm'};margin:0 auto;padding:${margin}px;position:relative;background:#fff;break-after:page;page-break-after:always;overflow:hidden}
+    .print-page:last-child{break-after:auto;page-break-after:auto}
+    .print-header,.print-footer{font-family:"Segoe UI",Arial,sans-serif;font-size:10pt;color:#555}
+    .print-header{margin-bottom:12px}.print-footer{position:absolute;left:${margin}px;right:${margin}px;bottom:${Math.max(35,margin/2)}px}
+    .print-body{font-size:12pt;line-height:1.45;min-height:100%}
+    .print-body p{margin:0 0 8px}.print-body h1{font-size:24pt}.print-body h2{font-size:18pt}.print-body h3{font-size:14pt}
+    .print-body img{max-width:100%;height:auto}.print-body table{width:100%;border-collapse:collapse;margin:10px 0;break-inside:avoid}.print-body td,.print-body th{border:1px solid #888;padding:6px;vertical-align:top}
+    .print-body .doc-page-break{break-after:page;page-break-after:always;height:0;margin:0;border:0}
+    .print-body .doc-comment{background:transparent;border:0}.print-body .doc-change{background:transparent;text-decoration:underline}
+    .print-body .doc-shape{break-inside:avoid}
+    @media print{.print-page{margin:0}.print-page:last-child{break-after:auto}}
+  </style></head><body>
+    <section class="print-page">
+      ${header?`<div class="print-header">${header}</div>`:''}
+      <main class="print-body">${content}</main>
+      ${footer?`<div class="print-footer">${footer}</div>`:''}
+    </section>
+    <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),180));window.addEventListener('afterprint',()=>setTimeout(()=>window.close(),250));<\/script>
+  </body></html>`);
+  w.document.close();
+  return true;
+}
+async function printPdfDocument(t){
+  const w=window.open('','_blank','noopener,noreferrer,width=1100,height=850');
+  if(!w){toast('Le navigateur a bloqué la fenêtre d’impression. Autorisez les fenêtres contextuelles pour Readix.','err');return false;}
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Document PDF</title><style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}.pdf-print-page{width:100%;break-after:page;page-break-after:always;display:flex;justify-content:center;align-items:flex-start}.pdf-print-page:last-child{break-after:auto;page-break-after:auto}.pdf-print-page canvas{display:block;width:100%;height:auto}</style></head><body><div id="pages"></div></body></html>');
+  w.document.close();
+  try{
+    if(!window.pdfjsLib)throw new Error('Moteur PDF indisponible.');
+    const pdf=await pdfjsLib.getDocument({data:u8(t.bytes).slice(0)}).promise;
+    const host=w.document.getElementById('pages');
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);const viewport=page.getViewport({scale:1.6});
+      const wrap=w.document.createElement('section');wrap.className='pdf-print-page';
+      const canvas=w.document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);wrap.appendChild(canvas);host.appendChild(wrap);
+      await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+    }
+    setTimeout(()=>w.print(),250);w.addEventListener('afterprint',()=>setTimeout(()=>w.close(),250));return true;
+  }catch(e){try{w.close();}catch(_){}toast('Impossible de préparer le PDF pour l’impression : '+(e?.message||e),'err');return false;}
+}
+function printActiveReadixDocument(){
+  const t=activeTab();
+  if(!t){toast('Aucun document ouvert à imprimer.','err');return;}
+  if(t.tool==='docstudio'){printDocStudio(t);return;}
+  if(t.pdf&&t.bytes){printPdfDocument(t);return;}
+  toast('Ce document ne possède pas encore de moteur d’impression dédié.','err');
+}
+
 function renderDocStudio(t,stage){
   stage.innerHTML='';
   const root=el('div','docstudio word-engine-v2');
@@ -1083,7 +1193,7 @@ function renderDocStudio(t,stage){
   const newDoc=()=>{const nt=createTab('Document1.docx');nt.tool='docstudio';nt.doc='';nt.docSavedAs=false;nt.docMeta={margin:96,paper:'A4',header:'',footer:''};APP.tool='docstudio';pushHist({tool:'docstudio',page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();};
   const save=()=>saveDocStudio(t,'docx'); const saveAs=()=>saveDocStudio(t,'docx',true); const open=()=>$('#hiddenDocFile').click();
   menuBar.append(
-    menu('Fichier',[{label:'Nouveau',icon:'new',key:'new',action:newDoc,short:'Ctrl+N'},{label:'Ouvrir',icon:'open',key:'open',action:open,short:'Ctrl+O'},{sep:true},{label:'Enregistrer',icon:'save',key:'save',action:save,short:'Ctrl+S'},{label:'Enregistrer sous…',icon:'saveas',key:'saveas',action:saveAs,short:'Ctrl+Maj+S'},{sep:true},{label:'Exporter en PDF',icon:'pdf',key:'pdf',action:()=>saveDocStudio(t,'pdf',true)},{label:'Imprimer',icon:'print',key:'print',action:()=>window.print(),short:'Ctrl+P'},{sep:true},{label:'Fermer le document',icon:'close',action:()=>closeTab(t.id)}]),
+    menu('Fichier',[{label:'Nouveau',icon:'new',key:'new',action:newDoc,short:'Ctrl+N'},{label:'Ouvrir',icon:'open',key:'open',action:open,short:'Ctrl+O'},{sep:true},{label:'Enregistrer',icon:'save',key:'save',action:save,short:'Ctrl+S'},{label:'Enregistrer sous…',icon:'saveas',key:'saveas',action:saveAs,short:'Ctrl+Maj+S'},{sep:true},{label:'Exporter en PDF',icon:'pdf',key:'pdf',action:()=>saveDocStudio(t,'pdf',true)},{label:'Imprimer',icon:'print',key:'print',action:()=>printActiveReadixDocument(),short:'Ctrl+P'},{sep:true},{label:'Fermer le document',icon:'close',action:()=>closeTab(t.id)}]),
     menu('Édition',[{label:'Annuler',icon:'undo',key:'undo',action:()=>docExec('undo'),short:'Ctrl+Z'},{label:'Rétablir',icon:'redo',key:'redo',action:()=>docExec('redo'),short:'Ctrl+Y'},{sep:true},{label:'Couper',icon:'copy',action:()=>docExec('cut'),short:'Ctrl+X'},{label:'Copier',icon:'copy',key:'copy',action:()=>docExec('copy'),short:'Ctrl+C'},{label:'Coller',icon:'paste',key:'paste',action:()=>docExec('paste'),short:'Ctrl+V'},{label:'Sélectionner tout',icon:'text',action:()=>docExec('selectAll'),short:'Ctrl+A'},{sep:true},{label:'Rechercher',icon:'search',key:'search',action:()=>docToggleFind(),short:'Ctrl+F'},{label:'Remplacer',icon:'replace',key:'replace',action:()=>{docToggleFind();}}]),
     menu('Affichage',[{label:'Mise en page',icon:'grid',action:()=>toast('Mode Mise en page actif.','ok')},{label:'Volet de navigation',icon:'nav',key:'nav',action:()=>docToggleNavigation()},{label:'Afficher les règles',icon:'grid',action:()=>root.classList.toggle('hide-rulers')},{label:'Plein écran',icon:'fullscreen',key:'fullscreen',action:()=>root.classList.toggle('we-maximized')},{label:'Zoom 75%',icon:'zoom',action:()=>setDocZoom(0.75)},{label:'Zoom 100%',icon:'zoom',action:()=>setDocZoom(1)},{label:'Zoom 125%',icon:'zoom',action:()=>setDocZoom(1.25)}]),
     menu('Insertion',[{label:'Tableau',icon:'table',key:'table',action:docInsertTable},{label:'Image',icon:'image',key:'image',action:()=>$('#hiddenDocImageFile').click()},{label:'Saut de page',icon:'pagebreak',key:'pagebreak',action:docInsertPageBreak},{label:'Lien hypertexte',icon:'link',key:'link',action:()=>insertDocLink()},{label:'Commentaire',icon:'comment',key:'comment',action:docInsertComment},{label:'En-tête',icon:'text',action:()=>docSetZone('header')},{label:'Pied de page',icon:'text',action:()=>docSetZone('footer')},{label:'Numéro de page',icon:'text',action:docInsertPageNumber}]),
@@ -1099,7 +1209,7 @@ function renderDocStudio(t,stage){
   // ===== Quick Access =====
   const quick=el('div','we-quickbar');
   const q=(key,fn)=>quick.append(button(key,fn));
-  q('new',newDoc);q('open',open);q('save',save);q('saveas',saveAs);quick.append(sep());q('print',()=>window.print());quick.append(sep());q('undo',()=>docExec('undo'));q('redo',()=>docExec('redo'));quick.append(sep());q('copy',()=>docExec('copy'));q('paste',()=>docExec('paste'));quick.append(sep());q('pdf',()=>saveDocStudio(t,'pdf',true));q('ai',()=>typeof toggleCopilotFloating==='function'&&toggleCopilotFloating());quick.append(sep());q('spell',()=>toast('Le correcteur du navigateur est activé.','ok'));q('help',()=>toast('Aide Readix Document Studio.','ok'));
+  q('new',newDoc);q('open',open);q('save',save);q('saveas',saveAs);quick.append(sep());q('print',()=>printActiveReadixDocument());quick.append(sep());q('undo',()=>docExec('undo'));q('redo',()=>docExec('redo'));quick.append(sep());q('copy',()=>docExec('copy'));q('paste',()=>docExec('paste'));quick.append(sep());q('pdf',()=>saveDocStudio(t,'pdf',true));q('ai',()=>typeof toggleCopilotFloating==='function'&&toggleCopilotFloating());quick.append(sep());q('spell',()=>toast('Le correcteur du navigateur est activé.','ok'));q('nav',docToggleNavigation);q('search',docToggleFind);q('help',()=>toast('Aide Readix Document Studio.','ok'));
   const quickSpacer=el('span','we-flex');quick.append(quickSpacer);const qgrid=button('grid',()=>toast('Affichage grille activé.','ok'));quick.append(qgrid);const qzoom=el('select','we-zoom');qzoom.innerHTML='<option value="75">75%</option><option value="100">100%</option><option value="125">125%</option>';qzoom.value='100';qzoom.onchange=()=>setDocZoom(Number(qzoom.value)/100);quick.append(qzoom);q('fullscreen',()=>root.classList.toggle('we-maximized'));q('help',()=>toast('Aide Readix Document Studio.','ok'));root.append(quick);
 
   // ===== Formatting ribbon =====
@@ -1109,7 +1219,7 @@ function renderDocStudio(t,stage){
   g=group();g.append(button('bold',()=>docExec('bold')),button('italic',()=>docExec('italic')),button('underline',()=>docExec('underline')),button('strike',()=>docExec('strikeThrough')),button('color',()=>applyDocColor()),button('highlight',()=>applyDocHighlight()));
   g=group();const styles=el('select','we-select we-style');styles.innerHTML='<option value="p">Normal</option><option value="h1">Titre 1</option><option value="h2">Titre 2</option><option value="h3">Titre 3</option><option value="blockquote">Citation</option>';styles.onchange=()=>{docExec('formatBlock',styles.value);styles.value='p';};g.append(styles);
   g=group();g.append(button('left',()=>docExec('justifyLeft')),button('center',()=>docExec('justifyCenter')),button('right',()=>docExec('justifyRight')),button('justify',()=>docExec('justifyFull')));
-  g=group();g.append(button('bullets',()=>docExec('insertUnorderedList')),button('numbers',()=>docExec('insertOrderedList')),button('outdent',()=>docExec('outdent')),button('indent',()=>docExec('indent')));
+  g=group();g.append(button('bullets',()=>docExec('insertUnorderedList')),button('numbers',()=>docExec('insertOrderedList')),button('outdent',()=>docExec('outdent')),button('indent',()=>docExec('indent')),button('copy',()=>docExec('copy')),button('paste',()=>docExec('paste')));
   g=group();g.append(button('table',docInsertTable),button('image',()=>$('#hiddenDocImageFile').click()),button('link',insertDocLink),button('pagebreak',docInsertPageBreak),button('comment',docInsertComment));
   g=group();const line=el('select','we-select');line.setAttribute('aria-label','Interligne');line.innerHTML='<option value="1.15">1,15</option><option value="1.5" selected>1,5</option><option value="2">2</option>';line.onchange=()=>{const ed=document.querySelector('.doceditor');if(ed){ed.focus();ed.style.lineHeight=line.value;docMarkDirty();}};g.append(line);g.append(button('nav',docToggleNavigation),button('search',docToggleFind));root.append(fmt);
 
@@ -1139,7 +1249,7 @@ function renderDocStudio(t,stage){
   // ===== Status bar =====
   const status=el('div','we-statusbar');
   const stat=()=>el('span','we-stat');status.append(stat());
-  status.innerHTML='<span class="we-stat" data-page>Page 1 sur 1</span><span class="we-stat">Section 1</span><span class="we-stat">1/1</span><span class="we-stat" data-line>À 0,9 cm</span><span class="we-stat">Li 1</span><span class="we-stat">Col 1</span><span class="we-stat doc-wordcount">0 mots</span><span class="we-stat">INS</span><span class="we-stat">STD</span><span class="we-stat">RÉV</span><span class="we-stat">EXT</span><span class="we-stat">RFP</span><span class="we-flex"></span><span class="we-stat">🌐 Français</span><span class="we-status-views"><button type="button" aria-label="Mise en page" title="Mise en page">▣</button><button type="button" aria-label="Lecture" title="Lecture">▤</button><button type="button" aria-label="Web" title="Web">▥</button><button type="button" aria-label="Réduire le zoom" title="Réduire le zoom">−</button><input class="we-range" type="range" min="50" max="150" value="100" aria-label="Zoom"><button type="button" aria-label="Augmenter le zoom" title="Augmenter le zoom">＋</button><span class="we-zoom-label">100%</span></span>';
+  status.innerHTML='<span class="we-stat" data-page>Page 1 sur 1</span><span class="we-stat">Section 1</span><span class="we-stat">1/1</span><span class="we-stat" data-line>À 0,9 cm</span><span class="we-stat">Li 1</span><span class="we-stat">Col 1</span><span class="we-stat doc-wordcount">0 mots</span><span class="we-stat">INS</span><span class="we-stat">STD</span><span class="we-stat">RÉV</span><span class="we-stat">EXT</span><span class="we-stat">RFP</span><span class="we-flex"></span><span class="we-stat we-language"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> Français</span><span class="we-status-views"><button type="button" aria-label="Mise en page" title="Mise en page">▣</button><button type="button" aria-label="Lecture" title="Lecture">▤</button><button type="button" aria-label="Web" title="Web">▥</button><button type="button" aria-label="Réduire le zoom" title="Réduire le zoom">−</button><input class="we-range" type="range" min="50" max="150" value="100" aria-label="Zoom"><button type="button" aria-label="Augmenter le zoom" title="Augmenter le zoom">＋</button><span class="we-zoom-label">100%</span></span>';
   const range=status.querySelector('.we-range');range.oninput=()=>{const z=Number(range.value)/100;setDocZoom(z);status.querySelector('.we-zoom-label').textContent=range.value+'%';};status.querySelector('[aria-label="Réduire le zoom"]').onclick=()=>{range.value=Math.max(50,Number(range.value)-10);range.oninput();};status.querySelector('[aria-label="Augmenter le zoom"]').onclick=()=>{range.value=Math.min(150,Number(range.value)+10);range.oninput();};root.append(status);
 
   // hidden image input for a real insertion workflow
@@ -3302,7 +3412,7 @@ $("#umLogout").onclick=()=>{$("#acctMenu").classList.remove("open");logout();};
 function updateHeader(){const t=activeTab();$("#docName").textContent=t&&t.pdf?t.name:"";updateSaveDot();
   $("#floatsig").classList.toggle("show",!!(t&&t.tool==="fillsign"&&t.pdf));}
 $("#saveBtn").onclick=doSave;
-$("#printBtn").onclick=()=>window.print();
+$("#printBtn").onclick=()=>printActiveReadixDocument();
 $("#brandHome").onclick=()=>openTool("view");
 $("#themeBtn").onclick=()=>{const d=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",d);try{localStorage.setItem("readix_theme",d);}catch(e){}};
 try{const th=localStorage.getItem("readix_theme");if(th)document.documentElement.setAttribute("data-theme",th);}catch(e){}
@@ -3343,7 +3453,7 @@ document.addEventListener("keydown",e=>{
   if(mod&&e.key.toLowerCase()==="k"){e.preventDefault();$("#cmdInput").focus();}
   else if(mod&&e.key.toLowerCase()==="s"){e.preventDefault();doSave();}
   else if(mod&&e.key.toLowerCase()==="o"){e.preventDefault();$("#hiddenFile").click();}
-  else if(mod&&e.key.toLowerCase()==="p"){e.preventDefault();window.print();}
+  else if(mod&&e.key.toLowerCase()==="p"){e.preventDefault();printActiveReadixDocument();}
   else if(mod&&!e.shiftKey&&e.key.toLowerCase()==="z"){const t=activeTab();if(t&&t.tool==="editpdf"){e.preventDefault();editUndo();}}
   else if(mod&&(e.key.toLowerCase()==="y"||(e.shiftKey&&e.key.toLowerCase()==="z"))){const t=activeTab();if(t&&t.tool==="editpdf"){e.preventDefault();editRedo();}}
 });
