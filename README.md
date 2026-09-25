@@ -289,3 +289,35 @@ Document Studio est entièrement reconstruit. L’interface reprend la maquette 
 - L’export PDF est une image fidèle de chaque page : le texte n’y est pas sélectionnable.
 - Les notes sont placées en fin de document (notes de fin).
 - L’en-tête et le pied de page sont identiques sur toutes les pages.
+
+
+## Nouveautés — Studio de publication (Phase A.3+)
+
+Le moteur Word intègre désormais un ensemble complet de fonctions de publication, toutes fonctionnelles et exportées fidèlement en .docx :
+
+**Références et structure**
+- **Table des matières automatique** (Insertion › Table des matières) : générée à partir des styles Titre 1 à 3, cliquable (Ctrl+clic pour atteindre le titre), numéros de page mis à jour automatiquement.
+- **Notes de bas de page** (Insertion › Note de bas de page, Ctrl+Alt+B) : véritables notes rendues au bas de la page contenant l'appel, exportées dans `footnotes.xml`. Les notes de fin (Ctrl+Alt+F) restent disponibles.
+- **Légendes** (Insertion › Légende) : « Figure N », « Tableau N », etc., numérotées automatiquement.
+- **Index** (Insertion › Marquer une entrée, puis Insérer l'index) : liste alphabétique avec numéros de page.
+
+**Mise en page**
+- **Filigrane** (Format › Filigrane) : texte (avec préréglages CONFIDENTIEL, BROUILLON…) ou image, en diagonale, opacité réglable. Exporté en VML dans l'en-tête .docx (lu par Word et LibreOffice).
+- **Bordure de page** (Format › Bordure de page) : style, épaisseur, couleur, marge — exportée via `w:pgBorders`.
+- **Couleur de page** (Format › Couleur de page) — exportée via `w:background`.
+- **En-têtes et pieds différenciés** (Format › En-têtes et pieds de page) : première page différente et pages paires/impaires distinctes (`w:titlePg`, `w:evenAndOddHeaders`, références d'en-tête multiples).
+- **Zoom jusqu'à 500 %**.
+
+**Publipostage et révision**
+- **Publipostage** (Outils › Publipostage) : import CSV (séparateur virgule ou point-virgule), insertion de champs «Champ», fusion produisant un document avec une copie par enregistrement (séparées par un saut de page).
+- **Comparer des versions** (Outils › Comparer) : compare le document actuel avec un .docx révisé et affiche les différences en modifications suivies (ajouts soulignés, suppressions barrées) à accepter/refuser via l'onglet Révision.
+- **Dictionnaire personnel** (Outils › Dictionnaire personnel) : mots à ne pas signaler, conservés localement, en complément du correcteur du navigateur selon la langue.
+
+**PDF avec texte sélectionnable** : l'export PDF conserve le rendu fidèle des pages et ajoute une couche de texte invisible, rendant le PDF sélectionnable et consultable (recherche).
+
+### Limites assumées (hors périmètre du moteur navigateur)
+- **Coédition en temps réel** : nécessite un serveur (WebSocket/CRDT) — relève de la couche serveur, pas du moteur client.
+- **Macros / VBA** : volontairement exclues (sécurité et périmètre).
+- **Correcteur grammatical et dictionnaire de synonymes complets** : nécessitent une grande base lexicale française. Le correcteur orthographique du navigateur (souligné rouge) et le dictionnaire personnel sont fournis à la place.
+- **Sections multiples à orientation/marges mixtes dans un même document** : reportées (nécessitent une refonte de la pagination).
+
