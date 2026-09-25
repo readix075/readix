@@ -55,7 +55,33 @@ async function initDb() {
       PRIMARY KEY (email, ym)
     );`);
   await pool.query(`ALTER TABLE usage ADD COLUMN IF NOT EXISTS op_count INTEGER NOT NULL DEFAULT 0;`);
-  console.log("✅ Base de données prête (tables users, usage).");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      email      TEXT NOT NULL,
+      id         TEXT NOT NULL,
+      title      TEXT NOT NULL DEFAULT 'Nouvelle discussion',
+      data       JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at BIGINT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS conversations_email_idx ON conversations(email, updated_at DESC);`);
+  await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS project_id TEXT;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      email       TEXT NOT NULL,
+      id          TEXT NOT NULL,
+      name        TEXT NOT NULL DEFAULT 'Projet',
+      description TEXT NOT NULL DEFAULT '',
+      domain      TEXT NOT NULL DEFAULT '',
+      status      TEXT NOT NULL DEFAULT 'active',
+      data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at  BIGINT NOT NULL DEFAULT 0,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS projects_email_idx ON projects(email, updated_at DESC);`);
+  console.log("✅ Base de données prête (tables users, usage, conversations, projects).");
 }
 async function getUser(email) {
   const r = await pool.query("SELECT email, name, pass_hash, plan FROM users WHERE email=$1", [email]);
@@ -130,7 +156,22 @@ app.post("/api/billing/webhook", express.raw({ type: "application/json" }), asyn
 app.use(express.json({ limit: "12mb" }));
 
 // Diagnostic public: permet de distinguer un ancien déploiement Render d'une erreur IA.
-app.get("/api/health", (req, res) => res.json({ ok:true, service:"readix", version:"19.1", actionEngine:true, timestamp:new Date().toISOString() }));
+// N'expose AUCUN secret : uniquement la présence (true/false) des variables de configuration.
+app.get("/api/health", (req, res) => res.json({
+  ok: true,
+  service: "readix",
+  version: "19.1",
+  actionEngine: true,
+  copilotAction: true,
+  config: {
+    database: !!DATABASE_URL,
+    aiKey: !!ANTHROPIC_API_KEY,
+    aiModel: ANTHROPIC_MODEL,
+    stripe: !!process.env.STRIPE_SECRET_KEY,
+    clientUrl: CLIENT_URL
+  },
+  timestamp: new Date().toISOString()
+}));
 
 
 // ---- Auth ----
@@ -183,6 +224,117 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.get("/api/me", auth, (req, res) => res.json({ user: req.user }));
+
+// ---- Readix Copilot : persistance des discussions (Phase 6) ----
+// Liste les discussions de l'utilisateur (les plus récentes d'abord).
+app.get("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const proj = req.query && req.query.project;
+    let r;
+    if (proj) {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 AND project_id=$2 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email, String(proj)]
+      );
+    } else {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email]
+      );
+    }
+    const conversations = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, title: x.title, updatedAt: Number(x.updated_at), projectId: x.project_id || null };
+    });
+    res.json({ conversations });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour une discussion (upsert par id, propre à l'utilisateur).
+app.post("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const chat = req.body && req.body.chat;
+  if (!chat || !chat.id) return res.status(400).json({ error: "Discussion invalide" });
+  const id = String(chat.id).slice(0, 80);
+  const title = String(chat.title || "Nouvelle discussion").slice(0, 200);
+  const updatedAt = Number(chat.updatedAt) || Date.now();
+  const projectId = chat.projectId ? String(chat.projectId).slice(0, 80) : null;
+  try {
+    await pool.query(
+      `INSERT INTO conversations(email,id,title,data,updated_at,project_id,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,now())
+       ON CONFLICT (email,id) DO UPDATE SET title=EXCLUDED.title, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at, project_id=EXCLUDED.project_id`,
+      [req.user.email, id, title, JSON.stringify(chat), updatedAt, projectId]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime une discussion.
+app.delete("/api/copilot/conversations/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    await pool.query("DELETE FROM conversations WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Readix Project Engine : projets (Étape A1) ----
+// Liste les projets de l'utilisateur (récents d'abord).
+app.get("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query(
+      "SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 ORDER BY updated_at DESC LIMIT 300",
+      [req.user.email]
+    );
+    const projects = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) };
+    });
+    res.json({ projects });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Récupère un projet précis.
+app.get("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query("SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    if (!r.rows.length) return res.status(404).json({ error: "Projet introuvable" });
+    const x = r.rows[0]; const base = (x.data && typeof x.data === "object") ? x.data : {};
+    res.json({ project: { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour un projet (upsert par id, propre à l'utilisateur).
+app.post("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const p = req.body && req.body.project;
+  if (!p || !p.id) return res.status(400).json({ error: "Projet invalide" });
+  const id = String(p.id).slice(0, 80);
+  const name = String(p.name || "Projet").slice(0, 200);
+  const description = String(p.description || "").slice(0, 2000);
+  const domain = String(p.domain || "").slice(0, 120);
+  const status = String(p.status || "active").slice(0, 40);
+  const updatedAt = Number(p.updatedAt) || Date.now();
+  try {
+    await pool.query(
+      `INSERT INTO projects(email,id,name,description,domain,status,data,updated_at,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
+       ON CONFLICT (email,id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, domain=EXCLUDED.domain, status=EXCLUDED.status, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
+      [req.user.email, id, name, description, domain, status, JSON.stringify(p), updatedAt]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime un projet (les conversations liées sont détachées, pas supprimées).
+app.delete("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const id = String(req.params.id);
+  try {
+    await pool.query("UPDATE conversations SET project_id=NULL WHERE email=$1 AND project_id=$2", [req.user.email, id]);
+    await pool.query("DELETE FROM projects WHERE email=$1 AND id=$2", [req.user.email, id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // Quota IA de l'utilisateur (pour l'affichage du compteur côté site)
 app.get("/api/usage", auth, async (req, res) => {
@@ -309,6 +461,30 @@ Quand l'utilisateur demande comment faire une action, donne les étapes exactes 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Génération de texte libre (rédaction assistée : plans, chapitres, réécriture…). Auth + plan Pro+ + quota.
+app.post("/api/ai/generate", auth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Fonction IA non configurée sur le serveur." });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  const system = String((req.body && req.body.system) || "").slice(0, 6000);
+  const maxTokens = Math.min(Math.max(Number(req.body && req.body.maxTokens) || 1400, 200), 4000);
+  if (!prompt) return res.status(400).json({ error: "Demande vide" });
+  const need = 2; // Pro ou supérieur
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Cette fonction IA nécessite le plan Pro ou supérieur." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  try {
+    const data = await anthropicMessage({
+      max_tokens: maxTokens,
+      system: system || "Tu es un assistant de rédaction expert. Réponds en français, de façon claire, structurée et complète.",
+      messages: [{ role: "user", content: prompt.slice(0, 14000) }]
+    });
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    await incUsage(req.user.email);
+    res.json({ text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/copilot", auth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
   const message = String((req.body && req.body.message) || "").trim();
@@ -417,14 +593,21 @@ Actions autorisées :
 - extract_pages : {type,pages:[1,2]} crée un nouveau PDF avec les pages indiquées du PDF courant.
 - rotate_pages : {type,pages:[1,2],degrees:90} fait pivoter les pages du PDF courant.
 - search_document : {type,query} demande une recherche documentaire.
-- extract_data : {type,query} demande une extraction structurée à partir du contexte fourni.
+- extract_data : {type,title,columns:["Col1","Col2"],rows:[["a","b"],["c","d"]]} EXTRAIT directement des données structurées du document et les renvoie sous forme de tableau (colonnes + lignes remplies à partir du document réel). Utilise-le pour « extrais toutes les factures / expériences / dates / montants… » ET pour toute demande d'export CSV, Excel ou tableau Word : le client affiche le tableau et propose les téléchargements CSV, Excel et Word. Remplis réellement columns et rows ; n'invente jamais de données absentes du document. Si rien de pertinent n'existe, renvoie actions:[] et explique-le.
 - summarize : {type} demande un résumé du contexte fourni.
+- convert_pdf_to_docx : {type} convertit le PDF ouvert (ou joint) en document Word éditable ouvert dans Document Studio. À utiliser pour « transforme/convertis ce PDF en Word ». Aucune page ni contenu à fournir : le client lit le PDF ouvert.
+- convert_docx_to_pdf : {type} convertit le document Word actuellement ouvert dans Document Studio en PDF. À utiliser pour « convertis ce document Word en PDF ».
+- ocr_document : {type} lance la reconnaissance de texte (OCR) sur le PDF ouvert quand il est numérisé/scanné (aucun texte sélectionnable). À utiliser explicitement pour « lance l'OCR », « fais un OCR de ce document », « ce PDF est scanné ».
 
 Règles :
 1. N’invente jamais qu’une action a été exécutée : le client l’exécutera après ta réponse.
 2. Pour une demande de création de fichier, utilise create_pdf/create_docx/create_docstudio.
-3. Pour « génère-moi un PDF de ce récapitulatif », crée directement create_pdf avec un contenu complet, structuré et fidèle au contexte disponible.
-4. Pour « mets cela dans Word », utilise create_docstudio ou create_docx selon la demande; si l’utilisateur veut modifier ensuite, préfère create_docstudio.
+3. Pour « génère-moi un PDF de ce récapitulatif », crée directement create_pdf avec un contenu complet, structuré et fidèle au contexte disponible. IMPORTANT : le fichier n'est PAS téléchargé automatiquement ; Readix affiche un bouton « Télécharger » que l'utilisateur clique lui-même. Ne dis donc JAMAIS que le fichier a été téléchargé ou enregistré ; formule plutôt « j'ai préparé le document, cliquez sur Télécharger quand vous voulez ».
+4. Pour « mets cela dans Word », utilise create_docstudio ou create_docx selon la demande; si l’utilisateur veut modifier ensuite, préfère create_docstudio. IMPORTANT : create_docstudio n'ouvre PAS l'onglet tout seul ; Readix affiche un bouton « Ouvrir dans Document Studio » que l'utilisateur clique lui-même. Ne dis donc jamais que le document « a été ouvert » : formule une proposition (« j'ai préparé un document, souhaitez-vous l'ouvrir ou l'ajuster d'abord ? »). L'utilisateur garde le contrôle sur ce qui est transféré dans un onglet.
+4a. Tu es un assistant documentaire intelligent, pas un simple exécutant : propose des idées utiles liées au projet de l'utilisateur, pose une question de clarification quand la demande est ambiguë, et suggère l'étape suivante pertinente. Reste concis et concret. N'agis (création de fichier, document, etc.) qu'en proposant le résultat pour que l'utilisateur décide de la suite.
+4b. Distingue bien CONVERSION et CRÉATION : « transforme/convertis CE PDF en Word » → convert_pdf_to_docx (le client lit le PDF ouvert, ne mets pas de content) ; « convertis CE document Word en PDF » → convert_docx_to_pdf. N’utilise create_pdf/create_docx que lorsque tu dois toi-même rédiger un NOUVEAU contenu (résumé, récapitulatif), pas pour convertir un document existant.
+4c. Pour toute demande de DONNÉES ou d'EXPORT (« extrais les factures », « liste les dates/montants », « mets-les dans un tableau Word », « exporte en Excel/CSV ») → une seule action extract_data avec columns et rows remplies. N'utilise pas create_docx pour un tableau de données : extract_data propose déjà l'export CSV, Excel et Word.
+4d. Si le documentContext fourni est vide alors qu'un document est ouvert (documentName présent), c'est probablement un PDF numérisé : n'invente rien, propose l'action ocr_document et explique qu'une reconnaissance de texte est nécessaire.
 5. Les actions delete_pages sont destructives : mets requiresConfirmation:true.
 6. Si le contexte documentaire est insuffisant, ne fabrique pas le contenu; réponds avec actions:[] et explique ce qui manque.
 7. Plusieurs actions peuvent être renvoyées dans l’ordre.

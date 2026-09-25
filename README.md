@@ -193,6 +193,99 @@ Cette version corrige le flux d'exécution du Copilot et ajoute des diagnostics 
 
 Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "19.1"` et `actionEngine: true`.
 
-## Phase 6 — Book Studio intégré
 
-Voir `README-PHASE6-INTEGRATED.md`. Book Studio est intégré directement à `public/app.html`; aucune page `demo/` n'est utilisée pour cette livraison.
+## Phase A — Readix Document Studio / Word Engine
+
+Cette version introduit la première couche du Word Engine : l'interface professionnelle de Document Studio, inspirée de l'organisation d'un traitement de texte classique.
+
+### Ajouts Phase A
+- barre de titre du document ;
+- barre de menus : Fichier, Édition, Affichage, Insertion, Format, Révision, Outils, Aide ;
+- menus déroulants fonctionnels ;
+- barre d'accès rapide ;
+- barre de mise en forme structurée ;
+- choix de police et taille ;
+- gras, italique, souligné, barré ;
+- styles Normal/Titre 1/Titre 2/Titre 3/Citation ;
+- alignements ;
+- listes et retraits ;
+- surlignage et interligne ;
+- liens ;
+- insertion de tableau, saut de page et commentaire ;
+- règles horizontale et verticale ;
+- zone de page type traitement de texte ;
+- barre d'état avec page, section, langue, mode, statistiques et zoom ;
+- commandes d'impression, recherche, navigation, import/export ;
+- export PDF branché sur le moteur PDF local existant ;
+- conservation des fonctions Document Studio déjà présentes : tableaux, révision, recherche/remplacement, en-tête/pied de page, navigation, autosave, DOCX.
+
+### Règle de non-régression
+La Phase A ne remplace pas le moteur PDF, Copilot, AI Advanced, Project Engine ou les fonctions existantes. Elle enrichit uniquement l'interface et les points d'entrée du Document Studio.
+
+## Phase A.2 — Word Engine reference polish + document-only printing
+
+- Document Studio UI aligned to the professional Word Engine reference layout.
+- Cleaner, readable drawing/status bars.
+- Expanded quick-access controls (navigation/search).
+- Print command is document-scoped: it no longer prints the Readix application shell.
+- DOCX/Document Studio printing opens a clean document-only print window.
+- PDF printing renders only the active PDF pages in a clean print window.
+- Ctrl+P and the Document Studio print menu/toolbar use the document-scoped print engine.
+
+
+## Phase A.3 — Readix Word Engine A3 (Document Studio fidèle à la maquette)
+
+Document Studio est entièrement reconstruit. L’interface reprend la maquette de référence : barre de titre bleue avec recherche, 10 menus, barre standard, barre de mise en forme, règles, barre de dessin et barre d’état. Chaque icône exécute réellement le rôle annoncé dans son infobulle (« Nom — rôle »), et **Aide › Aide sur les outils** liste le rôle des 115 outils.
+
+### Ce qui fonctionne
+- **Pages réelles** A4 / Lettre / Légal / A5, portrait ou paysage, marges réglables (règles ou Fichier › Mise en page). Un paragraphe qui ne tient plus sur la page passe à la page suivante. Saut de page avec Ctrl+Entrée.
+- **En-têtes et pieds de page** sur toutes les pages (double-clic dans la marge), numéros de page automatiques « Page X sur Y ».
+- **Règles déplaçables** : retraits de première ligne, négatif, gauche et droit ; marges ; tabulations gauche, centrée, droite et décimale (le coin « L » change le type).
+- **Mise en forme** :
+  - police, taille, gras, italique, souligné, barré, couleur, surlignage, exposant et indice, casse ;
+  - alignements, interligne, espacement, retraits, trame, bordures, colonnes ;
+  - styles (Titre, Titre 1 à 3, Citation, Code) ;
+  - reproduction de la mise en forme (pinceau).
+- **Listes** : puces (7 symboles), numérotation, listes multiniveaux (1/a/i, 1.1.1, I/A/1) ; Tab et Maj+Tab changent de niveau.
+- **Tableaux** :
+  - grille d’insertion, ajout et suppression de lignes et colonnes, fusion et fractionnement ;
+  - tri, formules (somme, moyenne, max, min, nombre) ;
+  - en-tête, bandes, sans bordure, tableau de calcul avec totaux automatiques.
+- **Dessin** :
+  - une trentaine de formes, lignes, flèches, forme libre, zone de texte, ellipse avec texte, WordArt, diagrammes (organigramme, processus, cycle, pyramide) ;
+  - graphiques (histogramme, courbe, secteurs), images, cliparts intégrés, stylo, surligneur et gomme ;
+  - sélection, déplacement, redimensionnement, rotation, remplissage, trait, tirets, flèches, ombre et relief 3D, ordre, alignement, habillage.
+- **Révision** :
+  - suivi des modifications (RÉV, Ctrl+Maj+E), accepter ou refuser ;
+  - commentaires avec leur volet ;
+  - langue, vérification orthographique, statistiques, correction automatique (« », majuscules, ©, →, —, …).
+- **Barre d’état vivante** :
+  - Page X sur Y, Section, « À x cm », Li, Col, mots, caractères ;
+  - INS/RFP (touche Inser, refrappe réelle) et STD/EXT (F8, sélection étendue) ;
+  - modes Page, Web et Plan, zoom réel de 25 à 300 %.
+- **Recherche** :
+  - en direct depuis la barre de titre, avec surlignage de toutes les occurrences ;
+  - Rechercher, Remplacer et Atteindre (Ctrl+F, Ctrl+H, Ctrl+G).
+- **Fichiers** :
+  - ouverture de fichiers .docx (avec mise en forme, listes, tableaux, images, en-têtes, commentaires et révisions), .txt, .html et .md ;
+  - enregistrement en **.docx** qui conserve toute la mise en forme, y compris les formes et images ancrées ;
+  - export **PDF** fidèle à l’affichage, HTML et texte ;
+  - impression des seules pages du document.
+- **Annuler / Rétablir** avec historique détaillé : la flèche ▾ permet d’annuler plusieurs actions d’un coup.
+- **Personnalisation** :
+  - barres affichables ou masquables ;
+  - barre standard et barre de dessin ancrables en haut ou en bas (glisser la poignée) ;
+  - réduire, agrandir, plein écran, mode lecture.
+
+### Intégration
+- `public/app.html` embarque le moteur (`<script id="readix-word-engine">` et `<style id="readix-word-engine-css">`). `renderDocStudio()` le monte dans l’onglet actif et le relie à l’onglet (`t.doc`, `t.docMeta`, nom, autosave IndexedDB, Copilot).
+- `saveDocStudio`, `printActiveReadixDocument` et l’import (`#hiddenDocFile`) passent désormais par le moteur. `buildDocxBlob` (utilisé par Copilot) produit maintenant des DOCX mis en forme, avec repli sur l’ancien export.
+- Correctif : la reprise de session restaure aussi la mise en page (`docMeta`).
+- `public/document-studio-demo.html` : version autonome pour tester Document Studio hors de l’application.
+- Sources du moteur : `word-engine/src/`. Après modification, lancez `python3 word-engine/build.py` pour réinjecter le moteur dans `app.html`.
+
+### Notes
+- Le zoom affiche le pourcentage réel. Les boutons (police, taille, gras, alignement…) reflètent le texte sous le curseur, comme dans Word.
+- L’export PDF est une image fidèle de chaque page : le texte n’y est pas sélectionnable.
+- Les notes sont placées en fin de document (notes de fin).
+- L’en-tête et le pied de page sont identiques sur toutes les pages.
