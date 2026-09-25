@@ -193,31 +193,6 @@ Cette version corrige le flux d'exécution du Copilot et ajoute des diagnostics 
 
 Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "19.1"` et `actionEngine: true`.
 
+## Phase 6 — Book Studio intégré
 
-## Phase A — Readix Document Studio / Word Engine
-
-Cette version introduit la première couche du Word Engine : l'interface professionnelle de Document Studio, inspirée de l'organisation d'un traitement de texte classique.
-
-### Ajouts Phase A
-- barre de titre du document ;
-- barre de menus : Fichier, Édition, Affichage, Insertion, Format, Révision, Outils, Aide ;
-- menus déroulants fonctionnels ;
-- barre d'accès rapide ;
-- barre de mise en forme structurée ;
-- choix de police et taille ;
-- gras, italique, souligné, barré ;
-- styles Normal/Titre 1/Titre 2/Titre 3/Citation ;
-- alignements ;
-- listes et retraits ;
-- surlignage et interligne ;
-- liens ;
-- insertion de tableau, saut de page et commentaire ;
-- règles horizontale et verticale ;
-- zone de page type traitement de texte ;
-- barre d'état avec page, section, langue, mode, statistiques et zoom ;
-- commandes d'impression, recherche, navigation, import/export ;
-- export PDF branché sur le moteur PDF local existant ;
-- conservation des fonctions Document Studio déjà présentes : tableaux, révision, recherche/remplacement, en-tête/pied de page, navigation, autosave, DOCX.
-
-### Règle de non-régression
-La Phase A ne remplace pas le moteur PDF, Copilot, AI Advanced, Project Engine ou les fonctions existantes. Elle enrichit uniquement l'interface et les points d'entrée du Document Studio.
+Voir `README-PHASE6-INTEGRATED.md`. Book Studio est intégré directement à `public/app.html`; aucune page `demo/` n'est utilisée pour cette livraison.
