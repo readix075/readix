@@ -6641,5 +6641,463 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 })();
 
 </script>
+<style id="readix-cv-css">
+/* ===== Readix CV Engine v2 — habillage du Studio (additif) ===== */
+.rxcv-studio .cv-stylebar { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 4px 0 10px; background: var(--surface-2); }
+.cv-sb-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 7px; }
+.cv-tpls { display: flex; flex-wrap: wrap; gap: 7px; }
+.cv-tpl { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 10px; cursor: pointer; font-size: 12px; color: var(--ink); }
+.cv-tpl:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.cv-tpl.on { border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent); font-weight: 600; }
+.cv-tpl-sw { width: 12px; height: 12px; border-radius: 3px; }
+.cv-sb-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 11px; }
+.cv-sb-c { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+.cv-sb-c input[type=color] { width: 26px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; cursor: pointer; }
+.cv-sb-c input[type=range] { width: 92px; }
+.cv-sb-sel { border: 1px solid var(--line); border-radius: 7px; padding: 4px 6px; font-size: 12px; background: #fff; color: var(--ink); }
+
+.cv-item { position: relative; }
+.cv-item-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.cv-mv { width: 24px; height: 24px; border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer; color: var(--ink-soft); font-size: 13px; line-height: 1; }
+.cv-mv:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.cv-mv:disabled { opacity: .35; cursor: default; }
+.cvf-chk { flex-direction: row !important; align-items: center; gap: 7px; }
+.cvf-chk input { width: 15px; height: 15px; }
+
+.cv-sections { display: flex; flex-direction: column; gap: 5px; }
+.cv-srow { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: #fff; }
+.cv-srow-l { flex: 1; font-size: 13px; color: var(--ink); }
+.cv-eye { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 3px 9px; font-size: 11px; cursor: pointer; color: var(--ink-faint); }
+.cv-eye.on { color: #0F9D58; border-color: #bfe6cd; background: #eefbf3; }
+
+/* aperçu : marges papier A4 déjà fournies par .cv-paper du socle ; on garantit un fond blanc net */
+.rxcv-studio .cv-paper { background: #fff; }
+.cv-photo-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+.cv-photo-mini { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); }
+.cv-ghost { background: #fff !important; color: var(--ink-soft) !important; }
+
+</style>
+<script id="readix-cv-engine">
+/* ============================================================
+   READIX CV ENGINE — Phase 2 (CV Studio)
+   Additif : enveloppe cvDefault / cvToHtml / renderCvBuilder du socle
+   pour apporter modèle structuré étendu, 6 gabarits réels, éditeur
+   riche (sections réordonnables, styles), IA CV et exports.
+   Aucune fonction du socle n'est modifiée : on RÉUTILISE
+   cvField, cvImportPdf, cvOptimize, downloadCopilotFile,
+   openDocInTab, aiGenerate, parseJsonLoose, cvFromAiJson, dialog,
+   toast, createTab. Retirer ce bloc restaure le CV d'origine.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixCV) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+
+  /* ---------- Modèle étendu + migration rétro-compatible ---------- */
+  var TEMPLATES = [
+    { id: "classique", label: "Classique", accent: "#334155" },
+    { id: "professionnel", label: "Professionnel", accent: "#1D4ED8" },
+    { id: "moderne", label: "Moderne", accent: "#0EA5E9" },
+    { id: "etudiant", label: "Étudiant", accent: "#059669" },
+    { id: "laterale", label: "Colonne latérale", accent: "#4F46E5" },
+    { id: "vierge", label: "Vierge", accent: "#475569" }
+  ];
+  var FONTS = ["Inter", "Georgia", "Times New Roman", "Arial", "Calibri"];
+  var SECTION_LABEL = { summary: "Profil", experience: "Expérience", education: "Formation", skills: "Compétences", languages: "Langues", certifications: "Certifications", projects: "Projets", interests: "Centres d’intérêt", references: "Références" };
+  var DEFAULT_ORDER = ["summary", "experience", "education", "skills", "languages", "certifications", "projects", "interests", "references"];
+
+  function baseDefault() {
+    var f = W("cvDefault"); // l'original enveloppé est mémorisé plus bas ; ici on part d'un socle propre
+    var base = ReadixCV._origCvDefault ? ReadixCV._origCvDefault() : { identity: { name: "", title: "", email: "", phone: "", city: "", links: "" }, summary: "", experiences: [], education: [], skills: "", languages: "" };
+    return base;
+  }
+  function upgrade(cv) {
+    if (!cv || typeof cv !== "object") cv = {};
+    cv.identity = cv.identity || {};
+    var id = cv.identity;
+    ["name", "title", "email", "phone", "city", "links", "address", "country", "website", "linkedin", "photo"].forEach(function (k) { if (id[k] == null) id[k] = ""; });
+    if (typeof cv.summary !== "string") cv.summary = cv.summary || "";
+    // Normalisation EN PLACE (on ne remplace jamais les tableaux : les références
+    // captées par le formulaire doivent rester valides à chaque rafraîchissement).
+    function norm(arr, keys, defaults) { if (!Array.isArray(arr)) return []; arr.forEach(function (x) { if (x && typeof x === "object") { keys.forEach(function (k) { if (x[k] == null) x[k] = (defaults && defaults[k] != null) ? defaults[k] : ""; }); } }); return arr; }
+    if (!Array.isArray(cv.experiences)) cv.experiences = [];
+    norm(cv.experiences, ["role", "company", "city", "start", "end", "desc", "achievements", "stack", "current"], { current: false });
+    if (!Array.isArray(cv.education)) cv.education = [];
+    norm(cv.education, ["degree", "school", "city", "start", "end", "desc"]);
+    // compétences : structurées + chaîne héritée synchronisée (créées UNE seule fois)
+    if (!Array.isArray(cv.skillsList)) {
+      cv.skillsList = String(cv.skills || "").split(/[,\n]/).map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) { return { name: s, level: "", category: "" }; });
+    } else norm(cv.skillsList, ["name", "level", "category"]);
+    if (!Array.isArray(cv.langsList)) {
+      cv.langsList = String(cv.languages || "").split(/[,\n]/).map(function (s) { return s.trim(); }).filter(Boolean).map(function (s) { return { name: s, level: "" }; });
+    } else norm(cv.langsList, ["name", "level"]);
+    if (!Array.isArray(cv.certifications)) cv.certifications = [];
+    norm(cv.certifications, ["name", "org", "date", "ref"]);
+    if (!Array.isArray(cv.projects)) cv.projects = [];
+    norm(cv.projects, ["name", "desc", "tech", "link"]);
+    if (typeof cv.interests !== "string") cv.interests = cv.interests || "";
+    if (!Array.isArray(cv.references)) cv.references = [];
+    norm(cv.references, ["name", "role", "contact"]);
+    if (!Array.isArray(cv.sections) || !cv.sections.length) cv.sections = DEFAULT_ORDER.slice();
+    else DEFAULT_ORDER.forEach(function (s) { if (cv.sections.indexOf(s) < 0) cv.sections.push(s); });
+    if (!cv.template) cv.template = "classique";
+    cv.settings = cv.settings || {};
+    var st = cv.settings;
+    if (!st.accent) st.accent = (TEMPLATES.filter(function (t) { return t.id === cv.template; })[0] || TEMPLATES[0]).accent;
+    if (!st.font) st.font = "Inter";
+    if (!st.size) st.size = 100;
+    if (!st.spacing) st.spacing = 100;
+    if (st.columns == null) st.columns = (cv.template === "laterale");
+    if (st.hidden == null) st.hidden = {};
+    return cv;
+  }
+  function syncLegacy(cv) {
+    cv.skills = (cv.skillsList || []).map(function (s) { return s.name; }).filter(Boolean).join(", ");
+    cv.languages = (cv.langsList || []).map(function (s) { return s.name + (s.level ? " (" + s.level + ")" : ""); }).filter(Boolean).join(", ");
+  }
+
+  /* ---------- Rendu : 6 gabarits réels ---------- */
+  function dateRange(a, b, current) { var e = current ? "présent" : b; return [a, e].filter(Boolean).join(" – "); }
+  function blocks(cv) {
+    var B = {};
+    B.summary = cv.summary ? "<p>" + esc(cv.summary).replace(/\n/g, "<br>") + "</p>" : "";
+    B.experience = (cv.experiences || []).map(function (x) {
+      var d = dateRange(x.start, x.end, x.current); var loc = [x.company, x.city].filter(Boolean).map(esc).join(", ");
+      var h = '<div class="cv-entry"><div class="cv-entry-h"><b>' + esc(x.role || "") + '</b>' + (d ? '<span class="cv-when">' + esc(d) + '</span>' : '') + '</div>';
+      if (loc) h += '<div class="cv-org">' + loc + '</div>';
+      if (x.desc) h += '<p>' + esc(x.desc).replace(/\n/g, "<br>") + '</p>';
+      if (x.achievements) h += '<ul>' + x.achievements.split(/\n/).filter(function (l) { return l.trim(); }).map(function (l) { return '<li>' + esc(l.replace(/^[-•]\s*/, "")) + '</li>'; }).join("") + '</ul>';
+      if (x.stack) h += '<div class="cv-stack">' + esc(x.stack) + '</div>';
+      return h + '</div>';
+    }).join("");
+    B.education = (cv.education || []).map(function (x) {
+      var d = dateRange(x.start, x.end); var loc = [x.school, x.city].filter(Boolean).map(esc).join(", ");
+      var h = '<div class="cv-entry"><div class="cv-entry-h"><b>' + esc(x.degree || "") + '</b>' + (d ? '<span class="cv-when">' + esc(d) + '</span>' : '') + '</div>';
+      if (loc) h += '<div class="cv-org">' + loc + '</div>';
+      if (x.desc) h += '<p>' + esc(x.desc) + '</p>';
+      return h + '</div>';
+    }).join("");
+    B.skills = (cv.skillsList || []).length ? '<ul class="cv-tags">' + cv.skillsList.map(function (s) { return '<li>' + esc(s.name) + (s.level ? ' <i>' + esc(s.level) + '</i>' : '') + '</li>'; }).join("") + '</ul>' : "";
+    B.languages = (cv.langsList || []).length ? '<ul class="cv-langs">' + cv.langsList.map(function (s) { return '<li>' + esc(s.name) + (s.level ? ' — ' + esc(s.level) : '') + '</li>'; }).join("") + '</ul>' : "";
+    B.certifications = (cv.certifications || []).length ? '<ul class="cv-plain">' + cv.certifications.map(function (c) { return '<li><b>' + esc(c.name) + '</b>' + (c.org ? ' — ' + esc(c.org) : '') + (c.date ? ' (' + esc(c.date) + ')' : '') + (c.ref ? ' · ' + esc(c.ref) : '') + '</li>'; }).join("") + '</ul>' : "";
+    B.projects = (cv.projects || []).length ? cv.projects.map(function (p) { var h = '<div class="cv-entry"><b>' + esc(p.name) + '</b>'; if (p.tech) h += ' <span class="cv-stack">' + esc(p.tech) + '</span>'; if (p.desc) h += '<p>' + esc(p.desc) + '</p>'; if (p.link) h += '<div class="cv-link">' + esc(p.link) + '</div>'; return h + '</div>'; }).join("") : "";
+    B.interests = cv.interests ? '<p>' + esc(cv.interests) + '</p>' : "";
+    B.references = (cv.references || []).length ? '<ul class="cv-plain">' + cv.references.map(function (r) { return '<li><b>' + esc(r.name) + '</b>' + (r.role ? ' — ' + esc(r.role) : '') + (r.contact ? ' · ' + esc(r.contact) : '') + '</li>'; }).join("") : "";
+    return B;
+  }
+  function sec(cv, key, B) { if (cv.settings.hidden[key]) return ""; var body = B[key]; if (!body) return ""; return '<section class="cv-sec-blk cv-' + key + '"><h2>' + esc(SECTION_LABEL[key] || key) + '</h2>' + body + '</section>'; }
+  function header(cv, id) {
+    var c = [];
+    if (id.email) c.push(esc(id.email)); if (id.phone) c.push(esc(id.phone));
+    var loc = [id.city, id.country].filter(Boolean).map(esc).join(", "); if (loc) c.push(loc);
+    if (id.website) c.push(esc(id.website)); if (id.linkedin) c.push(esc(id.linkedin));
+    if (id.links) c.push(esc(id.links));
+    var txt = '<div class="cv-head-txt"><h1>' + esc(id.name || "Votre nom") + '</h1>';
+    if (id.title) txt += '<div class="cv-title">' + esc(id.title) + '</div>';
+    if (c.length) txt += '<div class="cv-contact">' + c.join(" · ") + '</div>';
+    txt += '</div>';
+    var photo = id.photo ? '<img class="cv-photo" src="' + String(id.photo).replace(/"/g, "&quot;") + '" alt="">' : '';
+    return '<header class="cv-head' + (id.photo ? ' has-photo' : '') + '">' + photo + txt + '</header>';
+  }
+  function styleFor(cv) {
+    var s = cv.settings, a = s.accent || "#334155", scale = (s.size || 100) / 100, sp = (s.spacing || 100) / 100;
+    var fam = s.font === "Inter" ? "Inter, system-ui, sans-serif" : (s.font + ", serif");
+    return '<style>.rxcv-doc{--a:' + a + ';font-family:' + fam + ';font-size:' + (10.2 * scale).toFixed(2) + 'pt;line-height:' + (1.42 * sp).toFixed(2) + ';color:#1a2030;}'
+      + '.rxcv-doc h1{font-size:' + (21 * scale).toFixed(1) + 'pt;margin:0 0 2px;color:#0f1626;}'
+      + '.rxcv-doc h2{font-size:' + (12 * scale).toFixed(1) + 'pt;color:var(--a);margin:' + (13 * sp).toFixed(0) + 'px 0 5px;padding-bottom:2px;}'
+      + '.rxcv-doc .cv-head.has-photo{display:flex;align-items:center;gap:14px;} .rxcv-doc .cv-head-txt{flex:1;} .rxcv-doc .cv-photo{width:74px;height:74px;border-radius:50%;object-fit:cover;border:2px solid color-mix(in srgb,var(--a) 40%,#fff);} .rxcv-doc.cols .cv-head{grid-column:1/-1;}'
+      + '.rxcv-doc .cv-title{font-weight:600;color:var(--a);margin-bottom:3px;}'
+      + '.rxcv-doc .cv-contact{font-size:9pt;color:#556;}'
+      + '.rxcv-doc .cv-entry{margin:0 0 8px;} .rxcv-doc .cv-entry-h{display:flex;justify-content:space-between;gap:8px;} .rxcv-doc .cv-when{color:#667;font-size:9pt;white-space:nowrap;}'
+      + '.rxcv-doc .cv-org{color:#556;font-style:italic;margin:1px 0 2px;} .rxcv-doc p{margin:3px 0;} .rxcv-doc ul{margin:3px 0;padding-left:16px;}'
+      + '.rxcv-doc .cv-stack{display:inline-block;font-size:8.5pt;color:var(--a);} .rxcv-doc .cv-link{font-size:9pt;color:#556;}'
+      + '.rxcv-doc .cv-tags{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:6px;} .rxcv-doc .cv-tags li{background:color-mix(in srgb,var(--a) 12%,#fff);border:1px solid color-mix(in srgb,var(--a) 25%,#fff);border-radius:20px;padding:2px 9px;font-size:9pt;} .rxcv-doc .cv-tags i{color:var(--a);font-style:normal;}'
+      + '.rxcv-doc .cv-langs,.rxcv-doc .cv-plain{margin:3px 0;padding-left:16px;}'
+      + '.rxcv-doc.t-professionnel h1,.rxcv-doc.t-moderne h1{color:var(--a);} .rxcv-doc.t-professionnel h2{border-bottom:2px solid var(--a);} .rxcv-doc.t-classique h2{border-bottom:1px solid #ccd;} .rxcv-doc.t-moderne h2{text-transform:uppercase;letter-spacing:.06em;} .rxcv-doc.t-moderne .cv-head{border-left:4px solid var(--a);padding-left:12px;} .rxcv-doc.t-etudiant h2{color:var(--a);}'
+      + '.rxcv-doc.cols{display:grid;grid-template-columns:34% 1fr;gap:20px;} .rxcv-doc.cols .cv-aside{background:color-mix(in srgb,var(--a) 8%,#fff);padding:14px;border-radius:8px;} .rxcv-doc.cols .cv-aside h2{margin-top:8px;}'
+      + '</style>';
+  }
+  function renderTemplate(cv) {
+    upgrade(cv); var id = cv.identity || {}, B = blocks(cv), tpl = cv.template || "classique";
+    var cols = cv.settings.columns && tpl === "laterale";
+    var order = (cv.sections || DEFAULT_ORDER).slice();
+    var html = styleFor(cv);
+    if (cols) {
+      var asideKeys = ["skills", "languages", "certifications", "interests", "references"];
+      var mainKeys = ["summary", "experience", "education", "projects"];
+      var aside = order.filter(function (k) { return asideKeys.indexOf(k) >= 0; }).map(function (k) { return sec(cv, k, B); }).join("");
+      var main = order.filter(function (k) { return mainKeys.indexOf(k) >= 0; }).map(function (k) { return sec(cv, k, B); }).join("");
+      html += '<div class="rxcv-doc t-' + tpl + ' cols">' + header(cv, id) + '<div class="cv-aside">' + aside + '</div><div class="cv-main">' + main + '</div></div>';
+    } else {
+      var body = order.map(function (k) { return sec(cv, k, B); }).join("");
+      html += '<div class="rxcv-doc t-' + tpl + '">' + header(cv, id) + body + '</div>';
+    }
+    return html;
+  }
+
+  /* ---------- Éditeur riche (Studio) ---------- */
+  function field(label, val, on, kind) { var f = W("cvField"); if (f) return f(label, val, on, kind); var w = E("label", "cvf", '<span class="cvf-l">' + esc(label) + '</span>'); var i = kind === "area" ? E("textarea", "rp-input") : E("input", "rp-input"); if (kind === "area") i.rows = 2; i.value = val || ""; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
+  function check(label, val, on) { var w = E("label", "cvf cvf-chk"); var i = E("input"); i.type = "checkbox"; i.checked = !!val; i.onchange = function () { on(i.checked); }; w.appendChild(i); w.appendChild(E("span", null, esc(label))); return w; }
+  function listEditor(box, title, arr, blank, fields, touch, rerender) {
+    var head = E("div", "cv-sec cv-sec-row", "<span>" + esc(title) + "</span>");
+    var add = E("button", "cv-add", "+ Ajouter"); add.onclick = function () { arr.push(JSON.parse(JSON.stringify(blank))); touch(); rerender(); }; head.appendChild(add); box.appendChild(head);
+    arr.forEach(function (x, i) {
+      var card = E("div", "cv-item");
+      var tools = E("div", "cv-item-tools");
+      var up = E("button", "cv-mv", "↑"); up.title = "Monter"; up.disabled = i === 0; up.onclick = function () { var t = arr[i - 1]; arr[i - 1] = arr[i]; arr[i] = t; touch(); rerender(); };
+      var dn = E("button", "cv-mv", "↓"); dn.title = "Descendre"; dn.disabled = i === arr.length - 1; dn.onclick = function () { var t = arr[i + 1]; arr[i + 1] = arr[i]; arr[i] = t; touch(); rerender(); };
+      var rm = E("button", "cv-rm", "✕"); rm.title = "Supprimer"; rm.onclick = function () { arr.splice(i, 1); touch(); rerender(); };
+      tools.appendChild(up); tools.appendChild(dn); tools.appendChild(rm); card.appendChild(tools);
+      var grid = E("div", "cv-grid");
+      fields.forEach(function (fd) {
+        if (fd.type === "check") { card.appendChild(check(fd.label, x[fd.key], function (v) { x[fd.key] = v; touch(); })); return; }
+        var el2 = field(fd.label, x[fd.key], function (v) { x[fd.key] = v; touch(); }, fd.type);
+        if (fd.full || fd.type === "area") card.appendChild(el2); else grid.appendChild(el2);
+      });
+      if (grid.children.length) card.insertBefore(grid, card.children[1] || null);
+      box.appendChild(card);
+    });
+  }
+  function sectionManager(box, cv, touch, rerender) {
+    box.appendChild(E("div", "cv-sec", "Sections (ordre & visibilité)"));
+    var list = E("div", "cv-sections");
+    cv.sections.forEach(function (key, i) {
+      var row = E("div", "cv-srow");
+      var lbl = E("span", "cv-srow-l", esc(SECTION_LABEL[key] || key));
+      var up = E("button", "cv-mv", "↑"); up.disabled = i === 0; up.onclick = function () { var a = cv.sections; var t = a[i - 1]; a[i - 1] = a[i]; a[i] = t; touch(); rerender(); };
+      var dn = E("button", "cv-mv", "↓"); dn.disabled = i === cv.sections.length - 1; dn.onclick = function () { var a = cv.sections; var t = a[i + 1]; a[i + 1] = a[i]; a[i] = t; touch(); rerender(); };
+      var vis = E("button", "cv-eye" + (cv.settings.hidden[key] ? "" : " on"), cv.settings.hidden[key] ? "Masquée" : "Visible");
+      vis.onclick = function () { cv.settings.hidden[key] = !cv.settings.hidden[key]; touch(); rerender(); };
+      row.appendChild(lbl); row.appendChild(vis); row.appendChild(up); row.appendChild(dn); list.appendChild(row);
+    });
+    box.appendChild(list);
+  }
+  function styleBar(cv, touch, rerender) {
+    var bar = E("div", "cv-stylebar");
+    // gabarits
+    var tpls = E("div", "cv-tpls");
+    TEMPLATES.forEach(function (t) {
+      var chip = E("button", "cv-tpl" + (cv.template === t.id ? " on" : ""), '<span class="cv-tpl-sw" style="background:' + t.accent + '"></span>' + esc(t.label));
+      chip.onclick = function () { cv.template = t.id; cv.settings.accent = t.accent; cv.settings.columns = (t.id === "laterale"); touch(); rerender(); };
+      tpls.appendChild(chip);
+    });
+    bar.appendChild(E("div", "cv-sb-lbl", "Modèle")); bar.appendChild(tpls);
+    // contrôles
+    var ctl = E("div", "cv-sb-ctl");
+    var color = E("label", "cv-sb-c", "Couleur "); var ci = E("input"); ci.type = "color"; ci.value = cv.settings.accent; ci.oninput = function () { cv.settings.accent = ci.value; touch(); }; color.appendChild(ci);
+    var fontL = E("label", "cv-sb-c", "Police "); var fs = E("select", "cv-sb-sel"); FONTS.forEach(function (f) { var o = E("option"); o.value = f; o.textContent = f; fs.appendChild(o); }); fs.value = cv.settings.font; fs.onchange = function () { cv.settings.font = fs.value; touch(); }; fontL.appendChild(fs);
+    var sizeL = E("label", "cv-sb-c", "Taille "); var sz = E("input"); sz.type = "range"; sz.min = 85; sz.max = 120; sz.value = cv.settings.size; sz.oninput = function () { cv.settings.size = +sz.value; touch(); }; sizeL.appendChild(sz);
+    var spL = E("label", "cv-sb-c", "Espacement "); var sp = E("input"); sp.type = "range"; sp.min = 80; sp.max = 140; sp.value = cv.settings.spacing; sp.oninput = function () { cv.settings.spacing = +sp.value; touch(); }; spL.appendChild(sp);
+    ctl.appendChild(color); ctl.appendChild(fontL); ctl.appendChild(sizeL); ctl.appendChild(spL);
+    if (cv.template === "laterale") { var colL = check("2 colonnes", cv.settings.columns, function (v) { cv.settings.columns = v; touch(); }); colL.classList.add("cv-sb-c"); ctl.appendChild(colL); }
+    bar.appendChild(ctl);
+    return bar;
+  }
+
+  function renderStudio(t, stage) {
+    if (!t.cv) t.cv = window.cvDefault();
+    upgrade(t.cv); var cv = t.cv;
+    var wrap = E("div", "cv-builder rxcv-studio");
+    wrap.innerHTML = '<div class="cv-form" id="cvForm"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu</span><span style="flex:1"></span>'
+      + '<button class="btn ghost sm" data-x="ds">Document Studio</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="print">Imprimer</button></div>'
+      + '<div class="cv-paper-scroll"><div class="cv-paper" id="cvPaper"></div></div></div>';
+    stage.appendChild(wrap);
+    var paper = wrap.querySelector("#cvPaper");
+    var refresh = function () { paper.innerHTML = window.cvToHtml(cv); };
+    var touch = function () { syncLegacy(cv); t.dirty = true; t.name = (cv.identity.name ? ("CV — " + cv.identity.name) : "Mon CV"); var sa = W("scheduleAutosave"); if (sa) sa(); refresh(); var rt = W("renderTabs"); if (rt) rt(); };
+    var rerender = function () { stage.innerHTML = ""; renderStudio(t, stage); };
+    buildForm(wrap.querySelector("#cvForm"), cv, touch, rerender);
+    refresh();
+    wrap.querySelector(".cv-preview-bar").onclick = function (e) {
+      var b = e.target.closest("[data-x]"); if (!b) return; var html = window.cvToHtml(cv);
+      var nm = (cv.identity.name || "CV").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "CV";
+      if (b.dataset.x === "ds") { var f = W("openDocInTab"); if (f) f(nm + ".docx", html); }
+      else if (b.dataset.x === "pdf") { var f2 = W("downloadCopilotFile"); if (f2) f2({ kind: "pdf", html: true, name: nm + ".pdf", content: html }); }
+      else if (b.dataset.x === "docx") { var f3 = W("downloadCopilotFile"); if (f3) f3({ kind: "docx", html: true, name: nm + ".docx", content: html }); }
+      else if (b.dataset.x === "print") cvPrint(html, nm);
+    };
+  }
+
+  function buildForm(box, cv, touch, rerender) {
+    box.innerHTML = "";
+    // barre IA (réutilise les actions existantes) + à venir
+    var ai = E("div", "cv-ai-bar");
+    var b1 = E("button", "cv-add", "✨ Pré-remplir depuis un PDF"); b1.onclick = function () { var f = W("cvImportPdf"); if (f) f(cv, rerender, b1); }; ai.appendChild(b1);
+    var b2 = E("button", "cv-add", "✨ Adapter à une offre"); b2.onclick = function () { cvAnalyzeOffer(cv, rerender, b2); }; ai.appendChild(b2);
+    var b3 = E("button", "cv-add", "✨ Lettre de motivation"); b3.onclick = function () { cvCoverLetter(cv, b3); }; ai.appendChild(b3);
+    box.appendChild(ai);
+    // barre gabarit + styles
+    box.appendChild(styleBar(cv, touch, rerender));
+    // Identité
+    box.appendChild(E("div", "cv-sec", "Informations personnelles"));
+    var g = E("div", "cv-grid");
+    [["Nom complet", "name"], ["Titre / poste", "title"], ["E-mail", "email"], ["Téléphone", "phone"], ["Ville", "city"], ["Pays", "country"], ["Site web", "website"], ["LinkedIn", "linkedin"], ["Adresse", "address"], ["Autres liens", "links"]].forEach(function (p) { g.appendChild(field(p[0], cv.identity[p[1]], function (v) { cv.identity[p[1]] = v; touch(); })); });
+    box.appendChild(g);
+    // Photo
+    var pho = E("div", "cv-photo-row");
+    if (cv.identity.photo) { var im = E("img", "cv-photo-mini"); im.src = cv.identity.photo; pho.appendChild(im); }
+    var pbtn = E("button", "cv-add", cv.identity.photo ? "Changer la photo" : "Ajouter une photo");
+    pbtn.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { cv.identity.photo = rd.result; touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
+    pho.appendChild(pbtn);
+    if (cv.identity.photo) { var rmp = E("button", "cv-add cv-ghost", "Retirer"); rmp.onclick = function () { cv.identity.photo = ""; touch(); rerender(); }; pho.appendChild(rmp); }
+    box.appendChild(pho);
+    // Profil
+    var pH = E("div", "cv-sec cv-sec-row", "<span>Profil professionnel</span>");
+    var impr = E("button", "cv-add", "✨ Améliorer"); impr.onclick = function () { cvImproveSummary(cv, rerender, impr); }; pH.appendChild(impr); box.appendChild(pH);
+    box.appendChild(field("Résumé / accroche", cv.summary, function (v) { cv.summary = v; touch(); }, "area"));
+    // Expériences
+    listEditor(box, "Expériences", cv.experiences, { role: "", company: "", city: "", start: "", end: "", current: false, desc: "", achievements: "", stack: "" }, [
+      { label: "Poste", key: "role" }, { label: "Entreprise", key: "company" }, { label: "Ville / pays", key: "city" }, { label: "Début", key: "start" }, { label: "Fin", key: "end" }, { label: "Poste actuel", key: "current", type: "check" }, { label: "Description", key: "desc", type: "area" }, { label: "Réalisations (une par ligne)", key: "achievements", type: "area" }, { label: "Compétences utilisées", key: "stack" }
+    ], touch, rerender);
+    // Formation
+    listEditor(box, "Formation", cv.education, { degree: "", school: "", city: "", start: "", end: "", desc: "" }, [
+      { label: "Diplôme", key: "degree" }, { label: "Établissement", key: "school" }, { label: "Lieu", key: "city" }, { label: "Début", key: "start" }, { label: "Fin", key: "end" }, { label: "Description", key: "desc", type: "area" }
+    ], touch, rerender);
+    // Compétences
+    listEditor(box, "Compétences", cv.skillsList, { name: "", level: "", category: "" }, [
+      { label: "Compétence", key: "name" }, { label: "Niveau", key: "level" }, { label: "Catégorie", key: "category" }
+    ], touch, rerender);
+    // Langues
+    listEditor(box, "Langues", cv.langsList, { name: "", level: "" }, [
+      { label: "Langue", key: "name" }, { label: "Niveau", key: "level" }
+    ], touch, rerender);
+    // Certifications
+    listEditor(box, "Certifications", cv.certifications, { name: "", org: "", date: "", ref: "" }, [
+      { label: "Nom", key: "name" }, { label: "Organisme", key: "org" }, { label: "Date", key: "date" }, { label: "N° / référence", key: "ref" }
+    ], touch, rerender);
+    // Projets
+    listEditor(box, "Projets", cv.projects, { name: "", desc: "", tech: "", link: "" }, [
+      { label: "Nom", key: "name" }, { label: "Technologies / compétences", key: "tech" }, { label: "Description", key: "desc", type: "area" }, { label: "Lien", key: "link" }
+    ], touch, rerender);
+    // Intérêts
+    box.appendChild(E("div", "cv-sec", "Centres d’intérêt"));
+    box.appendChild(field("Intérêts (séparés par des virgules)", cv.interests, function (v) { cv.interests = v; touch(); }, "area"));
+    // Références
+    listEditor(box, "Références", cv.references, { name: "", role: "", contact: "" }, [
+      { label: "Nom", key: "name" }, { label: "Fonction", key: "role" }, { label: "Contact", key: "contact" }
+    ], touch, rerender);
+    // Gestion des sections
+    sectionManager(box, cv, touch, rerender);
+  }
+
+  /* ---------- IA CV (réutilise aiGenerate / parseJsonLoose / cvFromAiJson / openDocInTab) ---------- */
+  function cvSnapshot(cv) { return JSON.stringify({ identity: cv.identity, summary: cv.summary, experiences: cv.experiences, education: cv.education, skills: (cv.skillsList || []).map(function (s) { return s.name; }), languages: (cv.langsList || []).map(function (s) { return s.name; }) }).slice(0, 6000); }
+  function busy(btn, on, label) { if (!btn) return; if (on) { btn._lab = btn.textContent; btn.disabled = true; btn.textContent = label || "…"; } else { btn.disabled = false; if (btn._lab) btn.textContent = btn._lab; } }
+  function cvImproveSummary(cv, rerender, btn) {
+    var gen = W("aiGenerate"); if (!gen) return;
+    busy(btn, true, "Amélioration…");
+    Promise.resolve().then(function () {
+      return gen("Voici un CV (JSON) :\n" + cvSnapshot(cv) + "\n\nRédige un résumé professionnel (accroche) percutant de 2 à 3 phrases, en français, à la première personne implicite, sans inventer d'expérience. Réponds UNIQUEMENT avec le texte du résumé, sans guillemets.", "Tu es un coach carrière expert.", 400);
+    }).then(function (out) { out = String(out || "").trim(); if (out) { cv.summary = out; toast("Résumé amélioré ✓ — relisez-le.", "ok"); rerender(); } else toast("Réponse IA vide.", "warn"); })
+      .catch(function (e) { toast(e.message || "Échec.", "err"); })
+      .then(function () { busy(btn, false); });
+  }
+  function cvAnalyzeOffer(cv, rerender, btn) {
+    var dlg = W("dialog"); if (!dlg) return;
+    var dl = dlg('<h3>Adapter mon CV à une offre</h3><div style="font-size:12px;color:var(--ink-soft);margin:2px 0 4px">Collez le texte de l’offre d’emploi</div><textarea id="cvOff" class="rp-input" rows="6" placeholder="Missions, compétences requises, profil recherché…"></textarea><div class="row"><button class="btn ghost sm" data-a="cancel">Annuler</button><button class="btn sm" data-a="ok">Analyser</button></div>');
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "cancel") { dl.close(); return; }
+      var job = (dl.root.querySelector("#cvOff").value || "").trim(); if (!job) { toast("Collez d’abord l’offre.", "warn"); return; }
+      dl.close(); analyzeRun(cv, rerender, job, btn);
+    };
+  }
+  function analyzeRun(cv, rerender, job, btn) {
+    var gen = W("aiGenerate"), parse = W("parseJsonLoose"); if (!gen) return;
+    busy(btn, true, "Analyse…");
+    Promise.resolve().then(function () {
+      return gen("CV (JSON) :\n" + cvSnapshot(cv) + "\n\nOffre d’emploi :\n\"\"\"" + job.slice(0, 4000) + "\"\"\"\n\nAnalyse l’adéquation. Réponds UNIQUEMENT en JSON strict, schéma :\n{\"keywords\":[],\"skills\":[],\"experience\":\"\",\"education\":\"\",\"missing\":[],\"suggestions\":[]}", "Tu es un expert en recrutement. Réponds UNIQUEMENT avec le JSON.", 1200);
+    }).then(function (out) {
+      var obj = parse ? parse(out) : null; if (!obj) throw new Error("Réponse IA non exploitable.");
+      showAnalysis(cv, rerender, job, obj, btn);
+    }).catch(function (e) { toast(e.message || "Échec de l’analyse.", "err"); })
+      .then(function () { busy(btn, false); });
+  }
+  function showAnalysis(cv, rerender, job, obj, btn) {
+    var dlg = W("dialog"); if (!dlg) return;
+    function list(arr) { return (arr && arr.length) ? '<ul style="margin:4px 0 8px;padding-left:18px">' + arr.map(function (x) { return "<li>" + esc(String(x)) + "</li>"; }).join("") + "</ul>" : '<p style="color:var(--ink-faint);margin:2px 0 8px">—</p>'; }
+    var html = '<h3>Analyse de l’offre</h3><div style="max-height:52vh;overflow:auto;font-size:13px">'
+      + "<b>Mots-clés</b>" + list(obj.keywords) + "<b>Compétences demandées</b>" + list(obj.skills)
+      + (obj.experience ? "<b>Expérience</b><p style='margin:2px 0 8px'>" + esc(obj.experience) + "</p>" : "")
+      + (obj.education ? "<b>Formation</b><p style='margin:2px 0 8px'>" + esc(obj.education) + "</p>" : "")
+      + "<b>Éléments manquants dans votre CV</b>" + list(obj.missing) + "<b>Suggestions</b>" + list(obj.suggestions)
+      + '</div><div class="row"><button class="btn ghost sm" data-a="close">Fermer</button><button class="btn sm" data-a="apply">Optimiser mon CV pour cette offre</button></div>';
+    var dl = dlg(html);
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "close") { dl.close(); return; }
+      dl.close(); optimizeForJob(cv, rerender, job, btn);
+    };
+  }
+  function optimizeForJob(cv, rerender, job, btn) {
+    var gen = W("aiGenerate"), parse = W("parseJsonLoose"), from = W("cvFromAiJson"); if (!gen) return;
+    busy(btn, true, "Optimisation…");
+    var schema = '{"identity":{"name":"","title":"","email":"","phone":"","city":"","links":""},"summary":"","experiences":[{"role":"","company":"","start":"","end":"","desc":""}],"education":[{"degree":"","school":"","start":"","end":""}],"skills":"","languages":""}';
+    Promise.resolve().then(function () {
+      return gen("CV actuel (JSON) :\n" + cvSnapshot(cv) + "\n\nOffre visée :\n\"\"\"" + job.slice(0, 4000) + "\"\"\"\n\nAdapte et améliore le CV pour cette offre : reformule l’accroche, mets en avant les compétences et expériences pertinentes, améliore les descriptions. N’invente AUCUNE expérience. Réponds UNIQUEMENT avec le JSON du CV amélioré, même schéma :\n" + schema, "Tu es un coach carrière expert. Réponds UNIQUEMENT avec le JSON du CV.", 2600);
+    }).then(function (out) {
+      var obj = parse ? parse(out) : null; if (!obj) throw new Error("Réponse IA non exploitable.");
+      if (from) from(cv, obj); upgrade(cv); rerender(); toast("CV optimisé ✓ — vérifiez les modifications.", "ok");
+    }).catch(function (e) { toast(e.message || "Échec de l’optimisation.", "err"); })
+      .then(function () { busy(btn, false); });
+  }
+  function cvCoverLetter(cv, btn) {
+    var dlg = W("dialog"); if (!dlg) return;
+    var dl = dlg('<h3>Lettre de motivation</h3><div class="cv-grid"><label class="cvf"><span class="cvf-l">Entreprise</span><input id="clCo" class="rp-input"></label><label class="cvf"><span class="cvf-l">Poste visé</span><input id="clRole" class="rp-input" value="' + esc(cv.identity.title || "") + '"></label></div><div style="font-size:12px;color:var(--ink-soft);margin:6px 0 3px">Offre d’emploi (optionnel)</div><textarea id="clOff" class="rp-input" rows="4" placeholder="Collez l’offre pour une lettre ciblée…"></textarea><div class="row"><button class="btn ghost sm" data-a="cancel">Annuler</button><button class="btn sm" data-a="ok">Générer</button></div>');
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "cancel") { dl.close(); return; }
+      var co = dl.root.querySelector("#clCo").value.trim(), role = dl.root.querySelector("#clRole").value.trim(), off = dl.root.querySelector("#clOff").value.trim();
+      dl.close(); coverRun(cv, co, role, off, btn);
+    };
+  }
+  function coverRun(cv, company, role, off, btn) {
+    var gen = W("aiGenerate"), openDoc = W("openDocInTab"); if (!gen) return;
+    busy(btn, true, "Rédaction…");
+    Promise.resolve().then(function () {
+      return gen("Candidat (CV JSON) :\n" + cvSnapshot(cv) + "\n\nEntreprise : " + (company || "—") + "\nPoste visé : " + (role || cv.identity.title || "—") + "\n" + (off ? "Offre :\n\"\"\"" + off.slice(0, 3000) + "\"\"\"\n" : "") + "\nRédige une lettre de motivation professionnelle en français (250-350 mots), structurée (accroche, adéquation profil/poste, motivation, formule de politesse), sans inventer d’expérience. Réponds en HTML simple (<p>…</p>), sans <html> ni <body>.", "Tu es un expert en rédaction de lettres de motivation.", 1400);
+    }).then(function (out) {
+      out = String(out || "").trim(); if (!out) throw new Error("Réponse IA vide.");
+      if (!/</.test(out)) out = out.split(/\n{2,}/).map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("");
+      var name = cv.identity.name ? ("Lettre — " + cv.identity.name) : "Lettre de motivation";
+      var head = "<h1>Lettre de motivation</h1>" + (cv.identity.name ? "<p><b>" + esc(cv.identity.name) + "</b>" + (cv.identity.email ? " · " + esc(cv.identity.email) : "") + "</p>" : "");
+      if (openDoc) openDoc(name + ".docx", head + out);
+      toast("Lettre créée dans Document Studio ✓", "ok");
+    }).catch(function (e) { toast(e.message || "Échec de la génération.", "err"); })
+      .then(function () { busy(btn, false); });
+  }
+
+  function cvPrint(html, name) {
+    var ifr = document.createElement("iframe"); ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+    document.body.appendChild(ifr);
+    var d = ifr.contentDocument || ifr.contentWindow.document;
+    d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(name || "CV") + '</title><style>@page{margin:16mm;}body{margin:0;}</style></head><body>' + html + '</body></html>'); d.close();
+    setTimeout(function () { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(function () { ifr.remove(); }, 800); }, 350);
+  }
+
+  /* ---------- Enveloppement additif du socle ---------- */
+  ReadixCV = window.ReadixCV = { version: "2.0", templates: TEMPLATES, upgrade: upgrade, renderTemplate: renderTemplate, _origCvDefault: null, _origCvToHtml: null, _origRenderCvBuilder: null };
+  function wrap() {
+    if (typeof window.cvDefault === "function" && !ReadixCV._origCvDefault) {
+      ReadixCV._origCvDefault = window.cvDefault;
+      window.cvDefault = function () { return upgrade(ReadixCV._origCvDefault()); };
+    }
+    if (typeof window.cvToHtml === "function" && !ReadixCV._origCvToHtml) {
+      ReadixCV._origCvToHtml = window.cvToHtml;
+      window.cvToHtml = function (cv) { try { return renderTemplate(cv); } catch (e) { return ReadixCV._origCvToHtml(cv); } };
+    }
+    if (typeof window.renderCvBuilder === "function" && !ReadixCV._origRenderCvBuilder) {
+      ReadixCV._origRenderCvBuilder = window.renderCvBuilder;
+      window.renderCvBuilder = function (t, stage) { try { return renderStudio(t, stage); } catch (e) { return ReadixCV._origRenderCvBuilder(t, stage); } };
+    }
+    return ReadixCV._origRenderCvBuilder && ReadixCV._origCvToHtml;
+  }
+  (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] CV Engine v2 — modèle étendu, 6 gabarits, Studio enrichi actifs."); } catch (e) {} })();
+})();
+
+</script>
 </body>
 </html>
