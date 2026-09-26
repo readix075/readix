@@ -7380,441 +7380,6 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
 })();
 
 </script>
-<style id="readix-book-css">
-/* ===== Readix Book Engine v1 — Book Studio (additif) ===== */
-.rxbk-studio .bk-left { display: flex; flex-direction: column; gap: 10px; }
-.bk-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
-.bk-toolbar .cv-add { font-size: 12px; }
-
-/* Arbre de navigation */
-.bk-tree { border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: var(--surface-2); max-height: 42vh; overflow: auto; }
-.bk-group { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); margin: 9px 4px 3px; }
-.bk-group-row { display: flex; align-items: center; justify-content: space-between; }
-.bk-add-mini { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 22px; height: 22px; cursor: pointer; color: var(--brand); font-size: 14px; line-height: 1; }
-.bk-node { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
-.bk-node:hover { background: color-mix(in srgb, var(--brand) 8%, transparent); }
-.bk-node.sel { background: color-mix(in srgb, var(--brand) 15%, transparent); font-weight: 600; }
-.bk-node-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bk-book { font-weight: 700; }
-.bk-part-node { margin-top: 2px; font-weight: 600; }
-.bk-part-node .bk-node-t { color: var(--ink); }
-.bk-ch-node { margin-left: 16px; }
-.bk-bm-node, .bk-asset-node, .bk-fm-node { }
-.bk-grip { color: var(--ink-faint); cursor: grab; font-size: 12px; }
-.bk-drop { outline: 2px dashed var(--brand); outline-offset: -2px; }
-.bk-x, .bk-mini { border: none; background: none; cursor: pointer; color: var(--ink-faint); font-size: 12px; padding: 2px 4px; border-radius: 5px; }
-.bk-x:hover { color: #c1121f; background: #fdecec; }
-.bk-mini:hover { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
-.bk-chk { width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 5px; background: #fff; cursor: pointer; font-size: 0; }
-.bk-chk.on { background: var(--brand); border-color: var(--brand); position: relative; }
-.bk-chk.on::after { content: "✓"; color: #fff; font-size: 11px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.bk-asset-mini { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; }
-
-/* Éditeur */
-.bk-editor { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
-.bk-editor .cv-sec:first-child { margin-top: 0; }
-.bk-hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
-.bk-asset-full { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 8px; }
-
-/* Éditeur riche de chapitre */
-.bk-rich { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 4px; }
-.bk-rich-tb { display: flex; flex-wrap: wrap; gap: 3px; padding: 6px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
-.bk-rt { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; color: var(--ink-soft); }
-.bk-rt:hover { border-color: var(--brand); color: var(--brand); }
-.bk-rich-area { min-height: 220px; max-height: 46vh; overflow: auto; padding: 12px 14px; font-size: 14px; line-height: 1.6; outline: none; }
-.bk-rich-area:focus { background: #fff; }
-.bk-rich-area h2 { font-size: 18px; margin: 12px 0 6px; }
-.bk-rich-area h3 { font-size: 15px; margin: 10px 0 5px; }
-.bk-rich-area blockquote { border-left: 3px solid var(--brand); margin: 8px 0; padding: 2px 12px; color: var(--ink-soft); }
-
-/* Aperçu du livre : pages liminaires, TDM, chapitres */
-.bk-doc { color: #1a2030; }
-.bk-title-page { text-align: center; padding: 40px 0 28px; border-bottom: 1px solid #eee; margin-bottom: 18px; }
-.bk-title-page h1 { font-size: 26pt; margin: 0 0 8px; }
-.bk-title-page .bk-sub { font-size: 13pt; color: #555; margin-bottom: 18px; }
-.bk-title-page .bk-auth { font-size: 12pt; color: #333; }
-.bk-fm { margin: 14px 0; }
-.bk-ded { text-align: center; color: #555; }
-.bk-epi blockquote { border-left: 3px solid #ccc; padding-left: 12px; color: #555; font-style: italic; }
-.bk-part { text-align: center; margin: 26px 0 14px; }
-.bk-part-h { font-size: 20pt; letter-spacing: .02em; }
-.bk-chapter { margin: 16px 0; }
-.bk-chapter h2 { font-size: 15pt; border-bottom: 1px solid #eee; padding-bottom: 3px; }
-.bk-empty { color: #999; font-style: italic; }
-.bk-toc { margin: 18px 0; }
-.bk-toc h2 { font-size: 15pt; }
-.bk-toc-part { font-weight: 700; margin: 10px 0 4px; }
-.bk-toc-row { display: flex; align-items: baseline; gap: 6px; margin: 2px 0; }
-.bk-toc-t { white-space: nowrap; }
-.bk-toc-d { flex: 1; border-bottom: 1px dotted #bbb; transform: translateY(-3px); }
-.bk-toc-p { color: #555; }
-
-</style>
-<script id="readix-book-engine">
-/* ============================================================
-   READIX BOOK ENGINE — Phase 3 (Book Studio)
-   Additif : enveloppe bookDefault / bookToHtml / renderBookStudio
-   du socle pour apporter une structure de livre complète
-   (métadonnées, pages liminaires/finales, Parties → Chapitres,
-   table des matières générée, navigation, glisser-déposer,
-   duplication, assets), un éditeur de chapitre et le contexte
-   Copilot. RÉUTILISE aiGenerate, parseJsonLoose, bookImportManuscript,
-   buildBookPdf/buildCoverPdf, bookCover/BOOK_COVERS, openDocInTab,
-   downloadCopilotFile, downloadBlob, cvField, dialog, toast.
-   Aucune fonction du socle n'est modifiée. Retirer ce bloc
-   restaure le Book Studio d'origine.
-   ============================================================ */
-(function () {
-  "use strict";
-  if (window.ReadixBook) return;
-  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
-  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
-  function uid(p) { return (p || "id") + "_" + Math.random().toString(36).slice(2, 9); }
-
-  var FRONT = [
-    { key: "titlePage", label: "Page de titre", type: "toggle" },
-    { key: "copyright", label: "Copyright", type: "text" },
-    { key: "dedication", label: "Dédicace", type: "text" },
-    { key: "epigraph", label: "Épigraphe", type: "text" },
-    { key: "preface", label: "Préface", type: "rich" },
-    { key: "foreword", label: "Avant-propos", type: "rich" },
-    { key: "toc", label: "Table des matières", type: "toggle" }
-  ];
-  var BACK_TYPES = ["Remerciements", "Biographie de l’auteur", "Notes", "Annexes", "Bibliographie", "Ressources", "Autre"];
-
-  /* ---------- Modèle étendu + migration (idempotente, en place) ---------- */
-  function normChapter(ch) { if (!ch || typeof ch !== "object") return { id: uid("ch"), title: "", content: "" }; if (!ch.id) ch.id = uid("ch"); if (ch.title == null) ch.title = ""; if (ch.content == null) ch.content = ""; return ch; }
-  function foldFlatIntoParts(book, title) {
-    if (!Array.isArray(book.chapters) || !book.chapters.length) return;
-    var chs = book.chapters.map(normChapter);
-    book.parts.push({ id: uid("part"), title: title || "", chapters: chs });
-    book.chapters = [];
-  }
-  function upgrade(book) {
-    if (!book || typeof book !== "object") book = {};
-    ["title", "subtitle", "author", "language", "genre", "description", "format", "coverImage"].forEach(function (k) { if (book[k] == null) book[k] = ""; });
-    if (!book.cover) book.cover = "ink";
-    book.frontMatter = book.frontMatter || {};
-    var fm = book.frontMatter;
-    if (fm.titlePage == null) fm.titlePage = true;
-    if (fm.toc == null) fm.toc = true;
-    ["copyright", "dedication", "epigraph", "preface", "foreword"].forEach(function (k) { if (fm[k] == null) fm[k] = ""; });
-    if (!Array.isArray(book.parts)) book.parts = [];
-    if (!Array.isArray(book.chapters)) book.chapters = [];
-    // migration héritée : d'anciens chapitres plats → une partie sans titre
-    if (!book.parts.length && book.chapters.length) foldFlatIntoParts(book, "");
-    book.parts.forEach(function (p) { if (!p.id) p.id = uid("part"); if (p.title == null) p.title = ""; if (!Array.isArray(p.chapters)) p.chapters = []; p.chapters.forEach(normChapter); });
-    if (!Array.isArray(book.backMatter)) book.backMatter = [];
-    book.backMatter.forEach(function (b) { if (!b.id) b.id = uid("bm"); if (b.type == null) b.type = "Autre"; if (b.title == null) b.title = b.type; if (b.content == null) b.content = ""; });
-    if (!Array.isArray(book.assets)) book.assets = [];
-    book.assets.forEach(function (a) { if (!a.id) a.id = uid("as"); if (a.name == null) a.name = ""; if (a.type == null) a.type = "image"; if (a.data == null) a.data = ""; });
-    book.settings = book.settings || {};
-    if (!book.createdAt) book.createdAt = Date.now();
-    book.updatedAt = Date.now();
-    return book;
-  }
-  function syncFlat(book) { var flat = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { flat.push({ title: c.title, content: c.content }); }); }); book.chapters = flat; }
-  function allChapters(book) { var out = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { out.push({ part: p, ch: c }); }); }); return out; }
-  function findChapter(book, chId) { for (var i = 0; i < book.parts.length; i++) { var p = book.parts[i]; for (var j = 0; j < p.chapters.length; j++) { if (p.chapters[j].id === chId) return { part: p, ch: p.chapters[j], pi: i, ci: j }; } } return null; }
-
-  /* ---------- Rendu du livre + table des matières générée ---------- */
-  function contentHtml(s) { s = String(s || ""); if (/<[a-z][\s\S]*>/i.test(s)) return s; return s.split(/\n{2,}/).filter(function (x) { return x.trim(); }).map(function (p) { return "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join(""); }
-  function buildToc(book) {
-    var rows = "", n = 0;
-    book.parts.forEach(function (p) {
-      if (p.title) rows += '<div class="bk-toc-part">' + esc(p.title) + '</div>';
-      p.chapters.forEach(function (c) { n++; rows += '<div class="bk-toc-row"><span class="bk-toc-t">' + esc(c.title || ("Chapitre " + n)) + '</span><span class="bk-toc-d"></span><span class="bk-toc-p">' + n + '</span></div>'; });
-    });
-    return '<section class="bk-toc"><h2>Table des matières</h2>' + (rows || '<p class="bk-empty">Ajoutez des chapitres pour générer la table des matières.</p>') + '</section>';
-  }
-  function renderBook(book) {
-    upgrade(book); var fm = book.frontMatter, h = '<div class="bk-doc">';
-    if (fm.titlePage) { h += '<section class="bk-title-page"><h1>' + esc(book.title || "Titre du livre") + '</h1>' + (book.subtitle ? '<div class="bk-sub">' + esc(book.subtitle) + '</div>' : '') + (book.author ? '<div class="bk-auth">' + esc(book.author) + '</div>' : '') + '</section>'; }
-    if (fm.copyright) h += '<section class="bk-fm bk-copy">' + contentHtml(fm.copyright) + '</section>';
-    if (fm.dedication) h += '<section class="bk-fm bk-ded"><p><i>' + esc(fm.dedication).replace(/\n/g, "<br>") + '</i></p></section>';
-    if (fm.epigraph) h += '<section class="bk-fm bk-epi"><blockquote>' + esc(fm.epigraph).replace(/\n/g, "<br>") + '</blockquote></section>';
-    if (fm.preface) h += '<section class="bk-fm"><h2>Préface</h2>' + contentHtml(fm.preface) + '</section>';
-    if (fm.foreword) h += '<section class="bk-fm"><h2>Avant-propos</h2>' + contentHtml(fm.foreword) + '</section>';
-    if (fm.toc) h += buildToc(book);
-    book.parts.forEach(function (p) {
-      if (p.title) h += '<section class="bk-part"><h1 class="bk-part-h">' + esc(p.title) + '</h1></section>';
-      p.chapters.forEach(function (c) { h += '<section class="bk-chapter"><h2>' + esc(c.title || "Sans titre") + '</h2>' + contentHtml(c.content) + '</section>'; });
-    });
-    (book.backMatter || []).forEach(function (b) { h += '<section class="bk-fm bk-back"><h2>' + esc(b.title || b.type) + '</h2>' + contentHtml(b.content) + '</section>'; });
-    return h + '</div>';
-  }
-
-  /* ---------- Studio : navigation (arbre) + éditeur + aperçu ---------- */
-  var DRAG = null;
-  function renderStudio(t, stage) {
-    if (!t.book) t.book = window.bookDefault();
-    upgrade(t.book); var book = t.book;
-    // Mode Production (Phase 5) — délégué au Production Engine si présent
-    if (t._mode === "production" && window.ReadixProduction && ReadixProduction.render) {
-      try { return ReadixProduction.render(t, stage, function () { t._mode = "content"; stage.innerHTML = ""; renderStudio(t, stage); }); } catch (e) { t._mode = "content"; }
-    }
-    if (!t._sel) t._sel = { type: "book" };
-    var wrap = E("div", "cv-builder rxbk-studio");
-    wrap.innerHTML = '<div class="cv-form bk-left" id="bkLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du livre</span><span style="flex:1"></span>'
-      + '<button class="btn ghost sm" data-x="toc">Régénérer la TDM</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="cover">Couverture</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ds">Document Studio</button></div>'
-      + '<div class="cv-paper-scroll"><div class="cv-paper" id="bkPaper"></div></div></div>';
-    stage.appendChild(wrap);
-    var paper = wrap.querySelector("#bkPaper"), left = wrap.querySelector("#bkLeft");
-    var refresh = function () { paper.innerHTML = window.bookToHtml(book); };
-    var touch = function () { syncFlat(book); book.updatedAt = Date.now(); t.dirty = true; t.name = (book.title ? ("Livre — " + book.title) : "Mon livre"); var sa = W("scheduleAutosave"); if (sa) sa(); refresh(); var rt = W("renderTabs"); if (rt) rt(); };
-    var rerender = function () { stage.innerHTML = ""; renderStudio(t, stage); };
-    buildLeft(left, t, book, touch, rerender);
-    refresh();
-    wrap.querySelector(".cv-preview-bar").onclick = async function (e) {
-      var b = e.target.closest("[data-x]"); if (!b) return; var x = b.dataset.x;
-      var nm = (book.title || "Livre").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Livre";
-      if (x === "toc") { book.frontMatter.toc = true; refresh(); toast("Table des matières régénérée.", "ok"); return; }
-      if (x === "ds") { var f = W("openDocInTab"); if (f) f(nm + ".docx", window.bookToHtml(book)); return; }
-      if (x === "docx") { var f2 = W("downloadCopilotFile"); if (f2) f2({ kind: "docx", html: true, name: nm + ".docx", content: window.bookToHtml(book) }); return; }
-      var lab = b.textContent; b.disabled = true; b.textContent = "…";
-      try {
-        syncFlat(book);
-        if (x === "pdf") { var bp = W("buildBookPdf"), db = W("downloadBlob"); var bytes = await bp(book); db(new Blob([bytes], { type: "application/pdf" }), nm + ".pdf"); }
-        else if (x === "cover") { var cp = W("buildCoverPdf"), db2 = W("downloadBlob"); var by = await cp(book); db2(new Blob([by], { type: "application/pdf" }), nm + "-couverture.pdf"); }
-        toast("Téléchargement lancé.", "ok");
-      } catch (err) { toast("Échec : " + (err.message || err), "err"); }
-      finally { b.disabled = false; b.textContent = lab; }
-    };
-  }
-
-  function buildLeft(box, t, book, touch, rerender) {
-    box.innerHTML = "";
-    // bascule de mode Contenu / Production (Phase 5)
-    if (window.ReadixProduction) {
-      var modes = E("div", "bk-modes");
-      var mC = E("button", "bk-mode on", "Contenu");
-      var mP = E("button", "bk-mode", "Production");
-      mP.onclick = function () { t._mode = "production"; rerender(); };
-      modes.appendChild(mC); modes.appendChild(mP); box.appendChild(modes);
-    }
-    // barre d'actions
-    var bar = E("div", "bk-toolbar");
-    var addPart = E("button", "cv-add", "＋ Partie"); addPart.onclick = function () { book.parts.push({ id: uid("part"), title: "Nouvelle partie", chapters: [] }); touch(); rerender(); };
-    var addCh = E("button", "cv-add", "＋ Chapitre"); addCh.onclick = function () { var p = book.parts[book.parts.length - 1]; if (!p) { p = { id: uid("part"), title: "", chapters: [] }; book.parts.push(p); } var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); };
-    var proj = E("button", "cv-add cv-ghost", "Associer à un projet"); proj.onclick = function () { var pb = document.querySelector("#projBtn"); if (pb) { pb.click(); toast("Choisissez le projet actif pour y rattacher ce livre.", "ok"); } else toast("Project Engine indisponible.", "warn"); };
-    var plan = E("button", "cv-add", "✨ Proposer un plan"); plan.onclick = function () { bookPlanAI(book, rerender, plan); };
-    var imp = E("button", "cv-add", "✨ Importer un manuscrit"); imp.onclick = function () { var f = W("bookImportManuscript"); if (f) f(book, function () { foldFlatIntoParts(book, "Manuscrit importé"); touch(); rerender(); }, imp); };
-    [addPart, addCh, plan, imp, proj].forEach(function (b) { bar.appendChild(b); });
-    box.appendChild(bar);
-    // arbre de navigation
-    box.appendChild(buildTree(t, book, touch, rerender));
-    // éditeur de l'élément sélectionné
-    var ed = E("div", "bk-editor"); buildEditor(ed, t, book, touch, rerender); box.appendChild(ed);
-  }
-
-  function selNode(t, sel) { return t._sel && t._sel.type === sel.type && t._sel.chId === sel.chId && t._sel.fmKey === sel.fmKey && t._sel.bmId === sel.bmId && t._sel.assetId === sel.assetId; }
-  function buildTree(t, book, touch, rerender) {
-    var tree = E("div", "bk-tree");
-    var bookRow = E("div", "bk-node bk-book" + (t._sel.type === "book" ? " sel" : ""), '📖 <span class="bk-node-t">' + esc(book.title || "Mon livre") + '</span>');
-    bookRow.onclick = function () { t._sel = { type: "book" }; rerender(); }; tree.appendChild(bookRow);
-    // pages liminaires
-    var fmHead = E("div", "bk-group", "Pages préliminaires"); tree.appendChild(fmHead);
-    FRONT.forEach(function (f) {
-      var active = f.type === "toggle" ? book.frontMatter[f.key] : !!book.frontMatter[f.key];
-      var row = E("div", "bk-node bk-fm-node" + (t._sel.type === "fm" && t._sel.fmKey === f.key ? " sel" : ""));
-      var tog = E("button", "bk-chk" + (active ? " on" : "")); tog.title = active ? "Activée" : "Désactivée";
-      tog.onclick = function (e) { e.stopPropagation(); if (f.type === "toggle") { book.frontMatter[f.key] = !book.frontMatter[f.key]; } else { if (book.frontMatter[f.key]) book.frontMatter[f.key] = ""; else { book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; } } touch(); rerender(); };
-      row.appendChild(tog); row.appendChild(E("span", "bk-node-t", f.label));
-      if (f.type !== "toggle") row.onclick = function () { if (!book.frontMatter[f.key]) book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; rerender(); };
-      tree.appendChild(row);
-    });
-    // parties → chapitres (glisser-déposer)
-    tree.appendChild(E("div", "bk-group", "Corps du livre"));
-    book.parts.forEach(function (p, pi) {
-      var prow = E("div", "bk-node bk-part-node");
-      prow.draggable = true; prow.dataset.part = p.id;
-      prow.addEventListener("dragstart", function (e) { DRAG = { type: "part", partId: p.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
-      prow.addEventListener("dragover", function (e) { if (DRAG) { e.preventDefault(); prow.classList.add("bk-drop"); } });
-      prow.addEventListener("dragleave", function () { prow.classList.remove("bk-drop"); });
-      prow.addEventListener("drop", function (e) { e.preventDefault(); prow.classList.remove("bk-drop"); dropOnPart(book, p, touch, rerender); });
-      prow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(p.title || "(chapitres)") + '</span>';
-      var pdel = E("button", "bk-x", "✕"); pdel.title = "Supprimer la partie"; pdel.onclick = function (e) { e.stopPropagation(); book.parts.splice(pi, 1); touch(); rerender(); };
-      prow.appendChild(pdel);
-      prow.onclick = function () { t._sel = { type: "part", partId: p.id }; rerender(); };
-      tree.appendChild(prow);
-      p.chapters.forEach(function (c) {
-        var crow = E("div", "bk-node bk-ch-node" + (t._sel.type === "chapter" && t._sel.chId === c.id ? " sel" : ""));
-        crow.draggable = true; crow.dataset.ch = c.id; crow.dataset.part = p.id;
-        crow.addEventListener("dragstart", function (e) { e.stopPropagation(); DRAG = { type: "chapter", partId: p.id, chId: c.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
-        crow.addEventListener("dragover", function (e) { if (DRAG && DRAG.type === "chapter") { e.preventDefault(); crow.classList.add("bk-drop"); } });
-        crow.addEventListener("dragleave", function () { crow.classList.remove("bk-drop"); });
-        crow.addEventListener("drop", function (e) { e.preventDefault(); e.stopPropagation(); crow.classList.remove("bk-drop"); dropOnChapter(book, p, c, touch, rerender); });
-        crow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(c.title || "Sans titre") + '</span>';
-        var dup = E("button", "bk-mini", "⧉"); dup.title = "Dupliquer"; dup.onclick = function (e) { e.stopPropagation(); var copy = JSON.parse(JSON.stringify(c)); copy.id = uid("ch"); copy.title = (c.title || "Chapitre") + " — Copie"; var idx = p.chapters.indexOf(c); p.chapters.splice(idx + 1, 0, copy); touch(); rerender(); };
-        var cdel = E("button", "bk-x", "✕"); cdel.title = "Supprimer"; cdel.onclick = function (e) { e.stopPropagation(); var idx = p.chapters.indexOf(c); p.chapters.splice(idx, 1); touch(); rerender(); };
-        crow.appendChild(dup); crow.appendChild(cdel);
-        crow.onclick = function () { t._sel = { type: "chapter", chId: c.id }; rerender(); };
-        tree.appendChild(crow);
-      });
-    });
-    // pages finales
-    var bmHead = E("div", "bk-group bk-group-row", "<span>Pages finales</span>");
-    var bmAdd = E("button", "bk-add-mini", "＋"); bmAdd.title = "Ajouter"; bmAdd.onclick = function () { var it = { id: uid("bm"), type: "Remerciements", title: "Remerciements", content: "" }; book.backMatter.push(it); t._sel = { type: "bm", bmId: it.id }; touch(); rerender(); };
-    bmHead.appendChild(bmAdd); tree.appendChild(bmHead);
-    book.backMatter.forEach(function (b) {
-      var row = E("div", "bk-node bk-bm-node" + (t._sel.type === "bm" && t._sel.bmId === b.id ? " sel" : ""), '<span class="bk-node-t">' + esc(b.title || b.type) + '</span>');
-      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.backMatter = book.backMatter.filter(function (z) { return z.id !== b.id; }); touch(); rerender(); };
-      row.appendChild(x); row.onclick = function () { t._sel = { type: "bm", bmId: b.id }; rerender(); }; tree.appendChild(row);
-    });
-    // assets
-    var asHead = E("div", "bk-group bk-group-row", "<span>Assets</span>");
-    var asAdd = E("button", "bk-add-mini", "＋"); asAdd.title = "Ajouter une image"; asAdd.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.assets.push({ id: uid("as"), name: f.name, type: "image", data: rd.result }); touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
-    asHead.appendChild(asAdd); tree.appendChild(asHead);
-    book.assets.forEach(function (a) {
-      var row = E("div", "bk-node bk-asset-node" + (t._sel.type === "asset" && t._sel.assetId === a.id ? " sel" : ""), (a.type === "image" && a.data ? '<img class="bk-asset-mini" src="' + a.data + '">' : '📎') + '<span class="bk-node-t">' + esc(a.name || "asset") + '</span>');
-      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.assets = book.assets.filter(function (z) { return z.id !== a.id; }); touch(); rerender(); };
-      row.appendChild(x); row.onclick = function () { t._sel = { type: "asset", assetId: a.id }; rerender(); }; tree.appendChild(row);
-    });
-    return tree;
-  }
-  function dropOnChapter(book, targetPart, targetCh, touch, rerender) {
-    if (!DRAG || DRAG.type !== "chapter") return;
-    var src = findChapter(book, DRAG.chId); if (!src) { DRAG = null; return; }
-    src.part.chapters.splice(src.ci, 1);
-    var ti = targetPart.chapters.indexOf(targetCh); if (ti < 0) ti = targetPart.chapters.length;
-    targetPart.chapters.splice(ti, 0, src.ch); DRAG = null; touch(); rerender();
-  }
-  function dropOnPart(book, targetPart, touch, rerender) {
-    if (!DRAG) return;
-    if (DRAG.type === "chapter") { var src = findChapter(book, DRAG.chId); if (src) { src.part.chapters.splice(src.ci, 1); targetPart.chapters.push(src.ch); } }
-    else if (DRAG.type === "part" && DRAG.partId !== targetPart.id) { var si = book.parts.findIndex(function (p) { return p.id === DRAG.partId; }); var ti = book.parts.indexOf(targetPart); if (si >= 0) { var mv = book.parts.splice(si, 1)[0]; book.parts.splice(book.parts.indexOf(targetPart) + (si < ti ? 0 : 0), 0, mv); } }
-    DRAG = null; touch(); rerender();
-  }
-
-  /* ---------- Éditeurs ---------- */
-  function field(label, val, on, kind) { var f = W("cvField"); if (f) return f(label, val, on, kind); var w = E("label", "cvf", '<span class="cvf-l">' + esc(label) + '</span>'); var i = kind === "area" ? E("textarea", "rp-input") : E("input", "rp-input"); if (kind === "area") i.rows = 3; i.value = val || ""; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
-  function richEditor(html, onChange) {
-    var box = E("div", "bk-rich");
-    var tb = E("div", "bk-rich-tb");
-    [["H2", "formatBlock", "h2"], ["H3", "formatBlock", "h3"], ["¶", "formatBlock", "p"], ["G", "bold"], ["I", "italic"], ["• Liste", "insertUnorderedList"], ["1. Liste", "insertOrderedList"], ["❝", "formatBlock", "blockquote"], ["―", "hr"]].forEach(function (c) {
-      var bt = E("button", "bk-rt", c[0]); bt.type = "button"; bt.onmousedown = function (e) { e.preventDefault(); };
-      bt.onclick = function () { area.focus(); if (c[1] === "hr") document.execCommand("insertHorizontalRule"); else if (c[2]) document.execCommand(c[1], false, c[2]); else document.execCommand(c[1]); onChange(area.innerHTML); };
-      tb.appendChild(bt);
-    });
-    var area = E("div", "bk-rich-area"); area.contentEditable = "true"; area.innerHTML = contentHtml(html);
-    var timer = null; area.oninput = function () { clearTimeout(timer); timer = setTimeout(function () { onChange(area.innerHTML); }, 250); };
-    box.appendChild(tb); box.appendChild(area); return box;
-  }
-  function buildEditor(box, t, book, touch, rerender) {
-    box.innerHTML = ""; var sel = t._sel;
-    if (sel.type === "book") {
-      box.appendChild(E("div", "cv-sec", "Informations du livre"));
-      var g = E("div", "cv-grid");
-      [["Titre", "title"], ["Sous-titre", "subtitle"], ["Auteur", "author"], ["Langue", "language"], ["Genre", "genre"], ["Format de travail", "format"]].forEach(function (p) { g.appendChild(field(p[0], book[p[1]], function (v) { book[p[1]] = v; touch(); })); });
-      box.appendChild(g);
-      box.appendChild(field("Description", book.description, function (v) { book.description = v; touch(); }, "area"));
-      // couverture (structure)
-      box.appendChild(E("div", "cv-sec", "Couverture"));
-      var cov = E("div", "book-covers"); var COVERS = (typeof BOOK_COVERS !== "undefined") ? BOOK_COVERS : [];
-      COVERS.forEach(function (c) { var s = E("button", "book-cov" + (book.cover === c.id ? " sel" : "")); s.style.background = c.bg; s.title = c.name; s.innerHTML = '<span style="color:' + c.fg + '">Aa</span>'; s.onclick = function () { book.cover = c.id; touch(); rerender(); }; cov.appendChild(s); });
-      box.appendChild(cov);
-      var ci = E("div", "cv-photo-row");
-      if (book.coverImage) { var im = E("img", "cv-photo-mini"); im.src = book.coverImage; ci.appendChild(im); }
-      var cb = E("button", "cv-add", book.coverImage ? "Changer l’image" : "Image de couverture"); cb.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.coverImage = rd.result; touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
-      ci.appendChild(cb); box.appendChild(ci);
-    } else if (sel.type === "part") {
-      var p = book.parts.filter(function (x) { return x.id === sel.partId; })[0]; if (!p) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
-      box.appendChild(E("div", "cv-sec", "Partie"));
-      box.appendChild(field("Titre de la partie", p.title, function (v) { p.title = v; touch(); var n = box.parentNode ? box.parentNode.querySelector('.bk-part-node.sel .bk-node-t') : null; }));
-      var ca = E("button", "cv-add", "＋ Ajouter un chapitre"); ca.onclick = function () { var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); }; box.appendChild(ca);
-    } else if (sel.type === "chapter") {
-      var loc = findChapter(book, sel.chId); if (!loc) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
-      var ch = loc.ch;
-      var head = E("div", "cv-sec cv-sec-row", "<span>Chapitre</span>");
-      var ai = E("button", "cv-add", "✨ Rédiger (IA)"); ai.onclick = function () { bookChapterAI(book, ch, rerender, ai); }; head.appendChild(ai);
-      var sum = E("button", "cv-add cv-ghost", "✨ Résumer"); sum.onclick = function () { bookSummarize(ch, sum); }; head.appendChild(sum);
-      var ods = E("button", "cv-add cv-ghost", "Document Studio"); ods.onclick = function () { var f = W("openDocInTab"); if (f) f((ch.title || "Chapitre") + ".docx", "<h1>" + esc(ch.title || "") + "</h1>" + contentHtml(ch.content)); }; head.appendChild(ods);
-      box.appendChild(head);
-      box.appendChild(field("Titre du chapitre", ch.title, function (v) { ch.title = v; touch(); }));
-      box.appendChild(richEditor(ch.content, function (html) { ch.content = html; touch(); }));
-    } else if (sel.type === "fm") {
-      var f = FRONT.filter(function (x) { return x.key === sel.fmKey; })[0]; if (!f) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
-      box.appendChild(E("div", "cv-sec", f.label));
-      if (f.type === "rich") box.appendChild(richEditor(book.frontMatter[f.key], function (html) { book.frontMatter[f.key] = html; touch(); }));
-      else box.appendChild(field(f.label, (book.frontMatter[f.key] || "").trim(), function (v) { book.frontMatter[f.key] = v; touch(); }, "area"));
-    } else if (sel.type === "bm") {
-      var b = book.backMatter.filter(function (x) { return x.id === sel.bmId; })[0]; if (!b) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
-      box.appendChild(E("div", "cv-sec", "Page finale"));
-      var tw = E("label", "cvf", '<span class="cvf-l">Type</span>'); var selEl = E("select", "cv-sb-sel"); BACK_TYPES.forEach(function (bt) { var o = E("option"); o.value = bt; o.textContent = bt; selEl.appendChild(o); }); selEl.value = b.type; selEl.onchange = function () { b.type = selEl.value; if (!b.title || BACK_TYPES.indexOf(b.title) >= 0) b.title = selEl.value; touch(); rerender(); }; tw.appendChild(selEl); box.appendChild(tw);
-      box.appendChild(field("Titre", b.title, function (v) { b.title = v; touch(); }));
-      box.appendChild(richEditor(b.content, function (html) { b.content = html; touch(); }));
-    } else if (sel.type === "asset") {
-      var a = book.assets.filter(function (x) { return x.id === sel.assetId; })[0]; if (!a) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
-      box.appendChild(E("div", "cv-sec", "Asset"));
-      if (a.type === "image" && a.data) { var im2 = E("img", "bk-asset-full"); im2.src = a.data; box.appendChild(im2); }
-      box.appendChild(field("Nom", a.name, function (v) { a.name = v; touch(); }));
-      box.appendChild(E("div", "bk-hint", "Référence : peut être insérée dans un chapitre lors des phases de production."));
-    }
-    // Point d'ancrage éditorial (Phase 4) — additif, facultatif
-    try { if (window.ReadixEditorial && ReadixEditorial.mount) ReadixEditorial.mount({ box: box, t: t, book: book, sel: sel, touch: touch, rerender: rerender, findChapter: findChapter }); } catch (e) { }
-  }
-
-  /* ---------- IA (réutilise aiGenerate / parseJsonLoose) ---------- */
-  function busy(btn, on, label) { if (!btn) return; if (on) { btn._l = btn.textContent; btn.disabled = true; btn.textContent = label || "…"; } else { btn.disabled = false; if (btn._l) btn.textContent = btn._l; } }
-  function bookPlanAI(book, rerender, btn) {
-    var gen = W("aiGenerate"), parse = W("parseJsonLoose"); if (!gen) return;
-    var topic = [book.title, book.subtitle].filter(Boolean).join(" — "); if (!topic) { toast("Donnez d’abord un titre au livre.", "warn"); return; }
-    busy(btn, true, "L’IA réfléchit…");
-    Promise.resolve().then(function () {
-      return gen("Sujet du livre : " + topic + (book.genre ? " (genre : " + book.genre + ")" : "") + (book.description ? "\nDescription : " + book.description.slice(0, 800) : "") + "\n\nPropose un plan structuré en parties et chapitres. Réponds UNIQUEMENT en JSON strict :\n{\"parts\":[{\"title\":\"\",\"chapters\":[{\"title\":\"\"}]}]}", "Tu es un éditeur littéraire. Réponds UNIQUEMENT avec le JSON.", 1500);
-    }).then(function (out) {
-      var obj = parse ? parse(out) : null; if (!obj || !Array.isArray(obj.parts)) throw new Error("Réponse IA non exploitable.");
-      obj.parts.forEach(function (p) { var part = { id: uid("part"), title: p.title || "", chapters: (p.chapters || []).map(function (c) { return { id: uid("ch"), title: c.title || "", content: "" }; }) }; book.parts.push(part); });
-      upgrade(book); toast("Plan ajouté ✓", "ok"); rerender();
-    }).catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
-  }
-  function bookChapterAI(book, ch, rerender, btn) {
-    var gen = W("aiGenerate"); if (!gen) return; if (!ch.title) { toast("Donnez un titre au chapitre.", "warn"); return; }
-    var topic = [book.title, book.subtitle].filter(Boolean).join(" — ");
-    busy(btn, true, "Rédaction…");
-    Promise.resolve().then(function () {
-      return gen("Livre : " + (topic || "—") + (book.genre ? " (genre : " + book.genre + ")" : "") + "\nChapitre : " + ch.title + "\n\nRédige le contenu de ce chapitre en français (plusieurs paragraphes), en HTML simple (<h2>, <p>, <ul>…), sans <html> ni <body>.", "Tu es un auteur professionnel.", 2200);
-    }).then(function (out) { out = String(out || "").trim(); if (!out) throw new Error("Réponse vide."); if (!/</.test(out)) out = contentHtml(out); ch.content = out; toast("Chapitre rédigé ✓", "ok"); rerender(); })
-      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
-  }
-  function bookSummarize(ch, btn) {
-    var gen = W("aiGenerate"), dlg = W("dialog"); if (!gen) return;
-    var text = String(ch.content || "").replace(/<[^>]+>/g, " ").trim(); if (!text) { toast("Ce chapitre est vide.", "warn"); return; }
-    busy(btn, true, "Résumé…");
-    Promise.resolve().then(function () { return gen("Résume ce chapitre en 3 à 5 phrases, en français :\n\n" + text.slice(0, 6000), "Tu es un éditeur.", 500); })
-      .then(function (out) { out = String(out || "").trim(); if (dlg) { dlg('<h3>Résumé du chapitre</h3><p style="font-size:13px;line-height:1.5">' + esc(out) + '</p><div class="row"><button class="btn sm" data-a="ok" onclick="this.closest(\'#overlay,.overlay\')&&0">Fermer</button></div>').root.onclick = function (e) { if (e.target.closest("[data-a]")) e.target.closest("[data-a]").dispatchEvent(new Event("close")); }; } else toast(out, "ok"); })
-      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
-  }
-
-  /* ---------- Contexte Copilot (préparation Phase 4) ---------- */
-  function structure(book) { return (book.parts || []).map(function (p) { return { part: p.title || "(sans titre)", chapters: (p.chapters || []).map(function (c) { return c.title || "Sans titre"; }) }; }); }
-  function context() {
-    var A = (typeof APP !== "undefined") ? APP : null, tab = A && A.tabs ? A.tabs.filter(function (x) { return x.id === A.active; })[0] : null;
-    if (!tab || tab.tool !== "bookstudio" || !tab.book) return null;
-    var book = tab.book, sel = tab._sel || {}, loc = sel.chId ? findChapter(book, sel.chId) : null;
-    return {
-      kind: "book", title: book.title, subtitle: book.subtitle, author: book.author, language: book.language, genre: book.genre,
-      structure: structure(book),
-      currentPart: loc ? (loc.part.title || "(sans titre)") : (sel.partId ? (book.parts.filter(function (p) { return p.id === sel.partId; })[0] || {}).title : null),
-      currentChapter: loc ? { title: loc.ch.title, content: String(loc.ch.content || "").replace(/<[^>]+>/g, " ").slice(0, 4000) } : null
-    };
-  }
-
-  /* ---------- Enveloppement additif ---------- */
-  ReadixBook = window.ReadixBook = { version: "1.0", upgrade: upgrade, renderBook: renderBook, context: context, structure: structure, _orig: {} };
-  window.rxBookContext = context;
-  function wrap() {
-    if (typeof window.bookDefault === "function" && !ReadixBook._orig.bookDefault) { ReadixBook._orig.bookDefault = window.bookDefault; window.bookDefault = function () { return upgrade(ReadixBook._orig.bookDefault()); }; }
-    if (typeof window.bookToHtml === "function" && !ReadixBook._orig.bookToHtml) { ReadixBook._orig.bookToHtml = window.bookToHtml; window.bookToHtml = function (book) { try { return renderBook(book); } catch (e) { return ReadixBook._orig.bookToHtml(book); } }; }
-    if (typeof window.renderBookStudio === "function" && !ReadixBook._orig.renderBookStudio) { ReadixBook._orig.renderBookStudio = window.renderBookStudio; window.renderBookStudio = function (t, stage) { try { return renderStudio(t, stage); } catch (e) { return ReadixBook._orig.renderBookStudio(t, stage); } }; }
-    return ReadixBook._orig.renderBookStudio && ReadixBook._orig.bookToHtml;
-  }
-  (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] Book Engine v1 — structure complète, navigation, TDM, DnD, assets, contexte Copilot."); } catch (e) {} })();
-})();
-
-</script>
 <style id="readix-production-css">
 /* ===== Readix Production Engine v1 (Phase 5) — additif ===== */
 .bk-modes { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 8px; }
@@ -8322,6 +7887,943 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     settings: function () { var A = (typeof APP !== "undefined") ? APP : null; if (!A) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; return (t && t.book) ? upgrade(t.book) : null; }
   };
   try { console.info("[Readix] Production Engine v1 — formats, mise en page, pagination, aperçu, exports PDF/DOCX/EPUB réels."); } catch (e) {}
+})();
+
+</script>
+<style id="readix-book-css">
+/* ===== Readix Book Engine v1 — Book Studio (additif) ===== */
+.rxbk-studio .bk-left { display: flex; flex-direction: column; gap: 10px; }
+.bk-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.bk-toolbar .cv-add { font-size: 12px; }
+
+/* Arbre de navigation */
+.bk-tree { border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: var(--surface-2); max-height: 42vh; overflow: auto; }
+.bk-group { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); margin: 9px 4px 3px; }
+.bk-group-row { display: flex; align-items: center; justify-content: space-between; }
+.bk-add-mini { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 22px; height: 22px; cursor: pointer; color: var(--brand); font-size: 14px; line-height: 1; }
+.bk-node { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.bk-node:hover { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.bk-node.sel { background: color-mix(in srgb, var(--brand) 15%, transparent); font-weight: 600; }
+.bk-node-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-book { font-weight: 700; }
+.bk-part-node { margin-top: 2px; font-weight: 600; }
+.bk-part-node .bk-node-t { color: var(--ink); }
+.bk-ch-node { margin-left: 16px; }
+.bk-bm-node, .bk-asset-node, .bk-fm-node { }
+.bk-grip { color: var(--ink-faint); cursor: grab; font-size: 12px; }
+.bk-drop { outline: 2px dashed var(--brand); outline-offset: -2px; }
+.bk-x, .bk-mini { border: none; background: none; cursor: pointer; color: var(--ink-faint); font-size: 12px; padding: 2px 4px; border-radius: 5px; }
+.bk-x:hover { color: #c1121f; background: #fdecec; }
+.bk-mini:hover { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.bk-chk { width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 5px; background: #fff; cursor: pointer; font-size: 0; }
+.bk-chk.on { background: var(--brand); border-color: var(--brand); position: relative; }
+.bk-chk.on::after { content: "✓"; color: #fff; font-size: 11px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.bk-asset-mini { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; }
+
+/* Éditeur */
+.bk-editor { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+.bk-editor .cv-sec:first-child { margin-top: 0; }
+.bk-hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+.bk-asset-full { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 8px; }
+
+/* Éditeur riche de chapitre */
+.bk-rich { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 4px; }
+.bk-rich-tb { display: flex; flex-wrap: wrap; gap: 3px; padding: 6px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.bk-rt { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; color: var(--ink-soft); }
+.bk-rt:hover { border-color: var(--brand); color: var(--brand); }
+.bk-rich-area { min-height: 220px; max-height: 46vh; overflow: auto; padding: 12px 14px; font-size: 14px; line-height: 1.6; outline: none; }
+.bk-rich-area:focus { background: #fff; }
+.bk-rich-area h2 { font-size: 18px; margin: 12px 0 6px; }
+.bk-rich-area h3 { font-size: 15px; margin: 10px 0 5px; }
+.bk-rich-area blockquote { border-left: 3px solid var(--brand); margin: 8px 0; padding: 2px 12px; color: var(--ink-soft); }
+
+/* Aperçu du livre : pages liminaires, TDM, chapitres */
+.bk-doc { color: #1a2030; }
+.bk-title-page { text-align: center; padding: 40px 0 28px; border-bottom: 1px solid #eee; margin-bottom: 18px; }
+.bk-title-page h1 { font-size: 26pt; margin: 0 0 8px; }
+.bk-title-page .bk-sub { font-size: 13pt; color: #555; margin-bottom: 18px; }
+.bk-title-page .bk-auth { font-size: 12pt; color: #333; }
+.bk-fm { margin: 14px 0; }
+.bk-ded { text-align: center; color: #555; }
+.bk-epi blockquote { border-left: 3px solid #ccc; padding-left: 12px; color: #555; font-style: italic; }
+.bk-part { text-align: center; margin: 26px 0 14px; }
+.bk-part-h { font-size: 20pt; letter-spacing: .02em; }
+.bk-chapter { margin: 16px 0; }
+.bk-chapter h2 { font-size: 15pt; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+.bk-empty { color: #999; font-style: italic; }
+.bk-toc { margin: 18px 0; }
+.bk-toc h2 { font-size: 15pt; }
+.bk-toc-part { font-weight: 700; margin: 10px 0 4px; }
+.bk-toc-row { display: flex; align-items: baseline; gap: 6px; margin: 2px 0; }
+.bk-toc-t { white-space: nowrap; }
+.bk-toc-d { flex: 1; border-bottom: 1px dotted #bbb; transform: translateY(-3px); }
+.bk-toc-p { color: #555; }
+
+</style>
+<script id="readix-book-engine">
+/* ============================================================
+   READIX BOOK ENGINE — Phase 3 (Book Studio)
+   Additif : enveloppe bookDefault / bookToHtml / renderBookStudio
+   du socle pour apporter une structure de livre complète
+   (métadonnées, pages liminaires/finales, Parties → Chapitres,
+   table des matières générée, navigation, glisser-déposer,
+   duplication, assets), un éditeur de chapitre et le contexte
+   Copilot. RÉUTILISE aiGenerate, parseJsonLoose, bookImportManuscript,
+   buildBookPdf/buildCoverPdf, bookCover/BOOK_COVERS, openDocInTab,
+   downloadCopilotFile, downloadBlob, cvField, dialog, toast.
+   Aucune fonction du socle n'est modifiée. Retirer ce bloc
+   restaure le Book Studio d'origine.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixBook) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function uid(p) { return (p || "id") + "_" + Math.random().toString(36).slice(2, 9); }
+
+  var FRONT = [
+    { key: "titlePage", label: "Page de titre", type: "toggle" },
+    { key: "copyright", label: "Copyright", type: "text" },
+    { key: "dedication", label: "Dédicace", type: "text" },
+    { key: "epigraph", label: "Épigraphe", type: "text" },
+    { key: "preface", label: "Préface", type: "rich" },
+    { key: "foreword", label: "Avant-propos", type: "rich" },
+    { key: "toc", label: "Table des matières", type: "toggle" }
+  ];
+  var BACK_TYPES = ["Remerciements", "Biographie de l’auteur", "Notes", "Annexes", "Bibliographie", "Ressources", "Autre"];
+
+  /* ---------- Modèle étendu + migration (idempotente, en place) ---------- */
+  function normChapter(ch) { if (!ch || typeof ch !== "object") return { id: uid("ch"), title: "", content: "" }; if (!ch.id) ch.id = uid("ch"); if (ch.title == null) ch.title = ""; if (ch.content == null) ch.content = ""; return ch; }
+  function foldFlatIntoParts(book, title) {
+    if (!Array.isArray(book.chapters) || !book.chapters.length) return;
+    var chs = book.chapters.map(normChapter);
+    book.parts.push({ id: uid("part"), title: title || "", chapters: chs });
+    book.chapters = [];
+  }
+  function upgrade(book) {
+    if (!book || typeof book !== "object") book = {};
+    ["title", "subtitle", "author", "language", "genre", "description", "format", "coverImage"].forEach(function (k) { if (book[k] == null) book[k] = ""; });
+    if (!book.cover) book.cover = "ink";
+    book.frontMatter = book.frontMatter || {};
+    var fm = book.frontMatter;
+    if (fm.titlePage == null) fm.titlePage = true;
+    if (fm.toc == null) fm.toc = true;
+    ["copyright", "dedication", "epigraph", "preface", "foreword"].forEach(function (k) { if (fm[k] == null) fm[k] = ""; });
+    if (!Array.isArray(book.parts)) book.parts = [];
+    if (!Array.isArray(book.chapters)) book.chapters = [];
+    // migration héritée : d'anciens chapitres plats → une partie sans titre
+    if (!book.parts.length && book.chapters.length) foldFlatIntoParts(book, "");
+    book.parts.forEach(function (p) { if (!p.id) p.id = uid("part"); if (p.title == null) p.title = ""; if (!Array.isArray(p.chapters)) p.chapters = []; p.chapters.forEach(normChapter); });
+    if (!Array.isArray(book.backMatter)) book.backMatter = [];
+    book.backMatter.forEach(function (b) { if (!b.id) b.id = uid("bm"); if (b.type == null) b.type = "Autre"; if (b.title == null) b.title = b.type; if (b.content == null) b.content = ""; });
+    if (!Array.isArray(book.assets)) book.assets = [];
+    book.assets.forEach(function (a) { if (!a.id) a.id = uid("as"); if (a.name == null) a.name = ""; if (a.type == null) a.type = "image"; if (a.data == null) a.data = ""; });
+    book.settings = book.settings || {};
+    if (!book.createdAt) book.createdAt = Date.now();
+    book.updatedAt = Date.now();
+    return book;
+  }
+  function syncFlat(book) { var flat = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { flat.push({ title: c.title, content: c.content }); }); }); book.chapters = flat; }
+  function allChapters(book) { var out = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { out.push({ part: p, ch: c }); }); }); return out; }
+  function findChapter(book, chId) { for (var i = 0; i < book.parts.length; i++) { var p = book.parts[i]; for (var j = 0; j < p.chapters.length; j++) { if (p.chapters[j].id === chId) return { part: p, ch: p.chapters[j], pi: i, ci: j }; } } return null; }
+
+  /* ---------- Rendu du livre + table des matières générée ---------- */
+  function contentHtml(s) { s = String(s || ""); if (/<[a-z][\s\S]*>/i.test(s)) return s; return s.split(/\n{2,}/).filter(function (x) { return x.trim(); }).map(function (p) { return "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join(""); }
+  function buildToc(book) {
+    var rows = "", n = 0;
+    book.parts.forEach(function (p) {
+      if (p.title) rows += '<div class="bk-toc-part">' + esc(p.title) + '</div>';
+      p.chapters.forEach(function (c) { n++; rows += '<div class="bk-toc-row"><span class="bk-toc-t">' + esc(c.title || ("Chapitre " + n)) + '</span><span class="bk-toc-d"></span><span class="bk-toc-p">' + n + '</span></div>'; });
+    });
+    return '<section class="bk-toc"><h2>Table des matières</h2>' + (rows || '<p class="bk-empty">Ajoutez des chapitres pour générer la table des matières.</p>') + '</section>';
+  }
+  function renderBook(book) {
+    upgrade(book); var fm = book.frontMatter, h = '<div class="bk-doc">';
+    if (fm.titlePage) { h += '<section class="bk-title-page"><h1>' + esc(book.title || "Titre du livre") + '</h1>' + (book.subtitle ? '<div class="bk-sub">' + esc(book.subtitle) + '</div>' : '') + (book.author ? '<div class="bk-auth">' + esc(book.author) + '</div>' : '') + '</section>'; }
+    if (fm.copyright) h += '<section class="bk-fm bk-copy">' + contentHtml(fm.copyright) + '</section>';
+    if (fm.dedication) h += '<section class="bk-fm bk-ded"><p><i>' + esc(fm.dedication).replace(/\n/g, "<br>") + '</i></p></section>';
+    if (fm.epigraph) h += '<section class="bk-fm bk-epi"><blockquote>' + esc(fm.epigraph).replace(/\n/g, "<br>") + '</blockquote></section>';
+    if (fm.preface) h += '<section class="bk-fm"><h2>Préface</h2>' + contentHtml(fm.preface) + '</section>';
+    if (fm.foreword) h += '<section class="bk-fm"><h2>Avant-propos</h2>' + contentHtml(fm.foreword) + '</section>';
+    if (fm.toc) h += buildToc(book);
+    book.parts.forEach(function (p) {
+      if (p.title) h += '<section class="bk-part"><h1 class="bk-part-h">' + esc(p.title) + '</h1></section>';
+      p.chapters.forEach(function (c) { h += '<section class="bk-chapter"><h2>' + esc(c.title || "Sans titre") + '</h2>' + contentHtml(c.content) + '</section>'; });
+    });
+    (book.backMatter || []).forEach(function (b) { h += '<section class="bk-fm bk-back"><h2>' + esc(b.title || b.type) + '</h2>' + contentHtml(b.content) + '</section>'; });
+    return h + '</div>';
+  }
+
+  /* ---------- Studio : navigation (arbre) + éditeur + aperçu ---------- */
+  var DRAG = null;
+  function renderStudio(t, stage) {
+    if (!t.book) t.book = window.bookDefault();
+    upgrade(t.book); var book = t.book;
+    var backToContent = function () { t._mode = "content"; stage.innerHTML = ""; renderStudio(t, stage); };
+    // Mode Production (Phase 5)
+    if (t._mode === "production" && window.ReadixProduction && ReadixProduction.render) {
+      try { return ReadixProduction.render(t, stage, backToContent); } catch (e) { t._mode = "content"; }
+    }
+    // Modes Couverture / Illustrations (Phase 6)
+    if ((t._mode === "cover" || t._mode === "illustration") && window.ReadixCover && ReadixCover.render) {
+      try { return ReadixCover.render(t, stage, backToContent, t._mode); } catch (e) { t._mode = "content"; }
+    }
+    if (!t._sel) t._sel = { type: "book" };
+    var wrap = E("div", "cv-builder rxbk-studio");
+    wrap.innerHTML = '<div class="cv-form bk-left" id="bkLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du livre</span><span style="flex:1"></span>'
+      + '<button class="btn ghost sm" data-x="toc">Régénérer la TDM</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="cover">Couverture</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ds">Document Studio</button></div>'
+      + '<div class="cv-paper-scroll"><div class="cv-paper" id="bkPaper"></div></div></div>';
+    stage.appendChild(wrap);
+    var paper = wrap.querySelector("#bkPaper"), left = wrap.querySelector("#bkLeft");
+    var refresh = function () { paper.innerHTML = window.bookToHtml(book); };
+    var touch = function () { syncFlat(book); book.updatedAt = Date.now(); t.dirty = true; t.name = (book.title ? ("Livre — " + book.title) : "Mon livre"); var sa = W("scheduleAutosave"); if (sa) sa(); refresh(); var rt = W("renderTabs"); if (rt) rt(); };
+    var rerender = function () { stage.innerHTML = ""; renderStudio(t, stage); };
+    buildLeft(left, t, book, touch, rerender);
+    refresh();
+    wrap.querySelector(".cv-preview-bar").onclick = async function (e) {
+      var b = e.target.closest("[data-x]"); if (!b) return; var x = b.dataset.x;
+      var nm = (book.title || "Livre").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Livre";
+      if (x === "toc") { book.frontMatter.toc = true; refresh(); toast("Table des matières régénérée.", "ok"); return; }
+      if (x === "ds") { var f = W("openDocInTab"); if (f) f(nm + ".docx", window.bookToHtml(book)); return; }
+      if (x === "docx") { var f2 = W("downloadCopilotFile"); if (f2) f2({ kind: "docx", html: true, name: nm + ".docx", content: window.bookToHtml(book) }); return; }
+      var lab = b.textContent; b.disabled = true; b.textContent = "…";
+      try {
+        syncFlat(book);
+        if (x === "pdf") { var bp = W("buildBookPdf"), db = W("downloadBlob"); var bytes = await bp(book); db(new Blob([bytes], { type: "application/pdf" }), nm + ".pdf"); }
+        else if (x === "cover") { var cp = W("buildCoverPdf"), db2 = W("downloadBlob"); var by = await cp(book); db2(new Blob([by], { type: "application/pdf" }), nm + "-couverture.pdf"); }
+        toast("Téléchargement lancé.", "ok");
+      } catch (err) { toast("Échec : " + (err.message || err), "err"); }
+      finally { b.disabled = false; b.textContent = lab; }
+    };
+  }
+
+  function buildLeft(box, t, book, touch, rerender) {
+    box.innerHTML = "";
+    // bascule de mode Contenu / Production (Phase 5)
+    if (window.ReadixProduction) {
+      var modes = E("div", "bk-modes");
+      var mC = E("button", "bk-mode on", "Contenu");
+      var mP = E("button", "bk-mode", "Production");
+      mP.onclick = function () { t._mode = "production"; rerender(); };
+      modes.appendChild(mC); modes.appendChild(mP);
+      if (window.ReadixCover) {
+        var mCov = E("button", "bk-mode", "Couverture"); mCov.onclick = function () { t._mode = "cover"; rerender(); };
+        var mIll = E("button", "bk-mode", "Illustrations"); mIll.onclick = function () { t._mode = "illustration"; rerender(); };
+        modes.appendChild(mCov); modes.appendChild(mIll);
+      }
+      box.appendChild(modes);
+    }
+    // barre d'actions
+    var bar = E("div", "bk-toolbar");
+    var addPart = E("button", "cv-add", "＋ Partie"); addPart.onclick = function () { book.parts.push({ id: uid("part"), title: "Nouvelle partie", chapters: [] }); touch(); rerender(); };
+    var addCh = E("button", "cv-add", "＋ Chapitre"); addCh.onclick = function () { var p = book.parts[book.parts.length - 1]; if (!p) { p = { id: uid("part"), title: "", chapters: [] }; book.parts.push(p); } var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); };
+    var proj = E("button", "cv-add cv-ghost", "Associer à un projet"); proj.onclick = function () { var pb = document.querySelector("#projBtn"); if (pb) { pb.click(); toast("Choisissez le projet actif pour y rattacher ce livre.", "ok"); } else toast("Project Engine indisponible.", "warn"); };
+    var plan = E("button", "cv-add", "✨ Proposer un plan"); plan.onclick = function () { bookPlanAI(book, rerender, plan); };
+    var imp = E("button", "cv-add", "✨ Importer un manuscrit"); imp.onclick = function () { var f = W("bookImportManuscript"); if (f) f(book, function () { foldFlatIntoParts(book, "Manuscrit importé"); touch(); rerender(); }, imp); };
+    [addPart, addCh, plan, imp, proj].forEach(function (b) { bar.appendChild(b); });
+    box.appendChild(bar);
+    // arbre de navigation
+    box.appendChild(buildTree(t, book, touch, rerender));
+    // éditeur de l'élément sélectionné
+    var ed = E("div", "bk-editor"); buildEditor(ed, t, book, touch, rerender); box.appendChild(ed);
+  }
+
+  function selNode(t, sel) { return t._sel && t._sel.type === sel.type && t._sel.chId === sel.chId && t._sel.fmKey === sel.fmKey && t._sel.bmId === sel.bmId && t._sel.assetId === sel.assetId; }
+  function buildTree(t, book, touch, rerender) {
+    var tree = E("div", "bk-tree");
+    var bookRow = E("div", "bk-node bk-book" + (t._sel.type === "book" ? " sel" : ""), '📖 <span class="bk-node-t">' + esc(book.title || "Mon livre") + '</span>');
+    bookRow.onclick = function () { t._sel = { type: "book" }; rerender(); }; tree.appendChild(bookRow);
+    // pages liminaires
+    var fmHead = E("div", "bk-group", "Pages préliminaires"); tree.appendChild(fmHead);
+    FRONT.forEach(function (f) {
+      var active = f.type === "toggle" ? book.frontMatter[f.key] : !!book.frontMatter[f.key];
+      var row = E("div", "bk-node bk-fm-node" + (t._sel.type === "fm" && t._sel.fmKey === f.key ? " sel" : ""));
+      var tog = E("button", "bk-chk" + (active ? " on" : "")); tog.title = active ? "Activée" : "Désactivée";
+      tog.onclick = function (e) { e.stopPropagation(); if (f.type === "toggle") { book.frontMatter[f.key] = !book.frontMatter[f.key]; } else { if (book.frontMatter[f.key]) book.frontMatter[f.key] = ""; else { book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; } } touch(); rerender(); };
+      row.appendChild(tog); row.appendChild(E("span", "bk-node-t", f.label));
+      if (f.type !== "toggle") row.onclick = function () { if (!book.frontMatter[f.key]) book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; rerender(); };
+      tree.appendChild(row);
+    });
+    // parties → chapitres (glisser-déposer)
+    tree.appendChild(E("div", "bk-group", "Corps du livre"));
+    book.parts.forEach(function (p, pi) {
+      var prow = E("div", "bk-node bk-part-node");
+      prow.draggable = true; prow.dataset.part = p.id;
+      prow.addEventListener("dragstart", function (e) { DRAG = { type: "part", partId: p.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
+      prow.addEventListener("dragover", function (e) { if (DRAG) { e.preventDefault(); prow.classList.add("bk-drop"); } });
+      prow.addEventListener("dragleave", function () { prow.classList.remove("bk-drop"); });
+      prow.addEventListener("drop", function (e) { e.preventDefault(); prow.classList.remove("bk-drop"); dropOnPart(book, p, touch, rerender); });
+      prow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(p.title || "(chapitres)") + '</span>';
+      var pdel = E("button", "bk-x", "✕"); pdel.title = "Supprimer la partie"; pdel.onclick = function (e) { e.stopPropagation(); book.parts.splice(pi, 1); touch(); rerender(); };
+      prow.appendChild(pdel);
+      prow.onclick = function () { t._sel = { type: "part", partId: p.id }; rerender(); };
+      tree.appendChild(prow);
+      p.chapters.forEach(function (c) {
+        var crow = E("div", "bk-node bk-ch-node" + (t._sel.type === "chapter" && t._sel.chId === c.id ? " sel" : ""));
+        crow.draggable = true; crow.dataset.ch = c.id; crow.dataset.part = p.id;
+        crow.addEventListener("dragstart", function (e) { e.stopPropagation(); DRAG = { type: "chapter", partId: p.id, chId: c.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
+        crow.addEventListener("dragover", function (e) { if (DRAG && DRAG.type === "chapter") { e.preventDefault(); crow.classList.add("bk-drop"); } });
+        crow.addEventListener("dragleave", function () { crow.classList.remove("bk-drop"); });
+        crow.addEventListener("drop", function (e) { e.preventDefault(); e.stopPropagation(); crow.classList.remove("bk-drop"); dropOnChapter(book, p, c, touch, rerender); });
+        crow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(c.title || "Sans titre") + '</span>';
+        var dup = E("button", "bk-mini", "⧉"); dup.title = "Dupliquer"; dup.onclick = function (e) { e.stopPropagation(); var copy = JSON.parse(JSON.stringify(c)); copy.id = uid("ch"); copy.title = (c.title || "Chapitre") + " — Copie"; var idx = p.chapters.indexOf(c); p.chapters.splice(idx + 1, 0, copy); touch(); rerender(); };
+        var cdel = E("button", "bk-x", "✕"); cdel.title = "Supprimer"; cdel.onclick = function (e) { e.stopPropagation(); var idx = p.chapters.indexOf(c); p.chapters.splice(idx, 1); touch(); rerender(); };
+        crow.appendChild(dup); crow.appendChild(cdel);
+        crow.onclick = function () { t._sel = { type: "chapter", chId: c.id }; rerender(); };
+        tree.appendChild(crow);
+      });
+    });
+    // pages finales
+    var bmHead = E("div", "bk-group bk-group-row", "<span>Pages finales</span>");
+    var bmAdd = E("button", "bk-add-mini", "＋"); bmAdd.title = "Ajouter"; bmAdd.onclick = function () { var it = { id: uid("bm"), type: "Remerciements", title: "Remerciements", content: "" }; book.backMatter.push(it); t._sel = { type: "bm", bmId: it.id }; touch(); rerender(); };
+    bmHead.appendChild(bmAdd); tree.appendChild(bmHead);
+    book.backMatter.forEach(function (b) {
+      var row = E("div", "bk-node bk-bm-node" + (t._sel.type === "bm" && t._sel.bmId === b.id ? " sel" : ""), '<span class="bk-node-t">' + esc(b.title || b.type) + '</span>');
+      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.backMatter = book.backMatter.filter(function (z) { return z.id !== b.id; }); touch(); rerender(); };
+      row.appendChild(x); row.onclick = function () { t._sel = { type: "bm", bmId: b.id }; rerender(); }; tree.appendChild(row);
+    });
+    // assets
+    var asHead = E("div", "bk-group bk-group-row", "<span>Assets</span>");
+    var asAdd = E("button", "bk-add-mini", "＋"); asAdd.title = "Ajouter une image"; asAdd.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.assets.push({ id: uid("as"), name: f.name, type: "image", data: rd.result }); touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
+    asHead.appendChild(asAdd); tree.appendChild(asHead);
+    book.assets.forEach(function (a) {
+      var row = E("div", "bk-node bk-asset-node" + (t._sel.type === "asset" && t._sel.assetId === a.id ? " sel" : ""), (a.type === "image" && a.data ? '<img class="bk-asset-mini" src="' + a.data + '">' : '📎') + '<span class="bk-node-t">' + esc(a.name || "asset") + '</span>');
+      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.assets = book.assets.filter(function (z) { return z.id !== a.id; }); touch(); rerender(); };
+      row.appendChild(x); row.onclick = function () { t._sel = { type: "asset", assetId: a.id }; rerender(); }; tree.appendChild(row);
+    });
+    return tree;
+  }
+  function dropOnChapter(book, targetPart, targetCh, touch, rerender) {
+    if (!DRAG || DRAG.type !== "chapter") return;
+    var src = findChapter(book, DRAG.chId); if (!src) { DRAG = null; return; }
+    src.part.chapters.splice(src.ci, 1);
+    var ti = targetPart.chapters.indexOf(targetCh); if (ti < 0) ti = targetPart.chapters.length;
+    targetPart.chapters.splice(ti, 0, src.ch); DRAG = null; touch(); rerender();
+  }
+  function dropOnPart(book, targetPart, touch, rerender) {
+    if (!DRAG) return;
+    if (DRAG.type === "chapter") { var src = findChapter(book, DRAG.chId); if (src) { src.part.chapters.splice(src.ci, 1); targetPart.chapters.push(src.ch); } }
+    else if (DRAG.type === "part" && DRAG.partId !== targetPart.id) { var si = book.parts.findIndex(function (p) { return p.id === DRAG.partId; }); var ti = book.parts.indexOf(targetPart); if (si >= 0) { var mv = book.parts.splice(si, 1)[0]; book.parts.splice(book.parts.indexOf(targetPart) + (si < ti ? 0 : 0), 0, mv); } }
+    DRAG = null; touch(); rerender();
+  }
+
+  /* ---------- Éditeurs ---------- */
+  function field(label, val, on, kind) { var f = W("cvField"); if (f) return f(label, val, on, kind); var w = E("label", "cvf", '<span class="cvf-l">' + esc(label) + '</span>'); var i = kind === "area" ? E("textarea", "rp-input") : E("input", "rp-input"); if (kind === "area") i.rows = 3; i.value = val || ""; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
+  function richEditor(html, onChange) {
+    var box = E("div", "bk-rich");
+    var tb = E("div", "bk-rich-tb");
+    [["H2", "formatBlock", "h2"], ["H3", "formatBlock", "h3"], ["¶", "formatBlock", "p"], ["G", "bold"], ["I", "italic"], ["• Liste", "insertUnorderedList"], ["1. Liste", "insertOrderedList"], ["❝", "formatBlock", "blockquote"], ["―", "hr"]].forEach(function (c) {
+      var bt = E("button", "bk-rt", c[0]); bt.type = "button"; bt.onmousedown = function (e) { e.preventDefault(); };
+      bt.onclick = function () { area.focus(); if (c[1] === "hr") document.execCommand("insertHorizontalRule"); else if (c[2]) document.execCommand(c[1], false, c[2]); else document.execCommand(c[1]); onChange(area.innerHTML); };
+      tb.appendChild(bt);
+    });
+    var area = E("div", "bk-rich-area"); area.contentEditable = "true"; area.innerHTML = contentHtml(html);
+    var timer = null; area.oninput = function () { clearTimeout(timer); timer = setTimeout(function () { onChange(area.innerHTML); }, 250); };
+    box.appendChild(tb); box.appendChild(area); return box;
+  }
+  function buildEditor(box, t, book, touch, rerender) {
+    box.innerHTML = ""; var sel = t._sel;
+    if (sel.type === "book") {
+      box.appendChild(E("div", "cv-sec", "Informations du livre"));
+      var g = E("div", "cv-grid");
+      [["Titre", "title"], ["Sous-titre", "subtitle"], ["Auteur", "author"], ["Langue", "language"], ["Genre", "genre"], ["Format de travail", "format"]].forEach(function (p) { g.appendChild(field(p[0], book[p[1]], function (v) { book[p[1]] = v; touch(); })); });
+      box.appendChild(g);
+      box.appendChild(field("Description", book.description, function (v) { book.description = v; touch(); }, "area"));
+      // couverture (structure)
+      box.appendChild(E("div", "cv-sec", "Couverture"));
+      var cov = E("div", "book-covers"); var COVERS = (typeof BOOK_COVERS !== "undefined") ? BOOK_COVERS : [];
+      COVERS.forEach(function (c) { var s = E("button", "book-cov" + (book.cover === c.id ? " sel" : "")); s.style.background = c.bg; s.title = c.name; s.innerHTML = '<span style="color:' + c.fg + '">Aa</span>'; s.onclick = function () { book.cover = c.id; touch(); rerender(); }; cov.appendChild(s); });
+      box.appendChild(cov);
+      var ci = E("div", "cv-photo-row");
+      if (book.coverImage) { var im = E("img", "cv-photo-mini"); im.src = book.coverImage; ci.appendChild(im); }
+      var cb = E("button", "cv-add", book.coverImage ? "Changer l’image" : "Image de couverture"); cb.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.coverImage = rd.result; touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
+      ci.appendChild(cb); box.appendChild(ci);
+    } else if (sel.type === "part") {
+      var p = book.parts.filter(function (x) { return x.id === sel.partId; })[0]; if (!p) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Partie"));
+      box.appendChild(field("Titre de la partie", p.title, function (v) { p.title = v; touch(); var n = box.parentNode ? box.parentNode.querySelector('.bk-part-node.sel .bk-node-t') : null; }));
+      var ca = E("button", "cv-add", "＋ Ajouter un chapitre"); ca.onclick = function () { var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); }; box.appendChild(ca);
+    } else if (sel.type === "chapter") {
+      var loc = findChapter(book, sel.chId); if (!loc) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      var ch = loc.ch;
+      var head = E("div", "cv-sec cv-sec-row", "<span>Chapitre</span>");
+      var ai = E("button", "cv-add", "✨ Rédiger (IA)"); ai.onclick = function () { bookChapterAI(book, ch, rerender, ai); }; head.appendChild(ai);
+      var sum = E("button", "cv-add cv-ghost", "✨ Résumer"); sum.onclick = function () { bookSummarize(ch, sum); }; head.appendChild(sum);
+      var ods = E("button", "cv-add cv-ghost", "Document Studio"); ods.onclick = function () { var f = W("openDocInTab"); if (f) f((ch.title || "Chapitre") + ".docx", "<h1>" + esc(ch.title || "") + "</h1>" + contentHtml(ch.content)); }; head.appendChild(ods);
+      box.appendChild(head);
+      box.appendChild(field("Titre du chapitre", ch.title, function (v) { ch.title = v; touch(); }));
+      box.appendChild(richEditor(ch.content, function (html) { ch.content = html; touch(); }));
+    } else if (sel.type === "fm") {
+      var f = FRONT.filter(function (x) { return x.key === sel.fmKey; })[0]; if (!f) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", f.label));
+      if (f.type === "rich") box.appendChild(richEditor(book.frontMatter[f.key], function (html) { book.frontMatter[f.key] = html; touch(); }));
+      else box.appendChild(field(f.label, (book.frontMatter[f.key] || "").trim(), function (v) { book.frontMatter[f.key] = v; touch(); }, "area"));
+    } else if (sel.type === "bm") {
+      var b = book.backMatter.filter(function (x) { return x.id === sel.bmId; })[0]; if (!b) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Page finale"));
+      var tw = E("label", "cvf", '<span class="cvf-l">Type</span>'); var selEl = E("select", "cv-sb-sel"); BACK_TYPES.forEach(function (bt) { var o = E("option"); o.value = bt; o.textContent = bt; selEl.appendChild(o); }); selEl.value = b.type; selEl.onchange = function () { b.type = selEl.value; if (!b.title || BACK_TYPES.indexOf(b.title) >= 0) b.title = selEl.value; touch(); rerender(); }; tw.appendChild(selEl); box.appendChild(tw);
+      box.appendChild(field("Titre", b.title, function (v) { b.title = v; touch(); }));
+      box.appendChild(richEditor(b.content, function (html) { b.content = html; touch(); }));
+    } else if (sel.type === "asset") {
+      var a = book.assets.filter(function (x) { return x.id === sel.assetId; })[0]; if (!a) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Asset"));
+      if (a.type === "image" && a.data) { var im2 = E("img", "bk-asset-full"); im2.src = a.data; box.appendChild(im2); }
+      box.appendChild(field("Nom", a.name, function (v) { a.name = v; touch(); }));
+      box.appendChild(E("div", "bk-hint", "Référence : peut être insérée dans un chapitre lors des phases de production."));
+    }
+    // Point d'ancrage éditorial (Phase 4) — additif, facultatif
+    try { if (window.ReadixEditorial && ReadixEditorial.mount) ReadixEditorial.mount({ box: box, t: t, book: book, sel: sel, touch: touch, rerender: rerender, findChapter: findChapter }); } catch (e) { }
+  }
+
+  /* ---------- IA (réutilise aiGenerate / parseJsonLoose) ---------- */
+  function busy(btn, on, label) { if (!btn) return; if (on) { btn._l = btn.textContent; btn.disabled = true; btn.textContent = label || "…"; } else { btn.disabled = false; if (btn._l) btn.textContent = btn._l; } }
+  function bookPlanAI(book, rerender, btn) {
+    var gen = W("aiGenerate"), parse = W("parseJsonLoose"); if (!gen) return;
+    var topic = [book.title, book.subtitle].filter(Boolean).join(" — "); if (!topic) { toast("Donnez d’abord un titre au livre.", "warn"); return; }
+    busy(btn, true, "L’IA réfléchit…");
+    Promise.resolve().then(function () {
+      return gen("Sujet du livre : " + topic + (book.genre ? " (genre : " + book.genre + ")" : "") + (book.description ? "\nDescription : " + book.description.slice(0, 800) : "") + "\n\nPropose un plan structuré en parties et chapitres. Réponds UNIQUEMENT en JSON strict :\n{\"parts\":[{\"title\":\"\",\"chapters\":[{\"title\":\"\"}]}]}", "Tu es un éditeur littéraire. Réponds UNIQUEMENT avec le JSON.", 1500);
+    }).then(function (out) {
+      var obj = parse ? parse(out) : null; if (!obj || !Array.isArray(obj.parts)) throw new Error("Réponse IA non exploitable.");
+      obj.parts.forEach(function (p) { var part = { id: uid("part"), title: p.title || "", chapters: (p.chapters || []).map(function (c) { return { id: uid("ch"), title: c.title || "", content: "" }; }) }; book.parts.push(part); });
+      upgrade(book); toast("Plan ajouté ✓", "ok"); rerender();
+    }).catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+  function bookChapterAI(book, ch, rerender, btn) {
+    var gen = W("aiGenerate"); if (!gen) return; if (!ch.title) { toast("Donnez un titre au chapitre.", "warn"); return; }
+    var topic = [book.title, book.subtitle].filter(Boolean).join(" — ");
+    busy(btn, true, "Rédaction…");
+    Promise.resolve().then(function () {
+      return gen("Livre : " + (topic || "—") + (book.genre ? " (genre : " + book.genre + ")" : "") + "\nChapitre : " + ch.title + "\n\nRédige le contenu de ce chapitre en français (plusieurs paragraphes), en HTML simple (<h2>, <p>, <ul>…), sans <html> ni <body>.", "Tu es un auteur professionnel.", 2200);
+    }).then(function (out) { out = String(out || "").trim(); if (!out) throw new Error("Réponse vide."); if (!/</.test(out)) out = contentHtml(out); ch.content = out; toast("Chapitre rédigé ✓", "ok"); rerender(); })
+      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+  function bookSummarize(ch, btn) {
+    var gen = W("aiGenerate"), dlg = W("dialog"); if (!gen) return;
+    var text = String(ch.content || "").replace(/<[^>]+>/g, " ").trim(); if (!text) { toast("Ce chapitre est vide.", "warn"); return; }
+    busy(btn, true, "Résumé…");
+    Promise.resolve().then(function () { return gen("Résume ce chapitre en 3 à 5 phrases, en français :\n\n" + text.slice(0, 6000), "Tu es un éditeur.", 500); })
+      .then(function (out) { out = String(out || "").trim(); if (dlg) { dlg('<h3>Résumé du chapitre</h3><p style="font-size:13px;line-height:1.5">' + esc(out) + '</p><div class="row"><button class="btn sm" data-a="ok" onclick="this.closest(\'#overlay,.overlay\')&&0">Fermer</button></div>').root.onclick = function (e) { if (e.target.closest("[data-a]")) e.target.closest("[data-a]").dispatchEvent(new Event("close")); }; } else toast(out, "ok"); })
+      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+
+  /* ---------- Contexte Copilot (préparation Phase 4) ---------- */
+  function structure(book) { return (book.parts || []).map(function (p) { return { part: p.title || "(sans titre)", chapters: (p.chapters || []).map(function (c) { return c.title || "Sans titre"; }) }; }); }
+  function context() {
+    var A = (typeof APP !== "undefined") ? APP : null, tab = A && A.tabs ? A.tabs.filter(function (x) { return x.id === A.active; })[0] : null;
+    if (!tab || tab.tool !== "bookstudio" || !tab.book) return null;
+    var book = tab.book, sel = tab._sel || {}, loc = sel.chId ? findChapter(book, sel.chId) : null;
+    return {
+      kind: "book", title: book.title, subtitle: book.subtitle, author: book.author, language: book.language, genre: book.genre,
+      structure: structure(book),
+      currentPart: loc ? (loc.part.title || "(sans titre)") : (sel.partId ? (book.parts.filter(function (p) { return p.id === sel.partId; })[0] || {}).title : null),
+      currentChapter: loc ? { title: loc.ch.title, content: String(loc.ch.content || "").replace(/<[^>]+>/g, " ").slice(0, 4000) } : null
+    };
+  }
+
+  /* ---------- Enveloppement additif ---------- */
+  ReadixBook = window.ReadixBook = { version: "1.0", upgrade: upgrade, renderBook: renderBook, context: context, structure: structure, _orig: {} };
+  window.rxBookContext = context;
+  function wrap() {
+    if (typeof window.bookDefault === "function" && !ReadixBook._orig.bookDefault) { ReadixBook._orig.bookDefault = window.bookDefault; window.bookDefault = function () { return upgrade(ReadixBook._orig.bookDefault()); }; }
+    if (typeof window.bookToHtml === "function" && !ReadixBook._orig.bookToHtml) { ReadixBook._orig.bookToHtml = window.bookToHtml; window.bookToHtml = function (book) { try { return renderBook(book); } catch (e) { return ReadixBook._orig.bookToHtml(book); } }; }
+    if (typeof window.renderBookStudio === "function" && !ReadixBook._orig.renderBookStudio) { ReadixBook._orig.renderBookStudio = window.renderBookStudio; window.renderBookStudio = function (t, stage) { try { return renderStudio(t, stage); } catch (e) { return ReadixBook._orig.renderBookStudio(t, stage); } }; }
+    return ReadixBook._orig.renderBookStudio && ReadixBook._orig.bookToHtml;
+  }
+  (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] Book Engine v1 — structure complète, navigation, TDM, DnD, assets, contexte Copilot."); } catch (e) {} })();
+})();
+
+</script>
+<style id="readix-cover-css">
+/* ===== Readix Cover & Illustration Engine v1 (Phase 6) — additif ===== */
+.rxcov-studio .cov-left { display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 200px); overflow: auto; padding-right: 4px; }
+.cov-canvas-scroll { background: #eef0f4; padding: 20px; overflow: auto; display: flex; justify-content: center; }
+.cov-stage { position: relative; }
+.cov-canvas { position: relative; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.16); overflow: hidden; }
+.cov-zoom { font-size: 12px; color: var(--ink-faint); min-width: 42px; text-align: center; }
+
+.cov-panel-guide { border: 1px solid rgba(255,255,255,.25); pointer-events: none; }
+.cov-panel-lbl { position: absolute; top: 4px; left: 4px; font-size: 10px; color: rgba(255,255,255,.6); background: rgba(0,0,0,.25); padding: 1px 5px; border-radius: 4px; }
+.cov-safe { border: 1px dashed rgba(0,200,120,.7); pointer-events: none; }
+.cov-bleed-line { border: 1px dashed rgba(233,64,87,.8); pointer-events: none; }
+.cov-grid-ov { background-image: linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px); pointer-events: none; }
+
+.cov-el { box-sizing: border-box; user-select: none; cursor: move; }
+.cov-text { }
+.cov-image { }
+.cov-image-empty { display: flex; align-items: center; justify-content: center; background: rgba(120,130,150,.25); color: #667; font-size: 12px; border: 1px dashed #99a; }
+.cov-isbn { display: flex; align-items: center; justify-content: center; background: #fff; border: 1px dashed #333; color: #333; font-size: 10px; text-align: center; }
+.cov-selected { outline: 2px solid var(--brand); outline-offset: 1px; }
+.cov-h { position: absolute; width: 12px; height: 12px; background: #fff; border: 2px solid var(--brand); border-radius: 3px; z-index: 5; }
+.cov-h-rz { right: -7px; bottom: -7px; cursor: nwse-resize; }
+.cov-h-ro { left: 50%; top: -22px; margin-left: -6px; border-radius: 50%; cursor: grab; }
+
+.cov-addbar { display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 6px; }
+.cov-addbar .ed-btn.on { border-color: var(--brand); color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, #fff); }
+.cov-layers { display: flex; flex-direction: column; gap: 3px; }
+.cov-layer { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; background: #fff; font-size: 12.5px; }
+.cov-layer.sel { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, #fff); }
+.cov-layer-n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.cov-l-btn { border: none; background: none; cursor: pointer; color: var(--ink-soft); font-size: 12px; padding: 2px 4px; border-radius: 5px; }
+.cov-l-btn:hover { background: var(--surface-2); color: var(--brand); }
+.cov-ver-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 12.5px; padding: 4px 2px; border-bottom: 1px solid var(--line); }
+.cov-alerts { display: flex; flex-direction: column; gap: 4px; }
+.cov-alert { font-size: 11.5px; color: #9a3412; background: #fff4e6; border: 1px solid #fed7aa; border-radius: 7px; padding: 5px 8px; }
+
+</style>
+<script id="readix-cover-engine">
+/* ============================================================
+   READIX COVER & ILLUSTRATION ENGINE — Phase 6
+   Studio de composition graphique (couverture avant/dos/4e/
+   complète + illustrations) intégré au Book Studio. Canvas DOM
+   réel (sélection, déplacement, redimensionnement, rotation),
+   éléments texte/image/forme, arrière-plan, calques, alignement,
+   grille/repères, fond perdu + zone de sécurité, dos calculé/
+   saisi, modèles, versionnage, alertes de production, et
+   EXPORTS RÉELS (SVG, PNG, JPG, PDF) par sérialisation SVG.
+   Dimensions issues du Production Engine ; métadonnées du Book
+   Engine. Honnête : pas de faux ISBN/code-barres, pas de fausse
+   génération d'image, pas de faux rendu 3D, pas de faux export.
+   Additif : aucune fonction du socle modifiée.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixCover) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function num(v, d) { v = parseFloat(v); return isFinite(v) ? v : d; }
+  function uid(p) { return (p || "el") + "_" + Math.random().toString(36).slice(2, 9); }
+  var DPI = 96;
+
+  /* ---------- Dimensions issues du Production Engine ---------- */
+  function bookDims(book) {
+    if (window.ReadixProduction && ReadixProduction.upgrade) { var prod = ReadixProduction.upgrade(book); var sz = ReadixProduction.pageSizes[prod.pageSize] || { w: 6, h: 9 }; if (prod.pageSize === "custom") sz = { w: num(prod.custom.w, 6), h: num(prod.custom.h, 9) }; var w = sz.w, h = sz.h; if (prod.orientation === "landscape") { var t = w; w = h; h = t; } return { w: w, h: h, bleed: num(prod.bleed, 0.125), prod: prod }; }
+    return { w: 6, h: 9, bleed: 0.125, prod: null };
+  }
+  function pageCount(book) { try { if (window.ReadixProduction && ReadixProduction.paginate) { var pl = ReadixProduction.paginate(book, ReadixProduction.upgrade(book)); return pl.bodyPages.length + pl.frontPages.length + pl.tocPages.length + pl.backPages.length; } } catch (e) {} return 0; }
+
+  /* ---------- Modèle Cover (dans book.coverDesign) ---------- */
+  function defaults(book) { var d = bookDims(book); return { type: "full", spineAuto: true, spinePerPage: 0.0025, spineManual: 0.4, bleed: d.bleed, safeArea: 0.25, background: { type: "color", color: "#1f2a44", gradFrom: "#4F46E5", gradTo: "#0EA5E9", angle: 135, image: "", opacity: 1 }, elements: [], versions: [], settings: { grid: false, guides: true } }; }
+  function upgrade(book) {
+    if (!book.coverDesign) book.coverDesign = defaults(book);
+    var c = book.coverDesign, d = defaults(book);
+    for (var k in d) { if (c[k] == null) c[k] = d[k]; else if (typeof d[k] === "object" && !Array.isArray(d[k])) { for (var j in d[k]) if (c[k][j] == null) c[k][j] = d[k][j]; } }
+    if (!Array.isArray(c.elements)) c.elements = [];
+    c.elements.forEach(function (e, i) { if (!e.id) e.id = uid(); if (e.z == null) e.z = i; if (e.opacity == null) e.opacity = 1; if (e.rotation == null) e.rotation = 0; if (!e.panel) e.panel = "front"; });
+    if (!Array.isArray(book.illustrations)) book.illustrations = [];
+    book.illustrations.forEach(function (il) { if (!il.id) il.id = uid("il"); if (!Array.isArray(il.elements)) il.elements = []; if (!il.background) il.background = { type: "color", color: "#ffffff", opacity: 1 }; if (!il.w) il.w = 4; if (!il.h) il.h = 3; });
+    return c;
+  }
+  function spineWidth(book) { var c = book.coverDesign; if (!c.spineAuto) return num(c.spineManual, 0); var pc = pageCount(book); if (!pc) return 0; return +(pc * num(c.spinePerPage, 0.0025)).toFixed(3); }
+
+  /* ---------- Géométrie de la couverture ---------- */
+  function geom(book, scope) {
+    var d = bookDims(book), c = book.coverDesign, bleed = num(c.bleed, 0);
+    if (scope === "illustration") return null;
+    var spine = spineWidth(book);
+    if (c.type === "front" || c.type === "back") { return { totalW: d.w + bleed * 2, totalH: d.h + bleed * 2, bleed: bleed, safe: num(c.safeArea, 0), panels: { single: { x: bleed, w: d.w } }, single: c.type, bookW: d.w, bookH: d.h, spine: spine }; }
+    if (c.type === "spine") { return { totalW: spine + bleed * 2, totalH: d.h + bleed * 2, bleed: bleed, safe: num(c.safeArea, 0), panels: { spine: { x: bleed, w: spine } }, bookW: d.w, bookH: d.h, spine: spine }; }
+    // full
+    var totalW = d.w * 2 + spine + bleed * 2;
+    return { totalW: totalW, totalH: d.h + bleed * 2, bleed: bleed, safe: num(c.safeArea, 0), bookW: d.w, bookH: d.h, spine: spine,
+      panels: { back: { x: bleed, w: d.w }, spine: { x: bleed + d.w, w: spine }, front: { x: bleed + d.w + spine, w: d.w } } };
+  }
+  function panelFor(book, g, el) { if (g.single) return g.panels.single; if (g.type === "spine") return g.panels.spine; return g.panels[el.panel] || g.panels.front || g.panels.single; }
+
+  /* ---------- Rendu du canvas (éditeur) ---------- */
+  var SEL = null; // id élément sélectionné
+  function render(t, stage, back, mode) {
+    var book = t.book; upgrade(book);
+    if (mode === "illustration") return renderIllustration(t, stage, back);
+    var c = book.coverDesign;
+    var wrap = E("div", "cv-builder rxcov-studio");
+    wrap.innerHTML = '<div class="cv-form cov-left" id="covLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><button class="btn ghost sm" data-x="back">← Contenu</button><span class="cv-pv-title">Couverture</span><span style="flex:1"></span><button class="btn ghost sm" data-x="zoomout">−</button><span class="cov-zoom" id="covZoom">100%</span><button class="btn ghost sm" data-x="zoomin">+</button></div><div class="cov-canvas-scroll" id="covScroll"></div></div>';
+    stage.appendChild(wrap);
+    var scroll = wrap.querySelector("#covScroll");
+    if (!t._covZoom) t._covZoom = 1;
+    var save = function () { t.dirty = true; var sa = W("scheduleAutosave"); if (sa) sa(); };
+    var draw = function () { drawCanvas(scroll, book, t, select, save); wrap.querySelector("#covZoom").textContent = Math.round(t._covZoom * 100) + "%"; };
+    var rerender = function () { stage.innerHTML = ""; render(t, stage, back, mode); };
+    function select(id) { SEL = id; buildLeft(wrap.querySelector("#covLeft"), t, book, function () { save(); draw(); }, rerender, draw); draw(); }
+    buildLeft(wrap.querySelector("#covLeft"), t, book, function () { save(); draw(); }, rerender, draw);
+    draw();
+    wrap.querySelector(".cv-preview-bar").onclick = function (e) { var b = e.target.closest("[data-x]"); if (!b) return; if (b.dataset.x === "back") return back(); if (b.dataset.x === "zoomin") t._covZoom = Math.min(3, t._covZoom + .15); if (b.dataset.x === "zoomout") t._covZoom = Math.max(.2, t._covZoom - .15); draw(); };
+  }
+
+  function drawCanvas(scroll, book, t, select, save) {
+    var c = book.coverDesign, g = geom(book, "cover"); scroll.innerHTML = "";
+    var fit = Math.min(1, 620 / (g.totalW * DPI)) * (t._covZoom || 1);
+    var stageEl = E("div", "cov-stage");
+    var cw = g.totalW * DPI, ch = g.totalH * DPI;
+    stageEl.style.width = cw * fit + "px"; stageEl.style.height = ch * fit + "px";
+    var canvas = E("div", "cov-canvas"); canvas.style.cssText = "width:" + cw + "px;height:" + ch + "px;transform:scale(" + fit + ");transform-origin:top left;";
+    // arrière-plan
+    var bg = E("div", "cov-bg"); bg.style.cssText = "position:absolute;inset:0;opacity:" + (c.background.opacity != null ? c.background.opacity : 1) + ";";
+    if (c.background.type === "color") bg.style.background = c.background.color;
+    else if (c.background.type === "gradient") bg.style.background = "linear-gradient(" + c.background.angle + "deg," + c.background.gradFrom + "," + c.background.gradTo + ")";
+    else if (c.background.type === "image" && c.background.image) { bg.style.backgroundImage = "url(" + c.background.image + ")"; bg.style.backgroundSize = "cover"; bg.style.backgroundPosition = "center"; }
+    canvas.appendChild(bg);
+    // repères : panneaux, fond perdu, zone de sécurité
+    if (c.settings.guides) {
+      Object.keys(g.panels).forEach(function (key) { var pn = g.panels[key]; var pb = E("div", "cov-panel-guide"); pb.style.cssText = "position:absolute;left:" + (pn.x * DPI) + "px;top:" + (g.bleed * DPI) + "px;width:" + (pn.w * DPI) + "px;height:" + (g.bookH * DPI) + "px;"; pb.appendChild(E("span", "cov-panel-lbl", key === "front" ? "Couverture avant" : key === "back" ? "Quatrième" : key === "spine" ? "Dos" : (c.type === "back" ? "Quatrième" : "Couverture avant"))); canvas.appendChild(pb);
+        var safe = E("div", "cov-safe"); var s = g.safe * DPI; safe.style.cssText = "position:absolute;left:" + (pn.x * DPI + s) + "px;top:" + (g.bleed * DPI + s) + "px;width:" + (pn.w * DPI - s * 2) + "px;height:" + (g.bookH * DPI - s * 2) + "px;"; canvas.appendChild(safe); });
+      if (g.bleed > 0) { var bleedL = E("div", "cov-bleed-line"); bleedL.style.cssText = "position:absolute;left:" + (g.bleed * DPI) + "px;top:" + (g.bleed * DPI) + "px;width:" + ((g.totalW - g.bleed * 2) * DPI) + "px;height:" + ((g.totalH - g.bleed * 2) * DPI) + "px;"; canvas.appendChild(bleedL); }
+    }
+    if (c.settings.grid) { var grid = E("div", "cov-grid-ov"); grid.style.cssText = "position:absolute;inset:0;background-size:" + (0.5 * DPI) + "px " + (0.5 * DPI) + "px;"; canvas.appendChild(grid); }
+    // éléments (ordre z)
+    c.elements.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (el) {
+      if (el.hidden) return;
+      var pn = panelFor(book, g, el);
+      var node = elNode(el, pn, g, book);
+      node.style.position = "absolute";
+      node.style.left = ((pn.x + (el.x || 0)) * DPI) + "px";
+      node.style.top = ((g.bleed + (el.y || 0)) * DPI) + "px";
+      node.style.width = (el.w * DPI) + "px"; node.style.height = (el.h * DPI) + "px";
+      node.style.transform = "rotate(" + (el.rotation || 0) + "deg)"; node.style.opacity = (el.opacity != null ? el.opacity : 1);
+      if (el.id === SEL) node.classList.add("cov-selected");
+      node.onpointerdown = function (ev) { if (el.locked) { SEL = el.id; select(el.id); return; } ev.preventDefault(); SEL = el.id; select(el.id); startDrag(ev, el, book, fit, save, function () { drawCanvas(scroll, book, t, select, save); }); };
+      // poignées
+      if (el.id === SEL && !el.locked) {
+        var rz = E("div", "cov-h cov-h-rz"); rz.onpointerdown = function (ev) { ev.stopPropagation(); ev.preventDefault(); startResize(ev, el, book, fit, save, function () { drawCanvas(scroll, book, t, select, save); }); }; node.appendChild(rz);
+        var ro = E("div", "cov-h cov-h-ro"); ro.onpointerdown = function (ev) { ev.stopPropagation(); ev.preventDefault(); startRotate(ev, el, node, save, function () { drawCanvas(scroll, book, t, select, save); }); }; node.appendChild(ro);
+      }
+      canvas.appendChild(node);
+    });
+    stageEl.appendChild(canvas); scroll.appendChild(stageEl);
+    // clic vide => désélection
+    scroll.onpointerdown = function (ev) { if (ev.target === scroll || ev.target === stageEl) { SEL = null; select(null); } };
+  }
+  function elNode(el, pn, g, book) {
+    if (el.kind === "text") { var d = E("div", "cov-el cov-text"); d.style.cssText += "font-family:" + fontCss(el.font) + ";font-size:" + (el.size * DPI / 72) + "px;font-weight:" + (el.weight || "400") + ";font-style:" + (el.italic ? "italic" : "normal") + ";color:" + (el.color || "#fff") + ";text-align:" + (el.align || "center") + ";display:flex;align-items:center;justify-content:" + (el.align === "left" ? "flex-start" : el.align === "right" ? "flex-end" : "center") + ";overflow:hidden;line-height:1.15;"; d.textContent = el.text || ""; return d; }
+    if (el.kind === "image") { var im = E("div", "cov-el cov-image"); if (el.src) { im.style.backgroundImage = "url(" + el.src + ")"; im.style.backgroundSize = (el.fit === "contain" ? "contain" : el.fit === "fill" ? "100% 100%" : "cover"); im.style.backgroundPosition = "center"; im.style.backgroundRepeat = "no-repeat"; } else { im.classList.add("cov-image-empty"); im.textContent = "Image"; } return im; }
+    if (el.kind === "isbn") { var iz = E("div", "cov-el cov-isbn"); iz.textContent = "ISBN / code-barres (à fournir)"; return iz; }
+    // shape
+    var sh = E("div", "cov-el cov-shape"); sh.style.background = el.fill || "#ffffff"; if (el.shapeType === "circle") sh.style.borderRadius = "50%"; if (el.shapeType === "line") { sh.style.height = "0"; sh.style.borderTop = (el.stroke || 2) + "px solid " + (el.fill || "#fff"); sh.style.background = "none"; } if (el.stroke && el.shapeType !== "line") sh.style.border = el.strokeW + "px solid " + el.stroke; return sh;
+  }
+  function fontCss(f) { return f === "sans" ? "Inter, Arial, sans-serif" : f === "mono" ? "'Courier New', monospace" : "Georgia, 'Times New Roman', serif"; }
+
+  /* ---------- Interactions pointeur ---------- */
+  function startDrag(ev, el, book, fit, save, redraw) {
+    var sx = ev.clientX, sy = ev.clientY, ox = el.x || 0, oy = el.y || 0;
+    function mv(e) { el.x = ox + (e.clientX - sx) / (fit * DPI); el.y = oy + (e.clientY - sy) / (fit * DPI); redraw(); }
+    function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); save(); }
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+  }
+  function startResize(ev, el, book, fit, save, redraw) {
+    var sx = ev.clientX, sy = ev.clientY, ow = el.w, oh = el.h;
+    function mv(e) { el.w = Math.max(0.2, ow + (e.clientX - sx) / (fit * DPI)); el.h = Math.max(0.2, oh + (e.clientY - sy) / (fit * DPI)); redraw(); }
+    function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); save(); }
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+  }
+  function startRotate(ev, el, node, save, redraw) {
+    var r = node.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    function mv(e) { el.rotation = Math.round(Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI + 90); redraw(); }
+    function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); save(); }
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+  }
+
+  /* ---------- Panneau gauche : outils, propriétés, calques ---------- */
+  function sec(box, t) { box.appendChild(E("div", "cv-sec", t)); }
+  function selField(label, val, opts, on) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label))); var s = E("select", "cv-sb-sel"); opts.forEach(function (o) { var op = E("option"); op.value = o[0]; op.textContent = o[1]; s.appendChild(op); }); s.value = val; s.onchange = function () { on(s.value); }; w.appendChild(s); return w; }
+  function txtField(label, val, on) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label))); var i = E("input", "rp-input"); i.value = val || ""; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
+  function nF(label, val, on, step) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label))); var i = E("input", "rp-input"); i.type = "number"; i.step = step || "0.05"; i.value = val; i.oninput = function () { on(num(i.value, val)); }; w.appendChild(i); return w; }
+  function colorF(label, val, on) { var w = E("label", "cvf cv-sb-c"); w.appendChild(E("span", null, esc(label))); var i = E("input"); i.type = "color"; i.value = val || "#000000"; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
+
+  function buildLeft(box, t, book, touch, rerender, draw) {
+    box.innerHTML = ""; var c = book.coverDesign, g = geom(book, "cover");
+    // type de composition
+    sec(box, "Composition");
+    box.appendChild(selField("Vue", c.type, [["full", "Couverture complète"], ["front", "Couverture avant"], ["spine", "Dos"], ["back", "Quatrième de couverture"]], function (v) { c.type = v; touch(); rerender(); }));
+    // dos
+    sec(box, "Dos");
+    (function () { var w = E("label", "cvf cvf-chk"); var i = E("input"); i.type = "checkbox"; i.checked = !!c.spineAuto; i.onchange = function () { c.spineAuto = i.checked; touch(); rerender(); }; w.appendChild(i); w.appendChild(E("span", null, "Calcul automatique du dos")); box.appendChild(w); })();
+    if (c.spineAuto) { var pc = pageCount(book); box.appendChild(E("div", "pp-note", "Largeur du dos : " + (spineWidth(book) ? spineWidth(book) + " po" : "non définie") + " — source : " + pc + " page(s) × facteur papier (" + c.spinePerPage + " po/page). Ce facteur dépend du papier/imprimeur : ajustez-le si connu.")); box.appendChild(nF("Facteur papier (po/page)", c.spinePerPage, function (v) { c.spinePerPage = v; touch(); rerender(); }, "0.0005")); }
+    else box.appendChild(nF("Largeur du dos (po)", c.spineManual, function (v) { c.spineManual = v; touch(); rerender(); }, "0.05"));
+    // fond perdu / sécurité
+    sec(box, "Fond perdu & sécurité");
+    var g2 = E("div", "cv-grid"); g2.appendChild(nF("Fond perdu (po)", c.bleed, function (v) { c.bleed = v; touch(); rerender(); }, "0.025")); g2.appendChild(nF("Zone de sécurité (po)", c.safeArea, function (v) { c.safeArea = v; touch(); rerender(); }, "0.025")); box.appendChild(g2);
+    // arrière-plan
+    sec(box, "Arrière-plan");
+    box.appendChild(selField("Type", c.background.type, [["color", "Couleur"], ["gradient", "Dégradé"], ["image", "Image"]], function (v) { c.background.type = v; touch(); rerender(); }));
+    if (c.background.type === "color") box.appendChild(colorF("Couleur", c.background.color, function (v) { c.background.color = v; touch(); draw(); }));
+    else if (c.background.type === "gradient") { var gg = E("div", "cv-grid"); gg.appendChild(colorF("De", c.background.gradFrom, function (v) { c.background.gradFrom = v; touch(); draw(); })); gg.appendChild(colorF("À", c.background.gradTo, function (v) { c.background.gradTo = v; touch(); draw(); })); gg.appendChild(nF("Angle", c.background.angle, function (v) { c.background.angle = v; touch(); draw(); }, "5")); box.appendChild(gg); }
+    else { var bi = E("button", "cv-add", c.background.image ? "Changer l’image de fond" : "Importer une image de fond"); bi.onclick = function () { importImage(function (data) { c.background.image = data; touch(); rerender(); }); }; box.appendChild(bi); }
+    // ajouter des éléments
+    sec(box, "Ajouter");
+    var addbar = E("div", "cov-addbar");
+    [["Titre", function () { addText(book, "text", book.title || "Titre", { size: 34, weight: "700" }); }], ["Sous-titre", function () { addText(book, "text", book.subtitle || "Sous-titre", { size: 16, y: 1.4 }); }], ["Auteur", function () { addText(book, "text", book.author || "Auteur", { size: 18, y: 6.5 }); }], ["Texte", function () { addText(book, "text", "Texte", { size: 16 }); }], ["Image", function () { importImage(function (data) { addImage(book, data); touch(); rerender(); }); }], ["Rectangle", function () { addShape(book, "rect"); }], ["Cercle", function () { addShape(book, "circle"); }], ["Ligne", function () { addShape(book, "line"); }]].forEach(function (p) { var b = E("button", "ed-btn", p[0]); b.onclick = function () { p[1](); touch(); rerender(); }; addbar.appendChild(b); });
+    box.appendChild(addbar);
+    // quatrième de couverture : blocs + zone ISBN
+    if (c.type === "back" || c.type === "full") {
+      var bar2 = E("div", "cov-addbar");
+      [["Résumé", book.description || "Résumé du livre…"], ["Biographie", "Biographie de l’auteur…"], ["Accroche", "Texte promotionnel…"]].forEach(function (p) { var b = E("button", "ed-btn", p[0]); b.onclick = function () { addText(book, "text", p[1], { size: 12, w: 3.5, h: 2, align: "left", panel: "back", color: "#eee" }); touch(); rerender(); }; bar2.appendChild(b); });
+      var iz = E("button", "ed-btn", "Zone ISBN"); iz.onclick = function () { var el = { id: uid(), kind: "isbn", panel: "back", x: 3.2, y: 6.8, w: 1.6, h: 0.9, z: c.elements.length }; c.elements.push(el); touch(); rerender(); }; bar2.appendChild(iz);
+      box.appendChild(E("div", "cv-sec", "Quatrième de couverture")); box.appendChild(bar2);
+      box.appendChild(E("div", "pp-note", "La zone ISBN/code-barres est réservée à la production. Readix n’invente aucun ISBN ni code-barres : fournissez-le à l’impression."));
+    }
+    // modèles
+    sec(box, "Modèles de couverture");
+    var tpl = E("div", "pp-presets"); Object.keys(TEMPLATES).forEach(function (id) { var b = E("button", "cv-tpl", TEMPLATES[id].label); b.onclick = function () { applyTemplate(book, id); touch(); rerender(); }; tpl.appendChild(b); }); box.appendChild(tpl);
+    // synchro livre
+    sec(box, "Synchronisation avec le livre");
+    var sb = E("button", "cv-add cv-ghost", "Utiliser titre + auteur du livre"); sb.onclick = function () { syncFromBook(book, rerender); }; box.appendChild(sb);
+    // repères / grille
+    sec(box, "Repères");
+    var gr = E("div", "cov-addbar"); var tg = E("button", "ed-btn" + (c.settings.guides ? " on" : ""), "Repères"); tg.onclick = function () { c.settings.guides = !c.settings.guides; touch(); rerender(); }; var tgr = E("button", "ed-btn" + (c.settings.grid ? " on" : ""), "Grille"); tgr.onclick = function () { c.settings.grid = !c.settings.grid; touch(); rerender(); }; gr.appendChild(tg); gr.appendChild(tgr); box.appendChild(gr);
+    // propriétés de l'élément sélectionné
+    var el = c.elements.filter(function (x) { return x.id === SEL; })[0];
+    if (el) { buildProps(box, book, el, touch, rerender, draw); }
+    // calques
+    buildLayers(box, book, touch, rerender);
+    // versions
+    sec(box, "Versions");
+    var vb = E("div", "cov-addbar"); var sv = E("button", "ed-btn", "Enregistrer version"); sv.onclick = function () { c.versions.push({ at: Date.now(), label: "Version " + (c.versions.length + 1), snapshot: JSON.stringify({ elements: c.elements, background: c.background, type: c.type }) }); touch(); rerender(); toast("Version enregistrée.", "ok"); }; vb.appendChild(sv);
+    var dupC = E("button", "ed-btn", "Créer une variante"); dupC.onclick = function () { c.versions.push({ at: Date.now(), label: "Variante " + (c.versions.length + 1), snapshot: JSON.stringify({ elements: c.elements, background: c.background, type: c.type }) }); toast("Variante enregistrée dans les versions.", "ok"); touch(); rerender(); }; vb.appendChild(dupC); box.appendChild(vb);
+    c.versions.forEach(function (v, i) { var row = E("div", "cov-ver-row", esc(v.label)); var r = E("button", "ed-btn", "Restaurer"); r.onclick = function () { confirmIt("Restaurer « " + v.label + " » ? La composition actuelle sera remplacée.", function () { var s = JSON.parse(v.snapshot); c.elements = s.elements; c.background = s.background; c.type = s.type; touch(); rerender(); }); }; row.appendChild(r); box.appendChild(row); });
+    // alertes de production
+    buildAlerts(box, book);
+    // export
+    sec(box, "Export");
+    box.appendChild(exportPanel(t, book, "cover"));
+    // Copilot cover
+    sec(box, "Assistant couverture");
+    var ask = E("div", "ed-ask"); var inp = E("input", "rp-input"); inp.placeholder = "Ex. « centre le titre », « auteur en bas », « variante minimaliste »";
+    var go = E("button", "ed-btn ed-go", "Appliquer"); go.onclick = function () { coverCommand(inp.value, book, function () { touch(); rerender(); }); inp.value = ""; };
+    inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } };
+    ask.appendChild(inp); ask.appendChild(go); box.appendChild(ask);
+    // IA image (honnête)
+    var aiImg = E("button", "cv-add cv-ghost", "✨ Générer une illustration (IA)"); aiImg.onclick = function () { aiGenerateImage(book, aiImg); }; box.appendChild(aiImg);
+  }
+
+  function buildProps(box, book, el, touch, rerender, draw) {
+    sec(box, "Propriétés de l’élément");
+    if (el.kind === "text") { box.appendChild(txtField("Texte", el.text, function (v) { el.text = v; touch(); draw(); })); var g = E("div", "cv-grid"); g.appendChild(selField("Police", el.font || "serif", [["serif", "Serif"], ["sans", "Sans"], ["mono", "Mono"]], function (v) { el.font = v; touch(); draw(); })); g.appendChild(nF("Taille (pt)", el.size, function (v) { el.size = v; touch(); draw(); }, "1")); g.appendChild(selField("Graisse", el.weight || "400", [["400", "Normal"], ["600", "Semi"], ["700", "Gras"]], function (v) { el.weight = v; touch(); draw(); })); g.appendChild(selField("Alignement", el.align || "center", [["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], function (v) { el.align = v; touch(); draw(); })); box.appendChild(g); box.appendChild(colorF("Couleur", el.color || "#ffffff", function (v) { el.color = v; touch(); draw(); })); var it = E("label", "cvf cvf-chk"); var ii = E("input"); ii.type = "checkbox"; ii.checked = !!el.italic; ii.onchange = function () { el.italic = ii.checked; touch(); draw(); }; it.appendChild(ii); it.appendChild(E("span", null, "Italique")); box.appendChild(it); }
+    if (el.kind === "image") { box.appendChild(selField("Ajustement", el.fit || "cover", [["cover", "Fill (remplir)"], ["contain", "Contain (contenir)"], ["fill", "Étirer"]], function (v) { el.fit = v; touch(); draw(); })); var rb = E("button", "cv-add", "Remplacer l’image"); rb.onclick = function () { importImage(function (data) { el.src = data; el._nw = null; touch(); draw(); }, el); }; box.appendChild(rb); }
+    if (el.kind === "shape") { box.appendChild(colorF("Remplissage", el.fill || "#ffffff", function (v) { el.fill = v; touch(); draw(); })); }
+    var g3 = E("div", "cv-grid"); g3.appendChild(nF("X (po)", el.x || 0, function (v) { el.x = v; touch(); draw(); })); g3.appendChild(nF("Y (po)", el.y || 0, function (v) { el.y = v; touch(); draw(); })); g3.appendChild(nF("Largeur", el.w, function (v) { el.w = v; touch(); draw(); })); g3.appendChild(nF("Hauteur", el.h, function (v) { el.h = v; touch(); draw(); })); g3.appendChild(nF("Rotation", el.rotation || 0, function (v) { el.rotation = v; touch(); draw(); }, "1")); g3.appendChild(nF("Opacité", el.opacity != null ? el.opacity : 1, function (v) { el.opacity = Math.min(1, Math.max(0, v)); touch(); draw(); }, "0.05")); box.appendChild(g3);
+    // alignement dans le panneau
+    var al = E("div", "cov-addbar");
+    [["⌷ G", "left"], ["⌷ C", "cx"], ["⌷ D", "right"], ["⌶ H", "top"], ["⌶ M", "cy"], ["⌶ B", "bottom"]].forEach(function (p) { var b = E("button", "ed-btn", p[0]); b.title = p[1]; b.onclick = function () { alignEl(book, el, p[1]); touch(); rerender(); }; al.appendChild(b); });
+    box.appendChild(E("div", "cvf-l", "Aligner dans le panneau")); box.appendChild(al);
+    // actions
+    var act = E("div", "cov-addbar");
+    var dup = E("button", "ed-btn", "Dupliquer"); dup.onclick = function () { var copy = JSON.parse(JSON.stringify(el)); copy.id = uid(); copy.x = (el.x || 0) + .2; copy.y = (el.y || 0) + .2; copy.z = book.coverDesign.elements.length; book.coverDesign.elements.push(copy); SEL = copy.id; touch(); rerender(); }; act.appendChild(dup);
+    var del = E("button", "ed-btn", "Supprimer"); del.onclick = function () { book.coverDesign.elements = book.coverDesign.elements.filter(function (x) { return x.id !== el.id; }); SEL = null; touch(); rerender(); }; act.appendChild(del);
+    box.appendChild(act);
+  }
+  function buildLayers(box, book, touch, rerender) {
+    sec(box, "Calques"); var c = book.coverDesign;
+    var list = E("div", "cov-layers");
+    c.elements.slice().sort(function (a, b) { return b.z - a.z; }).forEach(function (el) {
+      var row = E("div", "cov-layer" + (el.id === SEL ? " sel" : ""));
+      var nm = E("span", "cov-layer-n", esc(el.name || (el.kind === "text" ? ("« " + (el.text || "").slice(0, 14) + " »") : el.kind === "isbn" ? "Zone ISBN" : el.kind === "image" ? "Image" : "Forme"))); nm.onclick = function () { SEL = el.id; rerender(); };
+      var eye = E("button", "cov-l-btn", el.hidden ? "◌" : "◉"); eye.title = "Afficher/Masquer"; eye.onclick = function (e) { e.stopPropagation(); el.hidden = !el.hidden; touch(); rerender(); };
+      var lock = E("button", "cov-l-btn", el.locked ? "🔒" : "🔓"); lock.title = "Verrouiller"; lock.onclick = function (e) { e.stopPropagation(); el.locked = !el.locked; touch(); rerender(); };
+      var up = E("button", "cov-l-btn", "↑"); up.onclick = function (e) { e.stopPropagation(); bumpZ(c, el, 1); touch(); rerender(); };
+      var dn = E("button", "cov-l-btn", "↓"); dn.onclick = function (e) { e.stopPropagation(); bumpZ(c, el, -1); touch(); rerender(); };
+      row.appendChild(nm); [eye, lock, up, dn].forEach(function (b) { row.appendChild(b); });
+      list.appendChild(row);
+    });
+    if (!c.elements.length) list.appendChild(E("div", "pp-note", "Aucun élément. Ajoutez du texte, une image ou une forme."));
+    box.appendChild(list);
+  }
+  function bumpZ(c, el, dir) { var sorted = c.elements.slice().sort(function (a, b) { return a.z - b.z; }); var i = sorted.indexOf(el); var j = i + dir; if (j < 0 || j >= sorted.length) return; var tmp = sorted[i].z; sorted[i].z = sorted[j].z; sorted[j].z = tmp; }
+  function alignEl(book, el, how) { var g = geom(book, "cover"), pn = panelFor(book, g, el); if (how === "left") el.x = 0; else if (how === "right") el.x = pn.w - el.w; else if (how === "cx") el.x = (pn.w - el.w) / 2; else if (how === "top") el.y = 0; else if (how === "bottom") el.y = g.bookH - el.h; else if (how === "cy") el.y = (g.bookH - el.h) / 2; }
+
+  function buildAlerts(box, book) {
+    var c = book.coverDesign, g = geom(book, "cover"), al = [];
+    if (g.spine <= 0) al.push("Largeur du dos non définie (dépend du nombre de pages / du papier).");
+    if (num(c.bleed, 0) <= 0) al.push("Fond perdu à 0 : ajoutez un fond perdu (usuellement 0,125 po) pour l’impression.");
+    c.elements.forEach(function (el) { if (el.hidden) return; var pn = panelFor(book, g, el); var s = g.safe; if (el.kind === "text" && ((el.x || 0) < s - 0.02 || (el.y || 0) < s - 0.02 || (el.x || 0) + el.w > pn.w - s + 0.02 || (el.y || 0) + el.h > g.bookH - s + 0.02)) al.push("Texte « " + (el.text || "").slice(0, 20) + " » proche/hors de la zone de sécurité."); if (el.kind === "image" && ((el.x || 0) + pn.x < 0 || (el.y || 0) < -0.001 || (el.x || 0) + el.w > pn.w + 0.001 || (el.y || 0) + el.h > g.bookH + 0.001)) al.push("Une image dépasse la zone imprimable / le fond perdu."); if (el.kind === "image" && el._nw && (el._nw / (el.w) < 150)) al.push("Résolution d’image possiblement insuffisante (< 150 ppp à cette taille)."); });
+    if (!al.length) return;
+    sec(box, "Alertes de production");
+    var wrap = E("div", "cov-alerts"); al.slice(0, 8).forEach(function (a) { wrap.appendChild(E("div", "cov-alert", "⚠ " + esc(a))); }); box.appendChild(wrap);
+  }
+
+  /* ---------- Ajout d'éléments / modèles / synchro ---------- */
+  function activePanel(book) { var c = book.coverDesign; if (c.type === "front") return "front"; if (c.type === "back") return "back"; if (c.type === "spine") return "spine"; return "front"; }
+  function addText(book, kind, text, o) { o = o || {}; var el = { id: uid(), kind: "text", panel: o.panel || activePanel(book), text: text, font: "serif", size: o.size || 18, weight: o.weight || "400", italic: false, align: o.align || "center", color: o.color || "#ffffff", x: o.x != null ? o.x : 0.6, y: o.y != null ? o.y : 1.0, w: o.w || (bookDims(book).w - 1.2), h: o.h || (o.size ? o.size / 40 : 0.6), rotation: 0, opacity: 1, z: book.coverDesign.elements.length }; book.coverDesign.elements.push(el); SEL = el.id; }
+  function addImage(book, data) { var el = { id: uid(), kind: "image", panel: activePanel(book), src: data, fit: "cover", x: 0.5, y: 0.5, w: 3, h: 3, rotation: 0, opacity: 1, z: book.coverDesign.elements.length }; var img = new Image(); img.onload = function () { el._nw = img.naturalWidth; el._nh = img.naturalHeight; }; img.src = data; book.coverDesign.elements.push(el); SEL = el.id; }
+  function addShape(book, type) { var el = { id: uid(), kind: "shape", shapeType: type, panel: activePanel(book), fill: type === "line" ? "#ffffff" : "#4F46E5", stroke: "", strokeW: 0, x: 1, y: 1, w: type === "line" ? 3 : 1.5, h: type === "line" ? 0.05 : 1.5, rotation: 0, opacity: 1, z: book.coverDesign.elements.length }; book.coverDesign.elements.push(el); SEL = el.id; }
+  function importImage(cb, el) { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/jpeg,image/webp,image/svg+xml"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { cb(rd.result); if (el) { var img = new Image(); img.onload = function () { el._nw = img.naturalWidth; }; img.src = rd.result; } }; rd.readAsDataURL(f); }; inp.click(); }
+  function syncFromBook(book, rerender) {
+    var c = book.coverDesign; var hasTitle = c.elements.some(function (e) { return e._bound === "title"; });
+    var apply = function () {
+      var tE = c.elements.filter(function (e) { return e._bound === "title"; })[0]; if (tE) tE.text = book.title || "Titre"; else { addText(book, "text", book.title || "Titre", { size: 34, weight: "700", y: 1 }); c.elements[c.elements.length - 1]._bound = "title"; }
+      var aE = c.elements.filter(function (e) { return e._bound === "author"; })[0]; if (aE) aE.text = book.author || "Auteur"; else { addText(book, "text", book.author || "Auteur", { size: 18, y: 6.5 }); c.elements[c.elements.length - 1]._bound = "author"; }
+      rerender(); toast("Couverture synchronisée avec le livre.", "ok");
+    };
+    if (hasTitle) confirmIt("Mettre à jour le titre et l’auteur de la couverture depuis le livre ?", apply); else apply();
+  }
+  var TEMPLATES = {
+    minimal: { label: "Minimaliste", bg: { type: "color", color: "#f4f4f0" }, els: [{ kind: "text", bind: "title", size: 30, weight: "700", color: "#1a1a1a", y: 2.6 }, { kind: "text", bind: "author", size: 14, color: "#555", y: 6.4 }] },
+    classic: { label: "Classique", bg: { type: "color", color: "#3a2f25" }, els: [{ kind: "shape", shapeType: "rect", fill: "#c9a24b", x: 0.8, y: 0.8, w: 4.4, h: 0.06 }, { kind: "text", bind: "title", size: 30, weight: "700", color: "#f4ecd8", y: 2.4 }, { kind: "text", bind: "author", size: 15, color: "#d8cbb0", y: 6.6 }] },
+    roman: { label: "Roman", bg: { type: "gradient", gradFrom: "#1e293b", gradTo: "#0f172a", angle: 160 }, els: [{ kind: "text", bind: "title", size: 34, weight: "700", color: "#fff", y: 3 }, { kind: "text", bind: "author", size: 16, color: "#cbd5e1", y: 7 }] },
+    business: { label: "Business", bg: { type: "color", color: "#0b3d5c" }, els: [{ kind: "shape", shapeType: "rect", fill: "#12aab0", x: 0, y: 5.6, w: 6, h: 3.4 }, { kind: "text", bind: "title", size: 30, weight: "700", color: "#fff", align: "left", x: 0.5, y: 1, w: 5 }, { kind: "text", bind: "author", size: 14, color: "#eaffff", align: "left", x: 0.5, y: 6.4, w: 5 }] },
+    photo: { label: "Photographique", bg: { type: "color", color: "#111" }, els: [{ kind: "image", x: 0, y: 0, w: 6, h: 6 }, { kind: "shape", shapeType: "rect", fill: "rgba(0,0,0,.55)", x: 0, y: 5.5, w: 6, h: 3.5 }, { kind: "text", bind: "title", size: 30, weight: "700", color: "#fff", y: 6, x: 0.5, align: "left", w: 5 }] },
+    modern: { label: "Moderne", bg: { type: "gradient", gradFrom: "#6d28d9", gradTo: "#ec4899", angle: 135 }, els: [{ kind: "text", bind: "title", size: 36, weight: "700", color: "#fff", y: 2.2 }, { kind: "text", bind: "author", size: 16, color: "#ffe4f3", y: 7 }] },
+    typo: { label: "Typographique", bg: { type: "color", color: "#fde047" }, els: [{ kind: "text", bind: "title", size: 44, weight: "700", color: "#111", align: "left", x: 0.5, y: 1.2, w: 5 }, { kind: "text", bind: "author", size: 16, color: "#333", align: "left", x: 0.5, y: 7, w: 5 }] }
+  };
+  function applyTemplate(book, id) {
+    var T = TEMPLATES[id]; if (!T) return; var c = book.coverDesign, d = bookDims(book);
+    c.background = Object.assign({ type: "color", color: "#fff", gradFrom: "#4F46E5", gradTo: "#0EA5E9", angle: 135, image: c.background.image || "", opacity: 1 }, T.bg);
+    c.elements = T.els.map(function (e, i) {
+      var base = { id: uid(), panel: "front", x: e.x != null ? e.x : 0.6, y: e.y != null ? e.y : 1, w: e.w != null ? e.w : (d.w - 1.2), h: e.h != null ? e.h : (e.kind === "image" ? 3 : (e.size ? e.size / 40 : 0.7)), rotation: 0, opacity: 1, z: i };
+      if (e.kind === "text") { base.kind = "text"; base.text = e.bind === "title" ? (book.title || "Titre") : e.bind === "author" ? (book.author || "Auteur") : (e.text || "Texte"); base._bound = e.bind; base.font = "serif"; base.size = e.size || 20; base.weight = e.weight || "400"; base.align = e.align || "center"; base.color = e.color || "#fff"; }
+      else if (e.kind === "image") { base.kind = "image"; base.src = ""; base.fit = "cover"; }
+      else { base.kind = "shape"; base.shapeType = e.shapeType || "rect"; base.fill = e.fill || "#4F46E5"; }
+      return base;
+    });
+    toast("Modèle « " + T.label + " » appliqué.", "ok");
+  }
+
+  /* ---------- Commandes Copilot couverture ---------- */
+  function confirmIt(msg, onYes) { var dlg = W("dialog"); if (!dlg) { if (window.confirm(msg)) onYes(); return; } var dl = dlg('<h3>Confirmer</h3><p style="font-size:13px">' + esc(msg) + '</p><div class="row"><button class="btn ghost sm" data-a="no">Annuler</button><button class="btn sm" data-a="yes">Appliquer</button></div>'); dl.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "yes") onYes(); dl.close(); }; }
+  function findByBound(c, b) { return c.elements.filter(function (e) { return e._bound === b; })[0] || c.elements.filter(function (e) { return e.kind === "text" && new RegExp(b === "title" ? "titre" : "auteur", "i").test(e.text || ""); })[0]; }
+  function coverCommand(text, book, done) {
+    var s = String(text || "").toLowerCase().trim(); if (!s) return; var c = book.coverDesign;
+    if (/centre.*titre|titre.*centr/.test(s)) { var el = findByBound(c, "title") || c.elements.filter(function (e) { return e.kind === "text"; })[0]; if (el) { alignEl(book, el, "cx"); done(); toast("Titre centré.", "ok"); } else toast("Aucun titre trouvé.", "warn"); return; }
+    if (/auteur.*bas|bas.*auteur/.test(s)) { var a = findByBound(c, "author") || c.elements.filter(function (e) { return e.kind === "text"; }).pop(); if (a) { alignEl(book, a, "bottom"); alignEl(book, a, "cx"); done(); toast("Auteur placé en bas.", "ok"); } return; }
+    if (/agrandis.*image|image.*grand/.test(s)) { var im = c.elements.filter(function (e) { return e.kind === "image"; }).pop(); if (im) { im.w *= 1.2; im.h *= 1.2; done(); toast("Image agrandie.", "ok"); } else toast("Aucune image.", "warn"); return; }
+    if (/titre du livre|utilise.*titre/.test(s)) { syncFromBook(book, done); return; }
+    if (/minimalist/.test(s)) { confirmIt("Appliquer le modèle Minimaliste ? La composition actuelle sera remplacée.", function () { applyTemplate(book, "minimal"); done(); }); return; }
+    if (/6\s*[x×]\s*9|format/.test(s)) { toast("Le format se règle dans Production ; la couverture s’adapte automatiquement.", "ok"); return; }
+    toast("Commande non reconnue. Essayez : « centre le titre », « auteur en bas », « variante minimaliste ».", "warn");
+  }
+
+  /* ---------- IA image : honnête (aucune fausse image) ---------- */
+  function aiGenerateImage(book, btn) {
+    var api = W("api");
+    var dlg = W("dialog"); if (!dlg) { toast("Fournisseur de génération d’images non configuré (à intégrer côté serveur).", "warn"); return; }
+    var dl = dlg('<h3>Générer une illustration (IA)</h3><textarea class="rp-input" id="aiPrompt" rows="3" placeholder="Ex. une ville futuriste au crépuscule"></textarea><div class="pp-note">La génération d’images nécessite un fournisseur configuré côté serveur (clé API sécurisée). Aucune image fictive n’est produite si ce n’est pas le cas.</div><div class="row"><button class="btn ghost sm" data-a="x">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>');
+    dl.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "x") { dl.close(); return; }
+      var prompt = dl.root.querySelector("#aiPrompt").value.trim(); if (!prompt) { toast("Décrivez l’image.", "warn"); return; }
+      if (!api) { toast("Génération d’images : fournisseur non configuré côté serveur.", "warn"); dl.close(); return; }
+      Promise.resolve().then(function () { return api("/api/ai/image", { prompt: prompt }); })
+        .then(function (r) { if (r && r.image) { addImage(book, r.image); toast("Illustration générée ✓", "ok"); } else throw new Error("no-image"); dl.close(); })
+        .catch(function () { dl.close(); toast("Génération d’images indisponible : aucun fournisseur configuré (à intégrer). Aucune image fictive n’a été créée.", "warn"); });
+    };
+  }
+
+  /* ---------- Sérialisation SVG + exports réels ---------- */
+  function buildSVG(book, scopeEls, geo, exportDPI) {
+    var scale = exportDPI / DPI, W2 = geo.totalW * DPI, H2 = geo.totalH * DPI, c = book.coverDesign;
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="' + (W2 * scale) + '" height="' + (H2 * scale) + '" viewBox="0 0 ' + W2 + ' ' + H2 + '">';
+    // fond
+    if (c.background.type === "gradient") { s += '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">' + '<stop offset="0" stop-color="' + c.background.gradFrom + '"/><stop offset="1" stop-color="' + c.background.gradTo + '"/></linearGradient></defs><rect width="' + W2 + '" height="' + H2 + '" fill="url(#bg)"/>'; }
+    else if (c.background.type === "image" && c.background.image) s += '<image href="' + c.background.image + '" x="0" y="0" width="' + W2 + '" height="' + H2 + '" preserveAspectRatio="xMidYMid slice"/>';
+    else s += '<rect width="' + W2 + '" height="' + H2 + '" fill="' + (c.background.color || "#fff") + '"/>';
+    scopeEls.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (el) {
+      if (el.hidden) return; var pn = panelFor(book, geo, el); var x = (pn.x + (el.x || 0)) * DPI, y = (geo.bleed + (el.y || 0)) * DPI, w = el.w * DPI, h = el.h * DPI;
+      var tr = el.rotation ? ' transform="rotate(' + el.rotation + ' ' + (x + w / 2) + ' ' + (y + h / 2) + ')"' : '';
+      var op = el.opacity != null ? el.opacity : 1;
+      if (el.kind === "text") {
+        var sizePx = el.size * DPI / 72, lhp = sizePx * 1.15, lines = wrapText(el.text || "", fontCss(el.font), sizePx, w, el.weight, el.italic);
+        var anchor = el.align === "left" ? "start" : el.align === "right" ? "end" : "middle";
+        var tx = el.align === "left" ? x : el.align === "right" ? (x + w) : (x + w / 2);
+        var totalH = lines.length * lhp, sy = y + Math.max(0, (h - totalH) / 2) + sizePx * 0.82;
+        var tspans = lines.map(function (ln, i) { return '<tspan x="' + tx.toFixed(1) + '" y="' + (sy + i * lhp).toFixed(1) + '">' + esc(ln) + '</tspan>'; }).join("");
+        s += '<text font-family="' + fontCss(el.font).replace(/"/g, "'") + '" font-size="' + sizePx.toFixed(1) + '" font-weight="' + (el.weight || 400) + '" font-style="' + (el.italic ? "italic" : "normal") + '" fill="' + (el.color || "#fff") + '" text-anchor="' + anchor + '"' + tr + ' opacity="' + op + '">' + tspans + '</text>';
+      }
+      else if (el.kind === "image" && el.src) { s += '<image href="' + el.src + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" preserveAspectRatio="' + (el.fit === "contain" ? "xMidYMid meet" : el.fit === "fill" ? "none" : "xMidYMid slice") + '"' + tr + ' opacity="' + op + '"/>'; }
+      else if (el.kind === "isbn") { s += '<g' + tr + ' opacity="' + op + '"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="#fff" stroke="#333" stroke-dasharray="4 3"/><text x="' + (x + w / 2) + '" y="' + (y + h / 2) + '" font-size="11" fill="#333" text-anchor="middle">ISBN / code-barres</text></g>'; }
+      else if (el.kind === "shape") { if (el.shapeType === "circle") s += '<ellipse cx="' + (x + w / 2) + '" cy="' + (y + h / 2) + '" rx="' + (w / 2) + '" ry="' + (h / 2) + '" fill="' + (el.fill || "#fff") + '"' + tr + ' opacity="' + op + '"/>'; else if (el.shapeType === "line") s += '<line x1="' + x + '" y1="' + (y + h / 2) + '" x2="' + (x + w) + '" y2="' + (y + h / 2) + '" stroke="' + (el.fill || "#fff") + '" stroke-width="' + Math.max(1, h) + '"' + tr + ' opacity="' + op + '"/>'; else s += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + (el.fill || "#fff") + '"' + tr + ' opacity="' + op + '"/>'; }
+    });
+    return s + '</svg>';
+  }
+  var _mctx = null; function measureCtx() { if (!_mctx) { var cv = document.createElement("canvas"); _mctx = cv.getContext("2d"); } return _mctx; }
+  function wrapText(text, css, sizePx, maxW, weight, italic) { var c = measureCtx(); c.font = (italic ? "italic " : "") + (weight || 400) + " " + sizePx + "px " + css; var words = String(text).split(/\s+/), line = "", lines = []; words.forEach(function (w) { var t = line ? line + " " + w : w; if (c.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }); if (line) lines.push(line); return lines.length ? lines : [""]; }
+  function svgToBlob(svg) { return new Blob([svg], { type: "image/svg+xml;charset=utf-8" }); }
+  function rasterize(svg, geo, exportDPI, mime, quality) {
+    return new Promise(function (resolve, reject) {
+      var W2 = geo.totalW * exportDPI, H2 = geo.totalH * exportDPI;
+      var img = new Image(); var url = URL.createObjectURL(svgToBlob(svg));
+      img.onload = function () { try { var cv = document.createElement("canvas"); cv.width = Math.round(W2); cv.height = Math.round(H2); var cx = cv.getContext("2d"); if (mime === "image/jpeg") { cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height); } cx.drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); cv.toBlob(function (b) { b ? resolve(b) : reject(new Error("Rastérisation échouée")); }, mime, quality || 0.92); } catch (e) { reject(e); } };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Image SVG invalide")); };
+      img.src = url;
+    });
+  }
+  function exportPanel(t, book, scope) {
+    var box = E("div", "pp-exports");
+    var rows = [{ id: "svg", label: "SVG" }, { id: "png", label: "PNG" }, { id: "jpg", label: "JPG" }, { id: "pdf", label: "PDF" }];
+    rows.forEach(function (r) { var row = E("div", "pp-exp-row"); var b = E("button", "btn sm", "Exporter " + r.label); b.onclick = function () { doExport(r.id, book, scope, b); }; row.appendChild(b); row.appendChild(E("span", "pp-badge pp-b-ok", "Disponible")); box.appendChild(row); });
+    box.appendChild(E("div", "pp-exp-note", "PNG/JPG/PDF rendus par rastérisation de la composition SVG (dataURL des images incluses). Résolution export : 150 ppp."));
+    return box;
+  }
+  function fileName(book, ext) { return ((book.title || "Couverture").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Couverture") + "-couverture." + ext; }
+  function doExport(kind, book, scope, btn) {
+    var lab = btn.textContent; btn.disabled = true; btn.textContent = "Génération…";
+    var db = W("downloadBlob");
+    var geo = geom(book, "cover"); var els = book.coverDesign.elements;
+    var EXPORT_DPI = 150;
+    Promise.resolve().then(function () {
+      if (kind === "svg") { if (!db) throw new Error("Téléchargement indisponible."); db(svgToBlob(buildSVG(book, els, geo, EXPORT_DPI)), fileName(book, "svg")); return; }
+      var svg = buildSVG(book, els, geo, EXPORT_DPI);
+      if (kind === "png") return rasterize(svg, geo, EXPORT_DPI, "image/png").then(function (b) { db(b, fileName(book, "png")); });
+      if (kind === "jpg") return rasterize(svg, geo, EXPORT_DPI, "image/jpeg", 0.92).then(function (b) { db(b, fileName(book, "jpg")); });
+      if (kind === "pdf") { var PDFLibRef = window.PDFLib; if (!PDFLibRef) throw new Error("Moteur PDF indisponible."); return rasterize(svg, geo, EXPORT_DPI, "image/png").then(function (b) { return b.arrayBuffer(); }).then(async function (buf) { var doc = await PDFLibRef.PDFDocument.create(); var png = await doc.embedPng(buf); var pw = geo.totalW * 72, ph = geo.totalH * 72; var page = doc.addPage([pw, ph]); page.drawImage(png, { x: 0, y: 0, width: pw, height: ph }); var bytes = await doc.save(); db(new Blob([bytes], { type: "application/pdf" }), fileName(book, "pdf")); }); }
+    }).then(function () { toast(kind.toUpperCase() + " généré ✓ — téléchargement lancé.", "ok"); })
+      .catch(function (e) { toast("Échec de l’export " + kind.toUpperCase() + " : " + (e.message || e), "err"); })
+      .then(function () { btn.disabled = false; btn.textContent = lab; });
+  }
+
+  /* ---------- Illustration Studio (réutilise le canvas) ---------- */
+  function renderIllustration(t, stage, back) {
+    var book = t.book; upgrade(book);
+    var wrap = E("div", "cv-builder rxcov-studio");
+    wrap.innerHTML = '<div class="cv-form cov-left" id="ilLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><button class="btn ghost sm" data-x="back">← Contenu</button><span class="cv-pv-title">Illustrations</span><span style="flex:1"></span></div><div class="cov-canvas-scroll" id="ilScroll"></div></div>';
+    stage.appendChild(wrap); var left = wrap.querySelector("#ilLeft"), scroll = wrap.querySelector("#ilScroll");
+    var save = function () { t.dirty = true; var sa = W("scheduleAutosave"); if (sa) sa(); };
+    var rerender = function () { stage.innerHTML = ""; renderIllustration(t, stage, back); };
+    if (!t._ilSel && book.illustrations.length) t._ilSel = book.illustrations[0].id;
+    function drawIl() {
+      scroll.innerHTML = ""; var il = book.illustrations.filter(function (x) { return x.id === t._ilSel; })[0]; if (!il) { scroll.appendChild(E("div", "pp-empty", "Créez une illustration à gauche.")); return; }
+      var fit = Math.min(1, 560 / (il.w * DPI)); var st = E("div", "cov-stage"); var cw = il.w * DPI, ch = il.h * DPI; st.style.width = cw * fit + "px"; st.style.height = ch * fit + "px";
+      var canvas = E("div", "cov-canvas"); canvas.style.cssText = "width:" + cw + "px;height:" + ch + "px;transform:scale(" + fit + ");transform-origin:top left;";
+      var bg = E("div"); bg.style.cssText = "position:absolute;inset:0;background:" + (il.background.color || "#fff") + ";"; canvas.appendChild(bg);
+      il.elements.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (el) { if (el.hidden) return; var node = elNode(el, { x: 0, w: il.w }, { bleed: 0, bookH: il.h }, book); node.style.position = "absolute"; node.style.left = ((el.x || 0) * DPI) + "px"; node.style.top = ((el.y || 0) * DPI) + "px"; node.style.width = (el.w * DPI) + "px"; node.style.height = (el.h * DPI) + "px"; node.style.transform = "rotate(" + (el.rotation || 0) + "deg)"; node.style.opacity = el.opacity != null ? el.opacity : 1; if (el.id === SEL) node.classList.add("cov-selected"); node.onpointerdown = function (ev) { if (el.locked) return; ev.preventDefault(); SEL = el.id; startDragIl(ev, el, fit, save, drawIl); }; if (el.id === SEL && !el.locked) { var rz = E("div", "cov-h cov-h-rz"); rz.onpointerdown = function (ev) { ev.stopPropagation(); ev.preventDefault(); startResize(ev, el, book, fit, save, drawIl); }; node.appendChild(rz); } canvas.appendChild(node); });
+      st.appendChild(canvas); scroll.appendChild(st);
+    }
+    function startDragIl(ev, el, fit, save, redraw) { var sx = ev.clientX, sy = ev.clientY, ox = el.x || 0, oy = el.y || 0; function mv(e) { el.x = ox + (e.clientX - sx) / (fit * DPI); el.y = oy + (e.clientY - sy) / (fit * DPI); redraw(); } function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); save(); } document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); }
+    // gauche
+    left.innerHTML = ""; sec(left, "Illustrations du livre");
+    var add = E("button", "cv-add", "＋ Nouvelle illustration"); add.onclick = function () { var il = { id: uid("il"), name: "Illustration " + (book.illustrations.length + 1), w: 4, h: 3, background: { type: "color", color: "#ffffff", opacity: 1 }, elements: [] }; book.illustrations.push(il); t._ilSel = il.id; save(); rerender(); }; left.appendChild(add);
+    book.illustrations.forEach(function (il) { var row = E("div", "cov-layer" + (il.id === t._ilSel ? " sel" : "")); var nm = E("span", "cov-layer-n", esc(il.name)); nm.onclick = function () { t._ilSel = il.id; SEL = null; rerender(); }; var del = E("button", "cov-l-btn", "✕"); del.onclick = function (e) { e.stopPropagation(); book.illustrations = book.illustrations.filter(function (x) { return x.id !== il.id; }); if (t._ilSel === il.id) t._ilSel = (book.illustrations[0] || {}).id; save(); rerender(); }; row.appendChild(nm); row.appendChild(del); left.appendChild(row); });
+    var il = book.illustrations.filter(function (x) { return x.id === t._ilSel; })[0];
+    if (il) {
+      sec(left, "Dimensions"); var g = E("div", "cv-grid"); g.appendChild(nF("Largeur (po)", il.w, function (v) { il.w = Math.max(1, v); save(); rerender(); }, "0.25")); g.appendChild(nF("Hauteur (po)", il.h, function (v) { il.h = Math.max(1, v); save(); rerender(); }, "0.25")); left.appendChild(g);
+      left.appendChild(colorF("Fond", il.background.color, function (v) { il.background.color = v; save(); drawIl(); }));
+      sec(left, "Ajouter"); var ab = E("div", "cov-addbar");
+      [["Texte", function () { il.elements.push({ id: uid(), kind: "text", text: "Texte", font: "sans", size: 20, weight: "600", align: "center", color: "#111", x: 0.5, y: 0.5, w: 3, h: 0.6, rotation: 0, opacity: 1, z: il.elements.length }); }], ["Image", function () { importImage(function (data) { il.elements.push({ id: uid(), kind: "image", src: data, fit: "contain", x: 0.3, y: 0.3, w: 2, h: 2, rotation: 0, opacity: 1, z: il.elements.length }); save(); rerender(); }); }], ["Rectangle", function () { il.elements.push({ id: uid(), kind: "shape", shapeType: "rect", fill: "#4F46E5", x: 0.5, y: 0.5, w: 1.5, h: 1, rotation: 0, opacity: 1, z: il.elements.length }); }], ["Cercle", function () { il.elements.push({ id: uid(), kind: "shape", shapeType: "circle", fill: "#0EA5E9", x: 0.5, y: 0.5, w: 1.2, h: 1.2, rotation: 0, opacity: 1, z: il.elements.length }); }]].forEach(function (p) { var b = E("button", "ed-btn", p[0]); b.onclick = function () { p[1](); save(); rerender(); }; ab.appendChild(b); });
+      left.appendChild(ab);
+      sec(left, "Export"); left.appendChild(illExportPanel(book, il));
+      left.appendChild(E("div", "pp-note", "Une illustration peut être exportée puis insérée dans un chapitre, une page ou la couverture."));
+    }
+    drawIl();
+    wrap.querySelector(".cv-preview-bar").onclick = function (e) { if (e.target.closest('[data-x="back"]')) back(); };
+  }
+  function illExportPanel(book, il) {
+    var box = E("div", "pp-exports"); [["png", "PNG"], ["svg", "SVG"]].forEach(function (r) { var row = E("div", "pp-exp-row"); var b = E("button", "btn sm", "Exporter " + r[1]); b.onclick = function () { exportIllustration(r[0], il, book, b); }; row.appendChild(b); row.appendChild(E("span", "pp-badge pp-b-ok", "Disponible")); box.appendChild(row); }); return box;
+  }
+  function exportIllustration(kind, il, book, btn) {
+    var lab = btn.textContent; btn.disabled = true; btn.textContent = "…"; var db = W("downloadBlob");
+    var geo = { totalW: il.w, totalH: il.h, bleed: 0, bookH: il.h, panels: { single: { x: 0, w: il.w } }, single: "front" };
+    var fakeCover = { background: il.background, elements: il.elements, type: "front" }; var savedCover = book.coverDesign; book.coverDesign = fakeCover;
+    var EXPORT_DPI = 150; var svg = buildSVG(book, il.elements, geo, EXPORT_DPI); book.coverDesign = savedCover;
+    Promise.resolve().then(function () { if (kind === "svg") { db(svgToBlob(svg), (il.name || "illustration") + ".svg"); return; } return rasterize(svg, geo, EXPORT_DPI, "image/png").then(function (b) { db(b, (il.name || "illustration") + ".png"); }); })
+      .then(function () { toast(kind.toUpperCase() + " généré ✓", "ok"); }).catch(function (e) { toast("Échec : " + (e.message || e), "err"); }).then(function () { btn.disabled = false; btn.textContent = lab; });
+  }
+
+  /* ---------- API ---------- */
+  ReadixCover = window.ReadixCover = {
+    version: "1.0", render: render, upgrade: upgrade, geom: geom, spineWidth: spineWidth, buildSVG: buildSVG, templates: TEMPLATES,
+    context: function () { var A = (typeof APP !== "undefined") ? APP : null; if (!A) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; if (!t || !t.book) return null; upgrade(t.book); var g = geom(t.book, "cover"); return { kind: "cover", type: t.book.coverDesign.type, spine: spineWidth(t.book), elements: t.book.coverDesign.elements.length, dims: { w: g.totalW, h: g.totalH }, title: t.book.title, author: t.book.author }; }
+  };
+  try { console.info("[Readix] Cover & Illustration Engine v1 — canvas, calques, alertes, exports SVG/PNG/JPG/PDF réels."); } catch (e) {}
 })();
 
 </script>
