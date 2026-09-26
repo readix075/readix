@@ -8949,5 +8949,132 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 })();
 
 </script>
+<style id="readix-ui-ext-css">
+/* ===== Readix UI Ext (additif) ===== */
+
+/* Masquer le bouton « Projet : Aucun » de l'en-tête (géré dans « Mes projets »). */
+#projBtn { display: none !important; }
+
+/* Overlay de progression OCR */
+.rx-ocr-ov { position: fixed; inset: 0; z-index: 9000; background: rgba(20, 24, 45, .38); display: grid; place-items: center; animation: rxOcrIn .15s ease both; }
+@keyframes rxOcrIn { from { opacity: 0; } to { opacity: 1; } }
+.rx-ocr-card { width: min(440px, 92vw); background: var(--surface, #fff); border: 1px solid var(--line, #e6e8ef); border-radius: 16px; box-shadow: 0 24px 60px rgba(20, 24, 45, .28); padding: 20px 22px; }
+.rx-ocr-h { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink, #1a1d29); margin-bottom: 10px; }
+.rx-ocr-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--line, #d9dce6); border-top-color: var(--brand, #4F46E5); animation: rxOcrSpin .8s linear infinite; }
+.rx-ocr-spin.ok { border: none; animation: none; }
+.rx-ocr-spin.ok::before { content: "✓"; color: #16a34a; font-weight: 700; }
+.rx-ocr-spin.err { border: none; animation: none; }
+.rx-ocr-spin.err::before { content: "!"; color: #dc2626; font-weight: 800; }
+@keyframes rxOcrSpin { to { transform: rotate(360deg); } }
+.rx-ocr-msg { font-size: 14px; font-weight: 600; color: var(--ink, #1a1d29); }
+.rx-ocr-sub { font-size: 12.5px; color: var(--ink-soft, #6b7180); margin-top: 4px; line-height: 1.5; }
+.rx-ocr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.rx-ocr-btn { border: none; background: var(--brand, #4F46E5); color: #fff; font-size: 13px; font-weight: 600; padding: 8px 13px; border-radius: 9px; cursor: pointer; }
+.rx-ocr-btn:hover { filter: brightness(1.06); }
+.rx-ocr-btn.ghost { background: transparent; color: var(--ink-soft, #6b7180); border: 1px solid var(--line, #e6e8ef); }
+
+</style>
+<script id="readix-ui-ext">
+/* ============================================================
+   READIX UI EXT — additif
+   1) Ajoute l'outil OCR au rail (rôle défini + branché à la vraie
+      reconnaissance de texte ocrPdfTab, avec progression et lien
+      vers le Copilot). L'OCR fonctionne donc de deux façons :
+      classique (bouton d'outil) et via le Copilot (action existante).
+   2) Masque le bouton « Projet : Aucun » de l'en-tête (la gestion
+      des projets vit dans « Mes projets »).
+   N'altère aucune fonction du socle : TOOLS reçoit une entrée,
+   openTool est enveloppé au runtime.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.__rxUiExt) return; window.__rxUiExt = true;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+
+  /* 1) Enregistrer l'outil OCR (défini + rattaché à son rôle) */
+  function ensureOcrTool() {
+    try {
+      if (typeof TOOLS === "undefined" || !Array.isArray(TOOLS)) return false;
+      if (TOOLS.some(function (t) { return t.id === "ocr"; })) return true;
+      var entry = { id: "ocr", name: "OCR (texte scanné)", grp: "Conversion", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h5M8 13h8M8 17h6"/><path d="M14 4v4h4"/>' };
+      var idx = -1; for (var i = 0; i < TOOLS.length; i++) { if (TOOLS[i].id === "tolpdf") idx = i; }
+      if (idx >= 0) TOOLS.splice(idx + 1, 0, entry); else TOOLS.push(entry);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* 2) Envelopper openTool pour donner son rôle à l'OCR */
+  function wrapOpenTool() {
+    if (typeof window.openTool !== "function" || window.openTool._rxOcr) return;
+    var orig = window.openTool;
+    window.openTool = function (id) { if (id === "ocr") { runOcrTool(); return; } return orig.apply(this, arguments); };
+    window.openTool._rxOcr = true;
+  }
+
+  function activeTabSafe() { var f = W("activeTab"); if (f) return f(); return (typeof APP !== "undefined" && APP.tabs) ? APP.tabs.filter(function (x) { return x.id === APP.active; })[0] : null; }
+
+  var busy = false;
+  async function runOcrTool() {
+    if (busy) { toast("Une reconnaissance OCR est déjà en cours…", "warn"); return; }
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF dans le Lecteur pour lancer l’OCR.", "warn"); var o = W("openTool"); if (o && (!t || !t.pdf)) {/* ne bascule pas d'outil : simple avertissement */} return; }
+    if (typeof ocrPdfTab !== "function") { toast("Le moteur OCR est indisponible.", "err"); return; }
+    busy = true;
+    var ov = buildOverlay(); document.body.appendChild(ov.root);
+    try {
+      var text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
+      t.ocrText = text || "";
+      ov.done(text);
+    } catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
+    finally { busy = false; }
+  }
+
+  function buildOverlay() {
+    var root = document.createElement("div"); root.className = "rx-ocr-ov";
+    root.innerHTML = '<div class="rx-ocr-card"><div class="rx-ocr-h"><span class="rx-ocr-spin"></span><b>Reconnaissance de texte (OCR)</b></div><div class="rx-ocr-msg">Préparation du moteur…</div><div class="rx-ocr-sub">Sur un document numérisé, cela peut prendre un moment.</div><div class="rx-ocr-actions"></div></div>';
+    function close() { if (root.parentNode) root.parentNode.removeChild(root); }
+    function mkBtn(label, fn, ghost) { var b = document.createElement("button"); b.className = "rx-ocr-btn" + (ghost ? " ghost" : ""); b.textContent = label; b.onclick = fn; return b; }
+    return {
+      root: root,
+      set: function (m) { var e = root.querySelector(".rx-ocr-msg"); if (e) e.textContent = m; },
+      done: function (text) {
+        root.querySelector(".rx-ocr-spin").classList.add("ok");
+        root.querySelector(".rx-ocr-msg").textContent = "Texte reconnu ✓";
+        var preview = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, " ").replace(/\s+/g, " ").trim();
+        root.querySelector(".rx-ocr-sub").textContent = preview ? ("« " + preview.slice(0, 130) + "… »") : "Aucun texte détecté sur ce document.";
+        var a = root.querySelector(".rx-ocr-actions");
+        a.appendChild(mkBtn("Analyser avec le Copilot", function () { close(); var f = W("toggleCopilotFloating"); if (f) f(); toast("Le texte reconnu est prêt : demandez au Copilot de le résumer, l’analyser ou en extraire des données.", "ok"); }));
+        a.appendChild(mkBtn("Extraire le texte", function () { close(); var f = W("openTool"); if (f) f("text"); }));
+        a.appendChild(mkBtn("Fermer", close, true));
+      },
+      fail: function (m) {
+        var sp = root.querySelector(".rx-ocr-spin"); if (sp) sp.classList.add("err");
+        root.querySelector(".rx-ocr-msg").textContent = "Échec de l’OCR";
+        root.querySelector(".rx-ocr-sub").textContent = m;
+        root.querySelector(".rx-ocr-actions").appendChild(mkBtn("Fermer", close, true));
+      }
+    };
+  }
+
+  /* 3) init : enregistrer l'outil, envelopper openTool, rafraîchir le rail */
+  function init() {
+    var added = ensureOcrTool();
+    wrapOpenTool();
+    if (added && typeof renderTools === "function") { try { renderTools(); } catch (e) {} }
+  }
+  init();
+  // Filet de sécurité si le socle finit de se charger juste après ce bloc.
+  var tries = 0;
+  var iv = setInterval(function () {
+    tries++;
+    var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && TOOLS.some(function (t) { return t.id === "ocr"; }) && window.openTool && window.openTool._rxOcr);
+    if (!ready) init();
+    if (ready || tries > 20) clearInterval(iv);
+  }, 250);
+  try { console.info("[Readix] UI Ext — outil OCR ajouté, bouton Projet d'en-tête masqué."); } catch (e) {}
+})();
+
+</script>
 </body>
 </html>
