@@ -7380,516 +7380,6 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
 })();
 
 </script>
-<style id="readix-production-css">
-/* ===== Readix Production Engine v1 (Phase 5) — additif ===== */
-.bk-modes { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 8px; }
-.bk-mode { border: none; background: #fff; padding: 6px 16px; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
-.bk-mode.on { background: var(--brand); color: #fff; font-weight: 600; }
-
-.rxpp-studio .pp-left { display: flex; flex-direction: column; gap: 4px; }
-.pp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.pp-note { font-size: 11px; color: var(--ink-faint); font-style: italic; margin: 4px 0 2px; line-height: 1.4; }
-
-/* aperçu paginé */
-.pp-scroll { background: #eef0f4; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.pp-sheet-wrap { display: flex; flex-direction: column; align-items: center; }
-.pp-sheet { position: relative; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.14); transform-origin: top center; color: #14181f; }
-.pp-cap { font-size: 11px; color: #8a93a3; margin-top: 4px; }
-.pp-empty { color: #7a8394; font-size: 13px; padding: 40px; }
-.pp-area { }
-.pp-para { margin: 0 0 2px; }
-.pp-titlepage { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; }
-.pp-bt { font-size: 26pt; font-weight: 700; } .pp-bs { font-size: 13pt; color: #555; margin-top: 8px; } .pp-ba { font-size: 12pt; margin-top: 30px; }
-.pp-part { text-align: center; font-weight: 700; margin: 30% 0 0; }
-.pp-chapter { margin-bottom: 14px; } .pp-chapter-n { font-size: 9pt; letter-spacing: .12em; color: #888; text-transform: uppercase; } .pp-chapter-t { font-weight: 700; margin-top: 4px; }
-.pp-subhead { font-weight: 700; margin: 8px 0 3px; }
-.pp-quote { border-left: 2px solid #ccc; margin: 6px 0; padding-left: 10px; color: #555; font-style: italic; }
-.pp-toc-h { font-weight: 700; font-size: 14pt; margin-bottom: 8px; }
-.pp-toc-row { display: flex; align-items: baseline; gap: 4px; margin: 2px 0; }
-.pp-toc-row.l0 .pp-toc-t { font-weight: 700; }
-.pp-toc-t { white-space: nowrap; } .pp-toc-dots { flex: 1; border-bottom: 1px dotted #aaa; transform: translateY(-3px); } .pp-toc-p { color: #555; }
-.pp-pages { font-size: 12px; color: var(--ink-faint); }
-
-/* exports */
-.pp-exports { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface-2); }
-.pp-exp-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.pp-exp-note { font-size: 11px; color: var(--ink-faint); margin: 2px 0 8px; line-height: 1.4; }
-.pp-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
-.pp-b-ok { background: #e7f7ee; color: #0a7c43; } .pp-b-prep { background: #fff4e0; color: #a86b00; } .pp-b-no { background: #f3f4f6; color: #6b7280; }
-.pp-legend { font-size: 11px; color: var(--ink-faint); margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-
-</style>
-<script id="readix-production-engine">
-/* ============================================================
-   READIX BOOK PRODUCTION ENGINE — Phase 5
-   Mode « Production » du Book Studio : format, marges, gouttière,
-   fond perdu, typographie, styles globaux, paragraphes, chapitres,
-   pagination réelle (approximation visuelle mesurée), en-têtes/
-   pieds, TDM générée, aperçu de production et EXPORTS RÉELS
-   (PDF via pdf-lib, DOCX via le moteur existant, EPUB via JSZip).
-   Paramètres stockés dans book.production (aucun modèle dupliqué).
-   Additif : aucune fonction du socle modifiée.
-   ============================================================ */
-(function () {
-  "use strict";
-  if (window.ReadixProduction) return;
-  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
-  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
-  function num(v, d) { v = parseFloat(v); return isFinite(v) ? v : d; }
-
-  // Formats (pouces)
-  var PAGE_SIZES = {
-    "6x9": { w: 6, h: 9, label: "6 × 9 po" }, "5x8": { w: 5, h: 8, label: "5 × 8 po" },
-    "A5": { w: 5.83, h: 8.27, label: "A5" }, "A4": { w: 8.27, h: 11.69, label: "A4" },
-    "Letter": { w: 8.5, h: 11, label: "Letter" }
-  };
-  var FONT_MAP = {
-    serif: { css: "Georgia, 'Times New Roman', serif", pdf: "TimesRoman", pdfB: "TimesRomanBold", pdfI: "TimesRomanItalic" },
-    sans: { css: "Inter, Arial, sans-serif", pdf: "Helvetica", pdfB: "HelveticaBold", pdfI: "HelveticaOblique" },
-    mono: { css: "'Courier New', monospace", pdf: "Courier", pdfB: "CourierBold", pdfI: "CourierOblique" }
-  };
-  var PRESETS = {
-    "roman69": { label: "Roman 6 × 9", pageSize: "6x9", body: { family: "serif", size: 11, lh: 1.4 }, margins: { top: 0.75, bottom: 0.75, inner: 0.75, outer: 0.6 }, chapterBreak: true },
-    "roman58": { label: "Roman 5 × 8", pageSize: "5x8", body: { family: "serif", size: 10.5, lh: 1.38 }, margins: { top: 0.7, bottom: 0.7, inner: 0.7, outer: 0.55 }, chapterBreak: true },
-    "a5": { label: "Livre A5", pageSize: "A5", body: { family: "serif", size: 10.5, lh: 1.4 }, margins: { top: 0.7, bottom: 0.7, inner: 0.7, outer: 0.6 }, chapterBreak: true },
-    "manualA4": { label: "Manuel A4", pageSize: "A4", body: { family: "sans", size: 11, lh: 1.5 }, margins: { top: 1, bottom: 1, inner: 1, outer: 0.8 }, chapterBreak: true },
-    "letter": { label: "Document Letter", pageSize: "Letter", body: { family: "sans", size: 11, lh: 1.5 }, margins: { top: 1, bottom: 1, inner: 1, outer: 1 }, chapterBreak: false }
-  };
-
-  function defaults() {
-    return {
-      pageSize: "6x9", custom: { w: 6, h: 9 }, orientation: "portrait",
-      margins: { top: 0.75, bottom: 0.75, inner: 0.75, outer: 0.6 }, gutter: 0.12, bleed: 0.125,
-      typography: { body: { family: "serif", size: 11, lh: 1.4 }, head: { family: "serif" }, chapterSize: 20, partSize: 26, sectionSize: 14 },
-      paragraph: { firstIndent: 0.3, spaceAfter: 0, align: "justify" },
-      chapters: { chapterBreak: true, numberStyle: "CHAPITRE N" }, // "CHAPITRE N" | "N" | "none"
-      numbering: { mode: "bottom-center", frontRoman: true, startAt: 1 }, // mode: none|bottom-center|bottom-outer|top-outer
-      headers: { content: "none" }, footers: { content: "pageNumber" }, // header: none|bookTitle|chapterTitle|author ; footer: none|pageNumber|author|title|custom
-      headerCustom: "", footerCustom: "",
-      toc: { include: true, levels: 2 }, duplex: false, preset: "roman69"
-    };
-  }
-  function upgrade(book) {
-    if (!book.production) book.production = defaults();
-    var d = defaults(), p = book.production;
-    for (var k in d) { if (p[k] == null) p[k] = d[k]; else if (typeof d[k] === "object" && !Array.isArray(d[k])) { for (var j in d[k]) if (p[k][j] == null) p[k][j] = d[k][j]; } }
-    return p;
-  }
-  function pageDims(prod) {
-    var sz = prod.pageSize === "custom" ? { w: num(prod.custom.w, 6), h: num(prod.custom.h, 9) } : PAGE_SIZES[prod.pageSize] || PAGE_SIZES["6x9"];
-    var w = sz.w, h = sz.h; if (prod.orientation === "landscape") { var t = w; w = h; h = t; }
-    return { w: w, h: h };
-  }
-
-  /* ---------- Modèle de blocs (à partir du Book Engine, sans duplication) ---------- */
-  function paras(html) {
-    var s = String(html || "");
-    if (!/<[a-z]/i.test(s)) return s.split(/\n{2,}/).map(function (x) { return { t: x.trim(), tag: "p" }; }).filter(function (b) { return b.t; });
-    var out = []; var re = /<(h2|h3|p|li|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi, m;
-    while ((m = re.exec(s))) { var txt = m[2].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); if (txt) out.push({ t: txt, tag: m[1].toLowerCase() }); }
-    if (!out.length) { var plain = s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); if (plain) out.push({ t: plain, tag: "p" }); }
-    return out;
-  }
-  function chapterNumberLabel(prod, n) { if (prod.chapters.numberStyle === "none") return ""; if (prod.chapters.numberStyle === "N") return String(n); return "CHAPITRE " + n; }
-  // blocks: {kind:'title'|'front'|'part'|'chapter'|'para'|'quote'|'heading', text, level, chId, breakBefore, chapterTitle}
-  function buildBlocks(book, prod) {
-    var B = [], fm = book.frontMatter || {};
-    if (fm.titlePage) B.push({ kind: "titlepage", text: book.title || "Titre", sub: book.subtitle || "", author: book.author || "", breakBefore: true, front: true });
-    if (fm.copyright) B.push({ kind: "front", heading: "", text: fm.copyright, breakBefore: true, front: true });
-    if (fm.dedication) B.push({ kind: "front", heading: "", text: fm.dedication, italic: true, center: true, breakBefore: true, front: true });
-    if (fm.epigraph) B.push({ kind: "front", heading: "", text: fm.epigraph, italic: true, breakBefore: true, front: true });
-    if (fm.preface) paras(fm.preface).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? "Préface" : p.t, headingText: "Préface", first: i === 0, para: p, breakBefore: i === 0, front: true }); });
-    if (fm.foreword) paras(fm.foreword).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? "Avant-propos" : p.t, first: i === 0, para: p, breakBefore: i === 0, front: true }); });
-    var chN = 0;
-    (book.parts || []).forEach(function (pt) {
-      if (pt.title) B.push({ kind: "part", text: pt.title, breakBefore: true });
-      (pt.chapters || []).forEach(function (c) {
-        chN++;
-        B.push({ kind: "chapter", text: c.title || "Sans titre", num: chN, numLabel: chapterNumberLabel(prod, chN), chId: c.id, breakBefore: prod.chapters.chapterBreak });
-        paras(c.content).forEach(function (p) { B.push({ kind: p.tag === "blockquote" ? "quote" : (p.tag === "h2" || p.tag === "h3" ? "subheading" : "para"), text: p.t, chapterTitle: c.title }); });
-      });
-    });
-    (book.backMatter || []).forEach(function (bm) { paras(bm.content).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? (bm.title || bm.type) : p.t, first: i === 0, breakBefore: i === 0, back: true }); }); });
-    return B;
-  }
-
-  /* ---------- Pagination réelle (mesurée au canvas) ---------- */
-  var _ctx = null; function ctx() { if (!_ctx) { var c = document.createElement("canvas"); _ctx = c.getContext("2d"); } return _ctx; }
-  function wrapCount(text, fontCss, sizePx, maxW) {
-    var c = ctx(); c.font = sizePx + "px " + fontCss; var words = String(text).split(/\s+/), line = "", lines = 1;
-    for (var i = 0; i < words.length; i++) { var test = line ? line + " " + words[i] : words[i]; if (c.measureText(test).width > maxW && line) { lines++; line = words[i]; } else line = test; }
-    return lines;
-  }
-  function paginate(book, prod) {
-    var dims = pageDims(prod), DPI = 96;
-    var pageW = dims.w * DPI, pageH = dims.h * DPI;
-    var inner = prod.margins.inner * DPI, outer = prod.margins.outer * DPI, top = prod.margins.top * DPI, bottom = prod.margins.bottom * DPI, gutter = num(prod.gutter, 0) * DPI;
-    var headerH = prod.headers.content !== "none" ? 22 : 0, footerH = prod.footers.content !== "none" ? 22 : 0;
-    var textW = pageW - inner - outer - gutter, textH = pageH - top - bottom - headerH - footerH;
-    var body = prod.typography.body, bodyCss = FONT_MAP[body.family].css, bodyPx = body.size * (DPI / 72), lhPx = bodyPx * body.lh;
-    var headCss = FONT_MAP[prod.typography.head.family || "serif"].css;
-    function blockHeight(b) {
-      if (b.kind === "titlepage") return textH; // page entière
-      if (b.kind === "part") return textH * 0.6;
-      if (b.kind === "chapter") return (prod.typography.chapterSize * (DPI / 72)) * 1.6 + lhPx * 2;
-      if (b.kind === "heading") return (prod.typography.chapterSize * (DPI / 72)) * 1.4 + lhPx;
-      if (b.kind === "subheading") return lhPx * 1.6 + wrapCount(b.text, headCss, prod.typography.sectionSize * (DPI / 72), textW) * (prod.typography.sectionSize * (DPI / 72)) * 1.3;
-      var sz = bodyPx, css = bodyCss; if (b.kind === "quote") { sz = bodyPx; }
-      var indentW = (prod.paragraph.firstIndent || 0) * DPI * 0; // l'indentation n'affecte pas la hauteur
-      return wrapCount(b.text, css, sz, textW) * lhPx + (prod.paragraph.spaceAfter || 0) * DPI + 2;
-    }
-    // 1) pages du contenu principal (numérotation arabe)
-    var blocks = buildBlocks(book, prod);
-    var frontBlocks = blocks.filter(function (b) { return b.front; });
-    var bodyBlocks = blocks.filter(function (b) { return !b.front && !b.back; });
-    var backBlocks = blocks.filter(function (b) { return b.back; });
-    function flow(list) {
-      var pages = [], cur = [], y = 0;
-      list.forEach(function (b) {
-        var h = blockHeight(b);
-        if (b.breakBefore && cur.length) { pages.push(cur); cur = []; y = 0; }
-        if (b.kind === "titlepage") { if (cur.length) { pages.push(cur); cur = []; y = 0; } pages.push([b]); return; }
-        if (y + h > textH && cur.length) { pages.push(cur); cur = []; y = 0; }
-        cur.push(b); y += h;
-      });
-      if (cur.length) pages.push(cur);
-      return pages;
-    }
-    var frontPages = flow(frontBlocks);
-    var bodyPages = flow(bodyBlocks);
-    var backPages = flow(backBlocks);
-    // page de départ arabe pour chaque chapitre (pour la TDM)
-    var chapterStart = {}, partStart = {};
-    bodyPages.forEach(function (pg, i) { pg.forEach(function (b) { if (b.kind === "chapter" && chapterStart[b.chId] == null) chapterStart[b.chId] = i + 1; if (b.kind === "part" && partStart[b.text] == null) partStart[b.text] = i + 1; }); });
-    // 2) pages de TDM (numérotation romaine, après le front)
-    var tocPages = [];
-    if (prod.toc.include) {
-      var entries = [];
-      (book.parts || []).forEach(function (pt) {
-        if (pt.title && prod.toc.levels >= 1) entries.push({ level: 0, text: pt.title, page: partStart[pt.title] || null });
-        (pt.chapters || []).forEach(function (c) { entries.push({ level: 1, text: c.title || "Sans titre", page: chapterStart[c.id] || null }); });
-      });
-      var perPage = Math.max(6, Math.floor((textH - 40) / (lhPx + 4)));
-      for (var i = 0; i < entries.length; i += perPage) tocPages.push([{ kind: "toc", entries: entries.slice(i, i + perPage), first: i === 0 }]);
-      if (!tocPages.length) tocPages.push([{ kind: "toc", entries: [], first: true }]);
-    }
-    return { frontPages: frontPages, tocPages: tocPages, bodyPages: bodyPages, backPages: backPages, dims: dims, metrics: { textW: textW, textH: textH, bodyPx: bodyPx, lhPx: lhPx, bodyCss: bodyCss, headCss: headCss, inner: inner, outer: outer, top: top, bottom: bottom, gutter: gutter, headerH: headerH, footerH: footerH, pageW: pageW, pageH: pageH } };
-  }
-  function roman(n) { var map = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]], r = ""; map.forEach(function (p) { while (n >= p[0]) { r += p[1]; n -= p[0]; } }); return r; }
-
-  /* ---------- Aperçu de production ---------- */
-  function renderPreview(scroll, book, prod) {
-    var plan = paginate(book, prod), m = plan.metrics;
-    scroll.innerHTML = "";
-    var scale = Math.min(1, 360 / m.pageW);
-    var romanIdx = 0, arabicIdx = 0;
-    function sheet(pageBlocks, kind, side) {
-      var romanNum = (kind === "front"); var pageNo;
-      if (romanNum && prod.numbering.frontRoman) { romanIdx++; pageNo = roman(romanIdx); } else { arabicIdx++; pageNo = String((prod.numbering.startAt || 1) - 1 + arabicIdx); }
-      var wrap = E("div", "pp-sheet-wrap");
-      var sh = E("div", "pp-sheet");
-      sh.style.width = m.pageW + "px"; sh.style.height = m.pageH + "px"; sh.style.transform = "scale(" + scale + ")";
-      var isLeft = (arabicIdx % 2 === 0); // recto-verso : pages paires = gauche
-      var padL = (prod.duplex && isLeft) ? m.outer : (m.inner + m.gutter), padR = (prod.duplex && isLeft) ? (m.inner + m.gutter) : m.outer;
-      var area = E("div", "pp-area"); area.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;top:" + (m.top + m.headerH) + "px;bottom:" + (m.bottom + m.footerH) + "px;overflow:hidden;font-family:" + m.bodyCss + ";font-size:" + m.bodyPx + "px;line-height:" + prod.typography.body.lh + ";text-align:" + prod.paragraph.align + ";";
-      // fond perdu (guide visuel)
-      if (num(prod.bleed, 0) > 0) { var bl = E("div", "pp-bleed"); bl.style.cssText = "position:absolute;inset:-" + (prod.bleed * 96 * scale) + "px;border:1px dashed #e2a; pointer-events:none;"; }
-      // en-tête / pied
-      if (prod.headers.content !== "none") { var hd = E("div", "pp-run pp-head"); hd.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;top:" + (m.top) + "px;font-size:" + (m.bodyPx * .8) + "px;color:#888;"; hd.textContent = runText(prod.headers.content, book, pageBlocks, prod); sh.appendChild(hd); }
-      if (prod.footers.content !== "none") { var ft = E("div", "pp-run pp-foot"); var fcls = prod.numbering.mode === "bottom-outer" ? (isLeft ? "left" : "right") : "center"; ft.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;bottom:" + (m.bottom * .4) + "px;font-size:" + (m.bodyPx * .8) + "px;color:#888;text-align:" + fcls + ";"; ft.textContent = footText(prod.footers.content, book, pageNo, prod); sh.appendChild(ft); }
-      // contenu
-      pageBlocks.forEach(function (b) { area.appendChild(renderBlock(b, prod, m)); });
-      sh.appendChild(area);
-      wrap.appendChild(sh);
-      var cap = E("div", "pp-cap", (romanNum ? "p. " + pageNo : "p. " + pageNo)); wrap.appendChild(cap);
-      wrap.style.height = (m.pageH * scale + 26) + "px";
-      scroll.appendChild(wrap);
-    }
-    plan.frontPages.forEach(function (pg) { sheet(pg, "front"); });
-    plan.tocPages.forEach(function (pg) { sheet(pg, "front"); });
-    plan.bodyPages.forEach(function (pg) { sheet(pg, "body"); });
-    plan.backPages.forEach(function (pg) { sheet(pg, "body"); });
-    if (!plan.frontPages.length && !plan.bodyPages.length && !plan.backPages.length) scroll.appendChild(E("div", "pp-empty", "Le livre est vide : ajoutez des chapitres dans l’onglet Contenu."));
-    return plan;
-  }
-  function runText(kind, book, pageBlocks, prod) { if (kind === "bookTitle") return book.title || ""; if (kind === "author") return book.author || ""; if (kind === "chapterTitle") { var ch = null; pageBlocks.forEach(function (b) { if (b.kind === "chapter") ch = b.text; else if (b.chapterTitle && !ch) ch = b.chapterTitle; }); return ch || book.title || ""; } return ""; }
-  function footText(kind, book, pageNo, prod) { if (kind === "pageNumber") return pageNo; if (kind === "author") return book.author || ""; if (kind === "title") return book.title || ""; if (kind === "custom") return prod.footerCustom || ""; return ""; }
-  function renderBlock(b, prod, m) {
-    if (b.kind === "titlepage") { var tp = E("div", "pp-titlepage"); tp.innerHTML = '<div class="pp-bt">' + esc(b.text) + '</div>' + (b.sub ? '<div class="pp-bs">' + esc(b.sub) + '</div>' : '') + (b.author ? '<div class="pp-ba">' + esc(b.author) + '</div>' : ''); return tp; }
-    if (b.kind === "toc") { var tc = E("div", "pp-toc"); if (b.first) tc.appendChild(E("div", "pp-toc-h", "Table des matières")); b.entries.forEach(function (e) { var r = E("div", "pp-toc-row" + (e.level === 0 ? " l0" : "")); r.innerHTML = '<span class="pp-toc-t">' + esc(e.text) + '</span><span class="pp-toc-dots"></span><span class="pp-toc-p">' + (e.page != null ? e.page : "—") + '</span>'; tc.appendChild(r); }); return tc; }
-    if (b.kind === "part") { var pd = E("div", "pp-part"); pd.style.fontSize = (prod.typography.partSize) + "pt"; pd.textContent = b.text; return pd; }
-    if (b.kind === "chapter") { var cd = E("div", "pp-chapter"); if (b.numLabel) cd.appendChild(E("div", "pp-chapter-n", b.numLabel)); var ct = E("div", "pp-chapter-t"); ct.style.fontSize = (prod.typography.chapterSize) + "pt"; ct.textContent = b.text; cd.appendChild(ct); return cd; }
-    if (b.kind === "heading") { var hd = E("div", "pp-chapter-t"); hd.style.fontSize = (prod.typography.chapterSize * .8) + "pt"; hd.textContent = b.text; return hd; }
-    if (b.kind === "subheading") { var sh = E("div", "pp-subhead"); sh.style.fontSize = (prod.typography.sectionSize) + "pt"; sh.textContent = b.text; return sh; }
-    if (b.kind === "quote") { var q = E("blockquote", "pp-quote"); q.textContent = b.text; return q; }
-    var p = E("p", "pp-para"); p.style.textIndent = (prod.paragraph.firstIndent || 0) + "in"; p.style.marginBottom = (prod.paragraph.spaceAfter || 0) + "in"; if (b.italic) p.style.fontStyle = "italic"; if (b.center) p.style.textAlign = "center"; p.textContent = b.text; return p;
-  }
-
-  /* ---------- Vue Production (réglages + aperçu) ---------- */
-  function render(t, stage, back) {
-    var book = t.book; var prod = upgrade(book);
-    var wrap = E("div", "cv-builder rxpp-studio");
-    wrap.innerHTML = '<div class="cv-form pp-left" id="ppLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><button class="btn ghost sm" data-x="back">← Contenu</button><span class="cv-pv-title">Aperçu de production</span><span style="flex:1"></span><span class="pp-pages" id="ppPages"></span></div><div class="cv-paper-scroll pp-scroll" id="ppScroll"></div></div>';
-    stage.appendChild(wrap);
-    var scroll = wrap.querySelector("#ppScroll");
-    var save = function () { t.dirty = true; var sa = W("scheduleAutosave"); if (sa) sa(); };
-    var refresh = function () { var plan = renderPreview(scroll, book, prod); var tot = plan.frontPages.length + plan.tocPages.length + plan.bodyPages.length + plan.backPages.length; wrap.querySelector("#ppPages").textContent = tot + " page" + (tot > 1 ? "s" : ""); };
-    var rerender = function () { stage.innerHTML = ""; render(t, stage, back); };
-    buildSettings(wrap.querySelector("#ppLeft"), t, book, prod, function () { save(); refresh(); }, rerender);
-    refresh();
-    wrap.querySelector('[data-x="back"]').onclick = back;
-  }
-
-  function sec(box, title) { box.appendChild(E("div", "cv-sec", title)); }
-  function selectField(label, val, opts, on) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label))); var s = E("select", "cv-sb-sel"); opts.forEach(function (o) { var op = E("option"); op.value = o[0]; op.textContent = o[1]; s.appendChild(op); }); s.value = val; s.onchange = function () { on(s.value); }; w.appendChild(s); return w; }
-  function numField(label, val, on, step, unit) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label) + (unit ? " (" + unit + ")" : ""))); var i = E("input", "rp-input"); i.type = "number"; i.step = step || "0.05"; i.value = val; i.oninput = function () { on(num(i.value, val)); }; w.appendChild(i); return w; }
-  function toggleField(label, val, on) { var w = E("label", "cvf cvf-chk"); var i = E("input"); i.type = "checkbox"; i.checked = !!val; i.onchange = function () { on(i.checked); }; w.appendChild(i); w.appendChild(E("span", null, esc(label))); return w; }
-
-  function buildSettings(box, t, book, prod, touch, rerender) {
-    box.innerHTML = "";
-    // Presets
-    sec(box, "Modèles de production");
-    var pr = E("div", "pp-presets");
-    Object.keys(PRESETS).forEach(function (id) { var P = PRESETS[id]; var b = E("button", "cv-tpl" + (prod.preset === id ? " on" : ""), esc(P.label)); b.onclick = function () { applyPreset(prod, id); touch(); rerender(); }; pr.appendChild(b); });
-    box.appendChild(pr);
-    // Format
-    sec(box, "Format & orientation");
-    var g1 = E("div", "cv-grid");
-    var fmtOpts = Object.keys(PAGE_SIZES).map(function (k) { return [k, PAGE_SIZES[k].label]; }); fmtOpts.push(["custom", "Personnalisé"]);
-    g1.appendChild(selectField("Format", prod.pageSize, fmtOpts, function (v) { prod.pageSize = v; prod.preset = null; touch(); rerender(); }));
-    g1.appendChild(selectField("Orientation", prod.orientation, [["portrait", "Portrait"], ["landscape", "Paysage"]], function (v) { prod.orientation = v; touch(); rerender(); }));
-    box.appendChild(g1);
-    if (prod.pageSize === "custom") { var gc = E("div", "cv-grid"); gc.appendChild(numField("Largeur", prod.custom.w, function (v) { prod.custom.w = Math.min(20, Math.max(2, v)); touch(); rerender(); }, "0.1", "po")); gc.appendChild(numField("Hauteur", prod.custom.h, function (v) { prod.custom.h = Math.min(20, Math.max(2, v)); touch(); rerender(); }, "0.1", "po")); box.appendChild(gc); }
-    // Marges
-    sec(box, "Marges & gouttière");
-    var mp = E("div", "pp-presets");
-    [["Standard", { top: .75, bottom: .75, inner: .75, outer: .6 }], ["Compact", { top: .5, bottom: .5, inner: .5, outer: .4 }], ["Large", { top: 1, bottom: 1, inner: 1, outer: .9 }]].forEach(function (P) { var b = E("button", "cv-tpl", P[0]); b.onclick = function () { prod.margins = Object.assign({}, P[1]); touch(); rerender(); }; mp.appendChild(b); });
-    box.appendChild(mp);
-    var g2 = E("div", "cv-grid");
-    g2.appendChild(numField("Haut", prod.margins.top, function (v) { prod.margins.top = v; touch(); rerender(); }, "0.05", "po"));
-    g2.appendChild(numField("Bas", prod.margins.bottom, function (v) { prod.margins.bottom = v; touch(); rerender(); }, "0.05", "po"));
-    g2.appendChild(numField("Intérieure", prod.margins.inner, function (v) { prod.margins.inner = v; touch(); rerender(); }, "0.05", "po"));
-    g2.appendChild(numField("Extérieure", prod.margins.outer, function (v) { prod.margins.outer = v; touch(); rerender(); }, "0.05", "po"));
-    g2.appendChild(numField("Gouttière", prod.gutter, function (v) { prod.gutter = v; touch(); rerender(); }, "0.02", "po"));
-    g2.appendChild(numField("Fond perdu", prod.bleed, function (v) { prod.bleed = v; touch(); rerender(); }, "0.025", "po"));
-    box.appendChild(g2);
-    box.appendChild(E("div", "pp-note", "Fond perdu : paramètre enregistré et affiché en guide. Non appliqué comme zone de rognage dans l’export PDF actuel (marques de coupe = évolution)."));
-    // Typographie
-    sec(box, "Typographie");
-    var g3 = E("div", "cv-grid");
-    var fams = [["serif", "Serif (Georgia/Times)"], ["sans", "Sans (Inter/Arial)"], ["mono", "Mono (Courier)"]];
-    g3.appendChild(selectField("Police du corps", prod.typography.body.family, fams, function (v) { prod.typography.body.family = v; touch(); rerender(); }));
-    g3.appendChild(selectField("Police des titres", prod.typography.head.family || "serif", fams, function (v) { prod.typography.head.family = v; touch(); rerender(); }));
-    g3.appendChild(numField("Taille du corps", prod.typography.body.size, function (v) { prod.typography.body.size = v; touch(); rerender(); }, "0.5", "pt"));
-    g3.appendChild(numField("Interligne", prod.typography.body.lh, function (v) { prod.typography.body.lh = v; touch(); rerender(); }, "0.05", "×"));
-    g3.appendChild(numField("Titre de chapitre", prod.typography.chapterSize, function (v) { prod.typography.chapterSize = v; touch(); rerender(); }, "1", "pt"));
-    g3.appendChild(numField("Titre de partie", prod.typography.partSize, function (v) { prod.typography.partSize = v; touch(); rerender(); }, "1", "pt"));
-    box.appendChild(g3);
-    // Paragraphes
-    sec(box, "Paragraphes");
-    var g4 = E("div", "cv-grid");
-    g4.appendChild(selectField("Alignement", prod.paragraph.align, [["left", "Gauche"], ["center", "Centre"], ["right", "Droite"], ["justify", "Justifié"]], function (v) { prod.paragraph.align = v; touch(); rerender(); }));
-    g4.appendChild(numField("Retrait 1re ligne", prod.paragraph.firstIndent, function (v) { prod.paragraph.firstIndent = v; touch(); rerender(); }, "0.05", "po"));
-    g4.appendChild(numField("Espacement après", prod.paragraph.spaceAfter, function (v) { prod.paragraph.spaceAfter = v; touch(); rerender(); }, "0.02", "po"));
-    box.appendChild(g4);
-    // Chapitres
-    sec(box, "Chapitres & parties");
-    var g5 = E("div", "cv-grid");
-    g5.appendChild(selectField("Numéro de chapitre", prod.chapters.numberStyle, [["CHAPITRE N", "CHAPITRE 1"], ["N", "1"], ["none", "Aucun"]], function (v) { prod.chapters.numberStyle = v; touch(); rerender(); }));
-    box.appendChild(g5);
-    box.appendChild(toggleField("Chaque chapitre commence sur une nouvelle page", prod.chapters.chapterBreak, function (v) { prod.chapters.chapterBreak = v; touch(); rerender(); }));
-    // Pagination / en-têtes / pieds
-    sec(box, "Pagination, en-têtes & pieds");
-    var g6 = E("div", "cv-grid");
-    g6.appendChild(selectField("Numéros de page", prod.numbering.mode, [["none", "Sans numéro"], ["bottom-center", "En bas (centré)"], ["bottom-outer", "En bas (extérieur)"], ["top-outer", "En haut (extérieur)"]], function (v) { prod.numbering.mode = v; prod.footers.content = v === "none" ? "none" : "pageNumber"; touch(); rerender(); }));
-    g6.appendChild(selectField("En-tête", prod.headers.content, [["none", "Aucun"], ["bookTitle", "Titre du livre"], ["chapterTitle", "Titre du chapitre"], ["author", "Auteur"]], function (v) { prod.headers.content = v; touch(); rerender(); }));
-    g6.appendChild(selectField("Pied de page", prod.footers.content, [["none", "Aucun"], ["pageNumber", "Numéro de page"], ["author", "Auteur"], ["title", "Titre"], ["custom", "Personnalisé"]], function (v) { prod.footers.content = v; touch(); rerender(); }));
-    box.appendChild(g6);
-    box.appendChild(toggleField("Pages préliminaires en chiffres romains (i, ii…)", prod.numbering.frontRoman, function (v) { prod.numbering.frontRoman = v; touch(); rerender(); }));
-    box.appendChild(toggleField("Mode recto-verso (marges & en-têtes alternés)", prod.duplex, function (v) { prod.duplex = v; touch(); rerender(); }));
-    box.appendChild(E("div", "pp-note", "Recto-verso : aperçu des marges/en-têtes alternés. L’export PDF applique les marges mais pas encore l’inversion recto-verso complète."));
-    // TDM
-    sec(box, "Table des matières");
-    box.appendChild(toggleField("Inclure la table des matières", prod.toc.include, function (v) { prod.toc.include = v; touch(); rerender(); }));
-    box.appendChild(selectField("Niveaux", String(prod.toc.levels), [["1", "Chapitres"], ["2", "Parties + chapitres"]], function (v) { prod.toc.levels = +v; touch(); rerender(); }));
-    // Exports
-    sec(box, "Export");
-    box.appendChild(exportPanel(t, book, prod));
-    // Assistant production (Copilot)
-    sec(box, "Assistant production");
-    var ask = E("div", "ed-ask"); var inp = E("input", "rp-input"); inp.placeholder = "Ex. « format A5 », « ajoute une gouttière », « chapitres sur une nouvelle page »";
-    var go = E("button", "ed-btn ed-go", "Appliquer"); go.onclick = function () { applyCommand(inp.value, prod, book, function () { touch(); rerender(); }); inp.value = ""; };
-    inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } };
-    ask.appendChild(inp); ask.appendChild(go); box.appendChild(ask);
-  }
-  function applyPreset(prod, id) { var P = PRESETS[id]; if (!P) return; prod.preset = id; prod.pageSize = P.pageSize; prod.margins = Object.assign({}, P.margins); prod.typography.body = Object.assign({}, prod.typography.body, P.body); prod.chapters.chapterBreak = P.chapterBreak; }
-
-  /* ---------- Statuts d'export + exports réels ---------- */
-  function badge(status) { var map = { available: ["Disponible", "pp-b-ok"], prepared: ["Préparé", "pp-b-prep"], none: ["Non disponible", "pp-b-no"] }; var s = map[status] || map.none; return '<span class="pp-badge ' + s[1] + '">' + s[0] + '</span>'; }
-  function exportPanel(t, book, prod) {
-    var box = E("div", "pp-exports");
-    var rows = [
-      { id: "pdf", label: "PDF", status: "available", note: "Mise en page réelle (format, marges, pagination, en-têtes/pieds). Polices standard PDF." },
-      { id: "docx", label: "DOCX", status: "available", note: "Structure, styles, titres, paragraphes. Mise en page fine simplifiée." },
-      { id: "epub", label: "EPUB", status: "available", note: "EPUB3 valide (métadonnées, chapitres, navigation/TDM). Format redistribuable (marges/pagination non applicables)." }
-    ];
-    rows.forEach(function (r) {
-      var row = E("div", "pp-exp-row");
-      var b = E("button", "btn sm", "Exporter " + r.label); b.onclick = function () { doExport(r.id, book, prod, b); };
-      row.appendChild(b); row.innerHTML += badge(r.status);
-      row.insertBefore(b, row.firstChild);
-      box.appendChild(row);
-      box.appendChild(E("div", "pp-exp-note", r.note));
-    });
-    box.appendChild(E("div", "pp-legend", badge("available") + " prêt · " + badge("prepared") + " architecturé · " + badge("none") + " à intégrer"));
-    return box;
-  }
-  function fileName(book, ext) { return ((book.title || "Livre").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Livre") + "." + ext; }
-  function doExport(kind, book, prod, btn) {
-    var lab = btn.textContent; btn.disabled = true; btn.textContent = "Génération…";
-    Promise.resolve().then(function () {
-      if (kind === "pdf") return exportPDF(book, prod);
-      if (kind === "docx") return exportDOCX(book, prod);
-      if (kind === "epub") return exportEPUB(book, prod);
-    }).then(function () { toast(kind.toUpperCase() + " généré ✓ — téléchargement lancé.", "ok"); })
-      .catch(function (e) { toast("Échec de l’export " + kind.toUpperCase() + " : " + (e.message || e), "err"); })
-      .then(function () { btn.disabled = false; btn.textContent = lab; });
-  }
-
-  function exportPDF(book, prod) {
-    var PDFLibRef = window.PDFLib; if (!PDFLibRef) throw new Error("Moteur PDF indisponible.");
-    var db = W("downloadBlob"); if (!db) throw new Error("Téléchargement indisponible.");
-    var dims = pageDims(prod), PW = dims.w * 72, PH = dims.h * 72;
-    var mTop = prod.margins.top * 72, mBot = prod.margins.bottom * 72, mIn = prod.margins.inner * 72, mOut = prod.margins.outer * 72, gut = num(prod.gutter, 0) * 72;
-    var body = prod.typography.body, fam = FONT_MAP[body.family], headFam = FONT_MAP[prod.typography.head.family || "serif"];
-    var size = body.size, lh = size * body.lh;
-    return (async function () {
-      var doc = await PDFLibRef.PDFDocument.create();
-      var F = await doc.embedFont(PDFLibRef.StandardFonts[fam.pdf]);
-      var FB = await doc.embedFont(PDFLibRef.StandardFonts[fam.pdfB]);
-      var HB = await doc.embedFont(PDFLibRef.StandardFonts[headFam.pdfB]);
-      var textW = PW - mIn - mOut - gut;
-      var page = null, y = 0, arabic = 0;
-      function foot() {
-        if (page && prod.footers.content !== "none") {
-          var txt = footText(prod.footers.content, book, String(arabic), prod);
-          if (txt) { var fs = size * .85, tw = F.widthOfTextAtSize(txt, fs), x = prod.numbering.mode === "bottom-outer" ? (arabic % 2 === 0 ? mOut : PW - mOut - tw) : (PW - tw) / 2; page.drawText(txt, { x: x, y: mBot * .5, size: fs, font: F, color: PDFLibRef.rgb(.4, .4, .4) }); }
-        }
-        if (page && prod.headers.content !== "none") { var ht = runText(prod.headers.content, book, [], prod); if (ht) page.drawText(ht.slice(0, 90), { x: mIn + gut, y: PH - mTop * .6, size: size * .8, font: F, color: PDFLibRef.rgb(.5, .5, .5) }); }
-      }
-      function newPage() { foot(); page = doc.addPage([PW, PH]); arabic++; y = PH - mTop; }
-      function wrap(text, font, fs) { var words = String(text).split(/\s+/), lines = [], line = ""; words.forEach(function (w) { var test = line ? line + " " + w : w; if (font.widthOfTextAtSize(test, fs) > textW && line) { lines.push(line); line = w; } else line = test; }); if (line) lines.push(line); return lines; }
-      function draw(text, font, fs, opts) {
-        opts = opts || {}; var lhh = fs * (opts.lh || body.lh);
-        var lines = wrap(text, font, fs);
-        lines.forEach(function (ln, i) {
-          if (y - lhh < mBot + (prod.footers.content !== "none" ? 16 : 0)) newPage();
-          var x = mIn + gut + (opts.indent && i === 0 ? (prod.paragraph.firstIndent * 72) : 0);
-          if (opts.align === "center") { var tw = font.widthOfTextAtSize(ln, fs); x = (PW - tw) / 2; }
-          page.drawText(ln, { x: x, y: y - fs, size: fs, font: font, color: PDFLibRef.rgb(.1, .1, .12) });
-          y -= lhh;
-        });
-        if (opts.after) y -= opts.after;
-      }
-      var blocks = buildBlocks(book, prod);
-      newPage();
-      blocks.forEach(function (b) {
-        if (b.kind === "titlepage") { newPage(); y = PH * .62; draw(b.text, HB, prod.typography.partSize, { align: "center", lh: 1.2 }); if (b.sub) { y -= 6; draw(b.sub, F, size + 2, { align: "center" }); } if (b.author) { y -= 20; draw(b.author, F, size, { align: "center" }); } return; }
-        if (b.breakBefore) newPage();
-        if (b.kind === "part") { y -= 40; draw(b.text, HB, prod.typography.partSize, { align: "center", after: 30 }); return; }
-        if (b.kind === "chapter") { if (b.numLabel) draw(b.numLabel, F, size, { after: 6 }); draw(b.text, HB, prod.typography.chapterSize, { after: 18 }); return; }
-        if (b.kind === "heading") { draw(b.text, HB, prod.typography.chapterSize * .8, { after: 12 }); return; }
-        if (b.kind === "subheading") { y -= 6; draw(b.text, HB, prod.typography.sectionSize, { after: 6 }); return; }
-        if (b.kind === "quote") { draw(b.text, F, size, { indent: false, after: 6 }); return; }
-        draw(b.text, F, size, { indent: prod.paragraph.firstIndent > 0, align: prod.paragraph.align === "center" ? "center" : "left", after: (prod.paragraph.spaceAfter || 0) * 72 });
-      });
-      foot();
-      var bytes = await doc.save();
-      db(new Blob([bytes], { type: "application/pdf" }), fileName(book, "pdf"));
-    })();
-  }
-
-  function exportDOCX(book, prod) {
-    var f = W("downloadCopilotFile"); if (!f) throw new Error("Export DOCX indisponible.");
-    var body = prod.typography.body, css = FONT_MAP[body.family].css;
-    var h = '<div style="font-family:' + css + ';font-size:' + body.size + 'pt;line-height:' + body.lh + '">';
-    var fm = book.frontMatter || {};
-    if (fm.titlePage) h += '<h1 style="text-align:center">' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p style="text-align:center"><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p style="text-align:center">' + esc(book.author) + '</p>' : '');
-    if (fm.copyright) h += '<p>' + esc(fm.copyright) + '</p>';
-    if (fm.dedication) h += '<p style="text-align:center"><i>' + esc(fm.dedication) + '</i></p>';
-    if (fm.preface) h += '<h2>Préface</h2>' + fm.preface;
-    if (fm.foreword) h += '<h2>Avant-propos</h2>' + fm.foreword;
-    if (prod.toc.include) { h += '<h2>Table des matières</h2>'; (book.parts || []).forEach(function (p) { if (p.title) h += '<p><b>' + esc(p.title) + '</b></p>'; (p.chapters || []).forEach(function (c) { h += '<p>' + esc(c.title || "") + '</p>'; }); }); }
-    var n = 0;
-    (book.parts || []).forEach(function (p) { if (p.title) h += '<h1 style="text-align:center">' + esc(p.title) + '</h1>'; (p.chapters || []).forEach(function (c) { n++; var lbl = prod.chapters.numberStyle === "none" ? "" : (prod.chapters.numberStyle === "N" ? n + ". " : "Chapitre " + n + " — "); h += '<h2>' + esc(lbl + (c.title || "")) + '</h2>' + (c.content || ""); }); });
-    (book.backMatter || []).forEach(function (b) { h += '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""); });
-    h += '</div>';
-    return Promise.resolve(f({ kind: "docx", html: true, name: fileName(book, "docx"), content: h }));
-  }
-
-  function exportEPUB(book, prod) {
-    var JSZipRef = window.JSZip; if (!JSZipRef) throw new Error("JSZip indisponible pour l’EPUB.");
-    var db = W("downloadBlob"); if (!db) throw new Error("Téléchargement indisponible.");
-    var zip = new JSZipRef();
-    zip.file("mimetype", "application/epub+zip", { compression: "STORE" }); // 1er fichier, non compressé (spec EPUB)
-    zip.folder("META-INF").file("container.xml", '<?xml version="1.0"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
-    var oebps = zip.folder("OEBPS");
-    oebps.file("style.css", "body{font-family:serif;line-height:1.5;margin:1em}h1,h2{font-family:sans-serif}blockquote{border-left:3px solid #ccc;padding-left:1em;color:#555}");
-    var uid = "urn:uuid:readix-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    var items = [], spine = [], nav = [];
-    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '</body></html>'); }
-    var idx = 0; var fm = book.frontMatter || {};
-    function addDoc(title, html, inNav) { idx++; var name = "s" + idx + ".xhtml"; xhtml(name, title, html); items.push('<item id="s' + idx + '" href="' + name + '" media-type="application/xhtml+xml"/>'); spine.push('<itemref idref="s' + idx + '"/>'); if (inNav) nav.push('<li><a href="' + name + '">' + esc(title) + '</a></li>'); return name; }
-    if (fm.titlePage) addDoc(book.title || "Titre", '<h1>' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p>' + esc(book.author) + '</p>' : ''), false);
-    if (fm.copyright) addDoc("Copyright", '<p>' + esc(fm.copyright) + '</p>', false);
-    if (fm.dedication) addDoc("Dédicace", '<p style="text-align:center"><em>' + esc(fm.dedication) + '</em></p>', false);
-    if (fm.preface) addDoc("Préface", '<h2>Préface</h2>' + fm.preface, true);
-    if (fm.foreword) addDoc("Avant-propos", '<h2>Avant-propos</h2>' + fm.foreword, true);
-    var n = 0;
-    (book.parts || []).forEach(function (p) {
-      if (p.title) { addDoc(p.title, '<h1>' + esc(p.title) + '</h1>', true); }
-      (p.chapters || []).forEach(function (c) { n++; var lbl = prod.chapters.numberStyle === "none" ? "" : (prod.chapters.numberStyle === "N" ? n + ". " : "Chapitre " + n + " — "); addDoc(c.title || ("Chapitre " + n), '<h2>' + esc(lbl + (c.title || "")) + '</h2>' + (c.content || "<p></p>"), true); });
-    });
-    (book.backMatter || []).forEach(function (b) { addDoc(b.title || b.type, '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""), true); });
-    // nav.xhtml (EPUB3)
-    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav></body></html>');
-    items.push('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
-    var opf = '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">' + uid + '</dc:identifier><dc:title>' + esc(book.title || "Livre") + '</dc:title><dc:language>' + (book.language || "fr") + '</dc:language>' + (book.author ? '<dc:creator>' + esc(book.author) + '</dc:creator>' : '') + (book.description ? '<dc:description>' + esc(clampText(book.description, 400)) + '</dc:description>' : '') + '<meta property="dcterms:modified">' + new Date().toISOString().replace(/\.\d+Z$/, "Z") + '</meta></metadata><manifest><item id="css" href="style.css" media-type="text/css"/>' + items.join("") + '</manifest><spine>' + spine.join("") + '</spine></package>';
-    oebps.file("content.opf", opf);
-    return zip.generateAsync({ type: "blob", mimeType: "application/epub+zip", compression: "DEFLATE" }).then(function (blob) { db(blob, fileName(book, "epub")); });
-  }
-  function clampText(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n) : s; }
-
-  /* ---------- Commandes de production (Copilot) + confirmation ---------- */
-  function confirmImportant(msg, onYes) { var dlg = W("dialog"); if (!dlg) { if (window.confirm(msg)) onYes(); return; } var dl = dlg('<h3>Confirmer</h3><p style="font-size:13px">' + esc(msg) + '</p><div class="row"><button class="btn ghost sm" data-a="no">Annuler</button><button class="btn sm" data-a="yes">Appliquer</button></div>'); dl.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "yes") onYes(); dl.close(); }; }
-  function applyCommand(text, prod, book, done) {
-    var s = String(text || "").toLowerCase().trim(); if (!s) return;
-    var m;
-    if ((m = s.match(/\b(6\s*[x×]\s*9|5\s*[x×]\s*8|a5|a4|letter)\b/))) { var f = m[1].replace(/\s/g, "").replace("×", "x"); var map = { "6x9": "6x9", "5x8": "5x8", "a5": "A5", "a4": "A4", "letter": "Letter" }; var fmt = map[f]; if (fmt) { confirmImportant("Changer le format du livre en " + PAGE_SIZES[fmt].label + " ?", function () { prod.pageSize = fmt; prod.preset = null; done(); toast("Format : " + PAGE_SIZES[fmt].label, "ok"); }); return; } }
-    if (/gouttière|gutter/.test(s)) { prod.gutter = prod.gutter > 0 ? prod.gutter : 0.15; done(); toast("Gouttière ajoutée (" + prod.gutter + " po).", "ok"); return; }
-    if (/nouvelle page|saut de page|chapitre.*page/.test(s)) { prod.chapters.chapterBreak = true; done(); toast("Chapitres sur une nouvelle page.", "ok"); return; }
-    if (/num[ée]ro.*page|pagination|page number/.test(s)) { prod.numbering.mode = "bottom-center"; prod.footers.content = "pageNumber"; done(); toast("Numéros de page activés.", "ok"); return; }
-    if (/police.*(sans|arial|inter)/.test(s)) { prod.typography.body.family = "sans"; done(); toast("Police du corps : sans serif.", "ok"); return; }
-    if (/police.*(serif|times|georgia)/.test(s)) { prod.typography.body.family = "serif"; done(); toast("Police du corps : serif.", "ok"); return; }
-    if (/table des mati|toc|sommaire/.test(s)) { prod.toc.include = true; done(); toast("Table des matières incluse.", "ok"); return; }
-    if (/paysage|landscape/.test(s)) { prod.orientation = "landscape"; done(); toast("Orientation : paysage.", "ok"); return; }
-    if (/portrait/.test(s)) { prod.orientation = "portrait"; done(); toast("Orientation : portrait.", "ok"); return; }
-    if (/recto.?verso|duplex/.test(s)) { prod.duplex = true; done(); toast("Mode recto-verso activé.", "ok"); return; }
-    toast("Commande non reconnue. Essayez : « format A5 », « ajoute une gouttière », « numéros de page ».", "warn");
-  }
-
-  /* ---------- API ---------- */
-  ReadixProduction = window.ReadixProduction = {
-    version: "1.0", render: render, upgrade: upgrade, paginate: paginate, presets: PRESETS, pageSizes: PAGE_SIZES,
-    exportPDF: exportPDF, exportDOCX: exportDOCX, exportEPUB: exportEPUB, applyCommand: applyCommand,
-    settings: function () { var A = (typeof APP !== "undefined") ? APP : null; if (!A) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; return (t && t.book) ? upgrade(t.book) : null; }
-  };
-  try { console.info("[Readix] Production Engine v1 — formats, mise en page, pagination, aperçu, exports PDF/DOCX/EPUB réels."); } catch (e) {}
-})();
-
-</script>
 <style id="readix-book-css">
 /* ===== Readix Book Engine v1 — Book Studio (additif) ===== */
 .rxbk-studio .bk-left { display: flex; flex-direction: column; gap: 10px; }
@@ -8824,6 +8314,517 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     context: function () { var A = (typeof APP !== "undefined") ? APP : null; if (!A) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; if (!t || !t.book) return null; upgrade(t.book); var g = geom(t.book, "cover"); return { kind: "cover", type: t.book.coverDesign.type, spine: spineWidth(t.book), elements: t.book.coverDesign.elements.length, dims: { w: g.totalW, h: g.totalH }, title: t.book.title, author: t.book.author }; }
   };
   try { console.info("[Readix] Cover & Illustration Engine v1 — canvas, calques, alertes, exports SVG/PNG/JPG/PDF réels."); } catch (e) {}
+})();
+
+</script>
+<style id="readix-production-css">
+/* ===== Readix Production Engine v1 (Phase 5) — additif ===== */
+.bk-modes { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 8px; }
+.bk-mode { border: none; background: #fff; padding: 6px 16px; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
+.bk-mode.on { background: var(--brand); color: #fff; font-weight: 600; }
+
+.rxpp-studio .pp-left { display: flex; flex-direction: column; gap: 4px; }
+.pp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-note { font-size: 11px; color: var(--ink-faint); font-style: italic; margin: 4px 0 2px; line-height: 1.4; }
+
+/* aperçu paginé */
+.pp-scroll { background: #eef0f4; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pp-sheet-wrap { display: flex; flex-direction: column; align-items: center; }
+.pp-sheet { position: relative; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.14); transform-origin: top center; color: #14181f; }
+.pp-cap { font-size: 11px; color: #8a93a3; margin-top: 4px; }
+.pp-empty { color: #7a8394; font-size: 13px; padding: 40px; }
+.pp-area { }
+.pp-para { margin: 0 0 2px; }
+.pp-titlepage { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; text-align: center; }
+.pp-bt { font-size: 26pt; font-weight: 700; } .pp-bs { font-size: 13pt; color: #555; margin-top: 8px; } .pp-ba { font-size: 12pt; margin-top: 30px; }
+.pp-part { text-align: center; font-weight: 700; margin: 30% 0 0; }
+.pp-chapter { margin-bottom: 14px; } .pp-chapter-n { font-size: 9pt; letter-spacing: .12em; color: #888; text-transform: uppercase; } .pp-chapter-t { font-weight: 700; margin-top: 4px; }
+.pp-subhead { font-weight: 700; margin: 8px 0 3px; }
+.pp-quote { border-left: 2px solid #ccc; margin: 6px 0; padding-left: 10px; color: #555; font-style: italic; }
+.pp-toc-h { font-weight: 700; font-size: 14pt; margin-bottom: 8px; }
+.pp-toc-row { display: flex; align-items: baseline; gap: 4px; margin: 2px 0; }
+.pp-toc-row.l0 .pp-toc-t { font-weight: 700; }
+.pp-toc-t { white-space: nowrap; } .pp-toc-dots { flex: 1; border-bottom: 1px dotted #aaa; transform: translateY(-3px); } .pp-toc-p { color: #555; }
+.pp-pages { font-size: 12px; color: var(--ink-faint); }
+
+/* exports */
+.pp-exports { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.pp-exp-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.pp-exp-note { font-size: 11px; color: var(--ink-faint); margin: 2px 0 8px; line-height: 1.4; }
+.pp-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.pp-b-ok { background: #e7f7ee; color: #0a7c43; } .pp-b-prep { background: #fff4e0; color: #a86b00; } .pp-b-no { background: #f3f4f6; color: #6b7280; }
+.pp-legend { font-size: 11px; color: var(--ink-faint); margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+</style>
+<script id="readix-production-engine">
+/* ============================================================
+   READIX BOOK PRODUCTION ENGINE — Phase 5
+   Mode « Production » du Book Studio : format, marges, gouttière,
+   fond perdu, typographie, styles globaux, paragraphes, chapitres,
+   pagination réelle (approximation visuelle mesurée), en-têtes/
+   pieds, TDM générée, aperçu de production et EXPORTS RÉELS
+   (PDF via pdf-lib, DOCX via le moteur existant, EPUB via JSZip).
+   Paramètres stockés dans book.production (aucun modèle dupliqué).
+   Additif : aucune fonction du socle modifiée.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixProduction) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function num(v, d) { v = parseFloat(v); return isFinite(v) ? v : d; }
+
+  // Formats (pouces)
+  var PAGE_SIZES = {
+    "6x9": { w: 6, h: 9, label: "6 × 9 po" }, "5x8": { w: 5, h: 8, label: "5 × 8 po" },
+    "A5": { w: 5.83, h: 8.27, label: "A5" }, "A4": { w: 8.27, h: 11.69, label: "A4" },
+    "Letter": { w: 8.5, h: 11, label: "Letter" }
+  };
+  var FONT_MAP = {
+    serif: { css: "Georgia, 'Times New Roman', serif", pdf: "TimesRoman", pdfB: "TimesRomanBold", pdfI: "TimesRomanItalic" },
+    sans: { css: "Inter, Arial, sans-serif", pdf: "Helvetica", pdfB: "HelveticaBold", pdfI: "HelveticaOblique" },
+    mono: { css: "'Courier New', monospace", pdf: "Courier", pdfB: "CourierBold", pdfI: "CourierOblique" }
+  };
+  var PRESETS = {
+    "roman69": { label: "Roman 6 × 9", pageSize: "6x9", body: { family: "serif", size: 11, lh: 1.4 }, margins: { top: 0.75, bottom: 0.75, inner: 0.75, outer: 0.6 }, chapterBreak: true },
+    "roman58": { label: "Roman 5 × 8", pageSize: "5x8", body: { family: "serif", size: 10.5, lh: 1.38 }, margins: { top: 0.7, bottom: 0.7, inner: 0.7, outer: 0.55 }, chapterBreak: true },
+    "a5": { label: "Livre A5", pageSize: "A5", body: { family: "serif", size: 10.5, lh: 1.4 }, margins: { top: 0.7, bottom: 0.7, inner: 0.7, outer: 0.6 }, chapterBreak: true },
+    "manualA4": { label: "Manuel A4", pageSize: "A4", body: { family: "sans", size: 11, lh: 1.5 }, margins: { top: 1, bottom: 1, inner: 1, outer: 0.8 }, chapterBreak: true },
+    "letter": { label: "Document Letter", pageSize: "Letter", body: { family: "sans", size: 11, lh: 1.5 }, margins: { top: 1, bottom: 1, inner: 1, outer: 1 }, chapterBreak: false }
+  };
+
+  function defaults() {
+    return {
+      pageSize: "6x9", custom: { w: 6, h: 9 }, orientation: "portrait",
+      margins: { top: 0.75, bottom: 0.75, inner: 0.75, outer: 0.6 }, gutter: 0.12, bleed: 0.125,
+      typography: { body: { family: "serif", size: 11, lh: 1.4 }, head: { family: "serif" }, chapterSize: 20, partSize: 26, sectionSize: 14 },
+      paragraph: { firstIndent: 0.3, spaceAfter: 0, align: "justify" },
+      chapters: { chapterBreak: true, numberStyle: "CHAPITRE N" }, // "CHAPITRE N" | "N" | "none"
+      numbering: { mode: "bottom-center", frontRoman: true, startAt: 1 }, // mode: none|bottom-center|bottom-outer|top-outer
+      headers: { content: "none" }, footers: { content: "pageNumber" }, // header: none|bookTitle|chapterTitle|author ; footer: none|pageNumber|author|title|custom
+      headerCustom: "", footerCustom: "",
+      toc: { include: true, levels: 2 }, duplex: false, preset: "roman69"
+    };
+  }
+  function upgrade(book) {
+    if (!book.production) book.production = defaults();
+    var d = defaults(), p = book.production;
+    for (var k in d) { if (p[k] == null) p[k] = d[k]; else if (typeof d[k] === "object" && !Array.isArray(d[k])) { for (var j in d[k]) if (p[k][j] == null) p[k][j] = d[k][j]; } }
+    return p;
+  }
+  function pageDims(prod) {
+    var sz = prod.pageSize === "custom" ? { w: num(prod.custom.w, 6), h: num(prod.custom.h, 9) } : PAGE_SIZES[prod.pageSize] || PAGE_SIZES["6x9"];
+    var w = sz.w, h = sz.h; if (prod.orientation === "landscape") { var t = w; w = h; h = t; }
+    return { w: w, h: h };
+  }
+
+  /* ---------- Modèle de blocs (à partir du Book Engine, sans duplication) ---------- */
+  function paras(html) {
+    var s = String(html || "");
+    if (!/<[a-z]/i.test(s)) return s.split(/\n{2,}/).map(function (x) { return { t: x.trim(), tag: "p" }; }).filter(function (b) { return b.t; });
+    var out = []; var re = /<(h2|h3|p|li|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi, m;
+    while ((m = re.exec(s))) { var txt = m[2].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); if (txt) out.push({ t: txt, tag: m[1].toLowerCase() }); }
+    if (!out.length) { var plain = s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); if (plain) out.push({ t: plain, tag: "p" }); }
+    return out;
+  }
+  function chapterNumberLabel(prod, n) { if (prod.chapters.numberStyle === "none") return ""; if (prod.chapters.numberStyle === "N") return String(n); return "CHAPITRE " + n; }
+  // blocks: {kind:'title'|'front'|'part'|'chapter'|'para'|'quote'|'heading', text, level, chId, breakBefore, chapterTitle}
+  function buildBlocks(book, prod) {
+    var B = [], fm = book.frontMatter || {};
+    if (fm.titlePage) B.push({ kind: "titlepage", text: book.title || "Titre", sub: book.subtitle || "", author: book.author || "", breakBefore: true, front: true });
+    if (fm.copyright) B.push({ kind: "front", heading: "", text: fm.copyright, breakBefore: true, front: true });
+    if (fm.dedication) B.push({ kind: "front", heading: "", text: fm.dedication, italic: true, center: true, breakBefore: true, front: true });
+    if (fm.epigraph) B.push({ kind: "front", heading: "", text: fm.epigraph, italic: true, breakBefore: true, front: true });
+    if (fm.preface) paras(fm.preface).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? "Préface" : p.t, headingText: "Préface", first: i === 0, para: p, breakBefore: i === 0, front: true }); });
+    if (fm.foreword) paras(fm.foreword).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? "Avant-propos" : p.t, first: i === 0, para: p, breakBefore: i === 0, front: true }); });
+    var chN = 0;
+    (book.parts || []).forEach(function (pt) {
+      if (pt.title) B.push({ kind: "part", text: pt.title, breakBefore: true });
+      (pt.chapters || []).forEach(function (c) {
+        chN++;
+        B.push({ kind: "chapter", text: c.title || "Sans titre", num: chN, numLabel: chapterNumberLabel(prod, chN), chId: c.id, breakBefore: prod.chapters.chapterBreak });
+        paras(c.content).forEach(function (p) { B.push({ kind: p.tag === "blockquote" ? "quote" : (p.tag === "h2" || p.tag === "h3" ? "subheading" : "para"), text: p.t, chapterTitle: c.title }); });
+      });
+    });
+    (book.backMatter || []).forEach(function (bm) { paras(bm.content).forEach(function (p, i) { B.push({ kind: i === 0 ? "heading" : "para", text: i === 0 ? (bm.title || bm.type) : p.t, first: i === 0, breakBefore: i === 0, back: true }); }); });
+    return B;
+  }
+
+  /* ---------- Pagination réelle (mesurée au canvas) ---------- */
+  var _ctx = null; function ctx() { if (!_ctx) { var c = document.createElement("canvas"); _ctx = c.getContext("2d"); } return _ctx; }
+  function wrapCount(text, fontCss, sizePx, maxW) {
+    var c = ctx(); c.font = sizePx + "px " + fontCss; var words = String(text).split(/\s+/), line = "", lines = 1;
+    for (var i = 0; i < words.length; i++) { var test = line ? line + " " + words[i] : words[i]; if (c.measureText(test).width > maxW && line) { lines++; line = words[i]; } else line = test; }
+    return lines;
+  }
+  function paginate(book, prod) {
+    var dims = pageDims(prod), DPI = 96;
+    var pageW = dims.w * DPI, pageH = dims.h * DPI;
+    var inner = prod.margins.inner * DPI, outer = prod.margins.outer * DPI, top = prod.margins.top * DPI, bottom = prod.margins.bottom * DPI, gutter = num(prod.gutter, 0) * DPI;
+    var headerH = prod.headers.content !== "none" ? 22 : 0, footerH = prod.footers.content !== "none" ? 22 : 0;
+    var textW = pageW - inner - outer - gutter, textH = pageH - top - bottom - headerH - footerH;
+    var body = prod.typography.body, bodyCss = FONT_MAP[body.family].css, bodyPx = body.size * (DPI / 72), lhPx = bodyPx * body.lh;
+    var headCss = FONT_MAP[prod.typography.head.family || "serif"].css;
+    function blockHeight(b) {
+      if (b.kind === "titlepage") return textH; // page entière
+      if (b.kind === "part") return textH * 0.6;
+      if (b.kind === "chapter") return (prod.typography.chapterSize * (DPI / 72)) * 1.6 + lhPx * 2;
+      if (b.kind === "heading") return (prod.typography.chapterSize * (DPI / 72)) * 1.4 + lhPx;
+      if (b.kind === "subheading") return lhPx * 1.6 + wrapCount(b.text, headCss, prod.typography.sectionSize * (DPI / 72), textW) * (prod.typography.sectionSize * (DPI / 72)) * 1.3;
+      var sz = bodyPx, css = bodyCss; if (b.kind === "quote") { sz = bodyPx; }
+      var indentW = (prod.paragraph.firstIndent || 0) * DPI * 0; // l'indentation n'affecte pas la hauteur
+      return wrapCount(b.text, css, sz, textW) * lhPx + (prod.paragraph.spaceAfter || 0) * DPI + 2;
+    }
+    // 1) pages du contenu principal (numérotation arabe)
+    var blocks = buildBlocks(book, prod);
+    var frontBlocks = blocks.filter(function (b) { return b.front; });
+    var bodyBlocks = blocks.filter(function (b) { return !b.front && !b.back; });
+    var backBlocks = blocks.filter(function (b) { return b.back; });
+    function flow(list) {
+      var pages = [], cur = [], y = 0;
+      list.forEach(function (b) {
+        var h = blockHeight(b);
+        if (b.breakBefore && cur.length) { pages.push(cur); cur = []; y = 0; }
+        if (b.kind === "titlepage") { if (cur.length) { pages.push(cur); cur = []; y = 0; } pages.push([b]); return; }
+        if (y + h > textH && cur.length) { pages.push(cur); cur = []; y = 0; }
+        cur.push(b); y += h;
+      });
+      if (cur.length) pages.push(cur);
+      return pages;
+    }
+    var frontPages = flow(frontBlocks);
+    var bodyPages = flow(bodyBlocks);
+    var backPages = flow(backBlocks);
+    // page de départ arabe pour chaque chapitre (pour la TDM)
+    var chapterStart = {}, partStart = {};
+    bodyPages.forEach(function (pg, i) { pg.forEach(function (b) { if (b.kind === "chapter" && chapterStart[b.chId] == null) chapterStart[b.chId] = i + 1; if (b.kind === "part" && partStart[b.text] == null) partStart[b.text] = i + 1; }); });
+    // 2) pages de TDM (numérotation romaine, après le front)
+    var tocPages = [];
+    if (prod.toc.include) {
+      var entries = [];
+      (book.parts || []).forEach(function (pt) {
+        if (pt.title && prod.toc.levels >= 1) entries.push({ level: 0, text: pt.title, page: partStart[pt.title] || null });
+        (pt.chapters || []).forEach(function (c) { entries.push({ level: 1, text: c.title || "Sans titre", page: chapterStart[c.id] || null }); });
+      });
+      var perPage = Math.max(6, Math.floor((textH - 40) / (lhPx + 4)));
+      for (var i = 0; i < entries.length; i += perPage) tocPages.push([{ kind: "toc", entries: entries.slice(i, i + perPage), first: i === 0 }]);
+      if (!tocPages.length) tocPages.push([{ kind: "toc", entries: [], first: true }]);
+    }
+    return { frontPages: frontPages, tocPages: tocPages, bodyPages: bodyPages, backPages: backPages, dims: dims, metrics: { textW: textW, textH: textH, bodyPx: bodyPx, lhPx: lhPx, bodyCss: bodyCss, headCss: headCss, inner: inner, outer: outer, top: top, bottom: bottom, gutter: gutter, headerH: headerH, footerH: footerH, pageW: pageW, pageH: pageH } };
+  }
+  function roman(n) { var map = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]], r = ""; map.forEach(function (p) { while (n >= p[0]) { r += p[1]; n -= p[0]; } }); return r; }
+
+  /* ---------- Aperçu de production ---------- */
+  function renderPreview(scroll, book, prod) {
+    var plan = paginate(book, prod), m = plan.metrics;
+    scroll.innerHTML = "";
+    var scale = Math.min(1, 360 / m.pageW);
+    var romanIdx = 0, arabicIdx = 0;
+    function sheet(pageBlocks, kind, side) {
+      var romanNum = (kind === "front"); var pageNo;
+      if (romanNum && prod.numbering.frontRoman) { romanIdx++; pageNo = roman(romanIdx); } else { arabicIdx++; pageNo = String((prod.numbering.startAt || 1) - 1 + arabicIdx); }
+      var wrap = E("div", "pp-sheet-wrap");
+      var sh = E("div", "pp-sheet");
+      sh.style.width = m.pageW + "px"; sh.style.height = m.pageH + "px"; sh.style.transform = "scale(" + scale + ")";
+      var isLeft = (arabicIdx % 2 === 0); // recto-verso : pages paires = gauche
+      var padL = (prod.duplex && isLeft) ? m.outer : (m.inner + m.gutter), padR = (prod.duplex && isLeft) ? (m.inner + m.gutter) : m.outer;
+      var area = E("div", "pp-area"); area.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;top:" + (m.top + m.headerH) + "px;bottom:" + (m.bottom + m.footerH) + "px;overflow:hidden;font-family:" + m.bodyCss + ";font-size:" + m.bodyPx + "px;line-height:" + prod.typography.body.lh + ";text-align:" + prod.paragraph.align + ";";
+      // fond perdu (guide visuel)
+      if (num(prod.bleed, 0) > 0) { var bl = E("div", "pp-bleed"); bl.style.cssText = "position:absolute;inset:-" + (prod.bleed * 96 * scale) + "px;border:1px dashed #e2a; pointer-events:none;"; }
+      // en-tête / pied
+      if (prod.headers.content !== "none") { var hd = E("div", "pp-run pp-head"); hd.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;top:" + (m.top) + "px;font-size:" + (m.bodyPx * .8) + "px;color:#888;"; hd.textContent = runText(prod.headers.content, book, pageBlocks, prod); sh.appendChild(hd); }
+      if (prod.footers.content !== "none") { var ft = E("div", "pp-run pp-foot"); var fcls = prod.numbering.mode === "bottom-outer" ? (isLeft ? "left" : "right") : "center"; ft.style.cssText = "position:absolute;left:" + padL + "px;right:" + padR + "px;bottom:" + (m.bottom * .4) + "px;font-size:" + (m.bodyPx * .8) + "px;color:#888;text-align:" + fcls + ";"; ft.textContent = footText(prod.footers.content, book, pageNo, prod); sh.appendChild(ft); }
+      // contenu
+      pageBlocks.forEach(function (b) { area.appendChild(renderBlock(b, prod, m)); });
+      sh.appendChild(area);
+      wrap.appendChild(sh);
+      var cap = E("div", "pp-cap", (romanNum ? "p. " + pageNo : "p. " + pageNo)); wrap.appendChild(cap);
+      wrap.style.height = (m.pageH * scale + 26) + "px";
+      scroll.appendChild(wrap);
+    }
+    plan.frontPages.forEach(function (pg) { sheet(pg, "front"); });
+    plan.tocPages.forEach(function (pg) { sheet(pg, "front"); });
+    plan.bodyPages.forEach(function (pg) { sheet(pg, "body"); });
+    plan.backPages.forEach(function (pg) { sheet(pg, "body"); });
+    if (!plan.frontPages.length && !plan.bodyPages.length && !plan.backPages.length) scroll.appendChild(E("div", "pp-empty", "Le livre est vide : ajoutez des chapitres dans l’onglet Contenu."));
+    return plan;
+  }
+  function runText(kind, book, pageBlocks, prod) { if (kind === "bookTitle") return book.title || ""; if (kind === "author") return book.author || ""; if (kind === "chapterTitle") { var ch = null; pageBlocks.forEach(function (b) { if (b.kind === "chapter") ch = b.text; else if (b.chapterTitle && !ch) ch = b.chapterTitle; }); return ch || book.title || ""; } return ""; }
+  function footText(kind, book, pageNo, prod) { if (kind === "pageNumber") return pageNo; if (kind === "author") return book.author || ""; if (kind === "title") return book.title || ""; if (kind === "custom") return prod.footerCustom || ""; return ""; }
+  function renderBlock(b, prod, m) {
+    if (b.kind === "titlepage") { var tp = E("div", "pp-titlepage"); tp.innerHTML = '<div class="pp-bt">' + esc(b.text) + '</div>' + (b.sub ? '<div class="pp-bs">' + esc(b.sub) + '</div>' : '') + (b.author ? '<div class="pp-ba">' + esc(b.author) + '</div>' : ''); return tp; }
+    if (b.kind === "toc") { var tc = E("div", "pp-toc"); if (b.first) tc.appendChild(E("div", "pp-toc-h", "Table des matières")); b.entries.forEach(function (e) { var r = E("div", "pp-toc-row" + (e.level === 0 ? " l0" : "")); r.innerHTML = '<span class="pp-toc-t">' + esc(e.text) + '</span><span class="pp-toc-dots"></span><span class="pp-toc-p">' + (e.page != null ? e.page : "—") + '</span>'; tc.appendChild(r); }); return tc; }
+    if (b.kind === "part") { var pd = E("div", "pp-part"); pd.style.fontSize = (prod.typography.partSize) + "pt"; pd.textContent = b.text; return pd; }
+    if (b.kind === "chapter") { var cd = E("div", "pp-chapter"); if (b.numLabel) cd.appendChild(E("div", "pp-chapter-n", b.numLabel)); var ct = E("div", "pp-chapter-t"); ct.style.fontSize = (prod.typography.chapterSize) + "pt"; ct.textContent = b.text; cd.appendChild(ct); return cd; }
+    if (b.kind === "heading") { var hd = E("div", "pp-chapter-t"); hd.style.fontSize = (prod.typography.chapterSize * .8) + "pt"; hd.textContent = b.text; return hd; }
+    if (b.kind === "subheading") { var sh = E("div", "pp-subhead"); sh.style.fontSize = (prod.typography.sectionSize) + "pt"; sh.textContent = b.text; return sh; }
+    if (b.kind === "quote") { var q = E("blockquote", "pp-quote"); q.textContent = b.text; return q; }
+    var p = E("p", "pp-para"); p.style.textIndent = (prod.paragraph.firstIndent || 0) + "in"; p.style.marginBottom = (prod.paragraph.spaceAfter || 0) + "in"; if (b.italic) p.style.fontStyle = "italic"; if (b.center) p.style.textAlign = "center"; p.textContent = b.text; return p;
+  }
+
+  /* ---------- Vue Production (réglages + aperçu) ---------- */
+  function render(t, stage, back) {
+    var book = t.book; var prod = upgrade(book);
+    var wrap = E("div", "cv-builder rxpp-studio");
+    wrap.innerHTML = '<div class="cv-form pp-left" id="ppLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><button class="btn ghost sm" data-x="back">← Contenu</button><span class="cv-pv-title">Aperçu de production</span><span style="flex:1"></span><span class="pp-pages" id="ppPages"></span></div><div class="cv-paper-scroll pp-scroll" id="ppScroll"></div></div>';
+    stage.appendChild(wrap);
+    var scroll = wrap.querySelector("#ppScroll");
+    var save = function () { t.dirty = true; var sa = W("scheduleAutosave"); if (sa) sa(); };
+    var refresh = function () { var plan = renderPreview(scroll, book, prod); var tot = plan.frontPages.length + plan.tocPages.length + plan.bodyPages.length + plan.backPages.length; wrap.querySelector("#ppPages").textContent = tot + " page" + (tot > 1 ? "s" : ""); };
+    var rerender = function () { stage.innerHTML = ""; render(t, stage, back); };
+    buildSettings(wrap.querySelector("#ppLeft"), t, book, prod, function () { save(); refresh(); }, rerender);
+    refresh();
+    wrap.querySelector('[data-x="back"]').onclick = back;
+  }
+
+  function sec(box, title) { box.appendChild(E("div", "cv-sec", title)); }
+  function selectField(label, val, opts, on) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label))); var s = E("select", "cv-sb-sel"); opts.forEach(function (o) { var op = E("option"); op.value = o[0]; op.textContent = o[1]; s.appendChild(op); }); s.value = val; s.onchange = function () { on(s.value); }; w.appendChild(s); return w; }
+  function numField(label, val, on, step, unit) { var w = E("label", "cvf"); w.appendChild(E("span", "cvf-l", esc(label) + (unit ? " (" + unit + ")" : ""))); var i = E("input", "rp-input"); i.type = "number"; i.step = step || "0.05"; i.value = val; i.oninput = function () { on(num(i.value, val)); }; w.appendChild(i); return w; }
+  function toggleField(label, val, on) { var w = E("label", "cvf cvf-chk"); var i = E("input"); i.type = "checkbox"; i.checked = !!val; i.onchange = function () { on(i.checked); }; w.appendChild(i); w.appendChild(E("span", null, esc(label))); return w; }
+
+  function buildSettings(box, t, book, prod, touch, rerender) {
+    box.innerHTML = "";
+    // Presets
+    sec(box, "Modèles de production");
+    var pr = E("div", "pp-presets");
+    Object.keys(PRESETS).forEach(function (id) { var P = PRESETS[id]; var b = E("button", "cv-tpl" + (prod.preset === id ? " on" : ""), esc(P.label)); b.onclick = function () { applyPreset(prod, id); touch(); rerender(); }; pr.appendChild(b); });
+    box.appendChild(pr);
+    // Format
+    sec(box, "Format & orientation");
+    var g1 = E("div", "cv-grid");
+    var fmtOpts = Object.keys(PAGE_SIZES).map(function (k) { return [k, PAGE_SIZES[k].label]; }); fmtOpts.push(["custom", "Personnalisé"]);
+    g1.appendChild(selectField("Format", prod.pageSize, fmtOpts, function (v) { prod.pageSize = v; prod.preset = null; touch(); rerender(); }));
+    g1.appendChild(selectField("Orientation", prod.orientation, [["portrait", "Portrait"], ["landscape", "Paysage"]], function (v) { prod.orientation = v; touch(); rerender(); }));
+    box.appendChild(g1);
+    if (prod.pageSize === "custom") { var gc = E("div", "cv-grid"); gc.appendChild(numField("Largeur", prod.custom.w, function (v) { prod.custom.w = Math.min(20, Math.max(2, v)); touch(); rerender(); }, "0.1", "po")); gc.appendChild(numField("Hauteur", prod.custom.h, function (v) { prod.custom.h = Math.min(20, Math.max(2, v)); touch(); rerender(); }, "0.1", "po")); box.appendChild(gc); }
+    // Marges
+    sec(box, "Marges & gouttière");
+    var mp = E("div", "pp-presets");
+    [["Standard", { top: .75, bottom: .75, inner: .75, outer: .6 }], ["Compact", { top: .5, bottom: .5, inner: .5, outer: .4 }], ["Large", { top: 1, bottom: 1, inner: 1, outer: .9 }]].forEach(function (P) { var b = E("button", "cv-tpl", P[0]); b.onclick = function () { prod.margins = Object.assign({}, P[1]); touch(); rerender(); }; mp.appendChild(b); });
+    box.appendChild(mp);
+    var g2 = E("div", "cv-grid");
+    g2.appendChild(numField("Haut", prod.margins.top, function (v) { prod.margins.top = v; touch(); rerender(); }, "0.05", "po"));
+    g2.appendChild(numField("Bas", prod.margins.bottom, function (v) { prod.margins.bottom = v; touch(); rerender(); }, "0.05", "po"));
+    g2.appendChild(numField("Intérieure", prod.margins.inner, function (v) { prod.margins.inner = v; touch(); rerender(); }, "0.05", "po"));
+    g2.appendChild(numField("Extérieure", prod.margins.outer, function (v) { prod.margins.outer = v; touch(); rerender(); }, "0.05", "po"));
+    g2.appendChild(numField("Gouttière", prod.gutter, function (v) { prod.gutter = v; touch(); rerender(); }, "0.02", "po"));
+    g2.appendChild(numField("Fond perdu", prod.bleed, function (v) { prod.bleed = v; touch(); rerender(); }, "0.025", "po"));
+    box.appendChild(g2);
+    box.appendChild(E("div", "pp-note", "Fond perdu : paramètre enregistré et affiché en guide. Non appliqué comme zone de rognage dans l’export PDF actuel (marques de coupe = évolution)."));
+    // Typographie
+    sec(box, "Typographie");
+    var g3 = E("div", "cv-grid");
+    var fams = [["serif", "Serif (Georgia/Times)"], ["sans", "Sans (Inter/Arial)"], ["mono", "Mono (Courier)"]];
+    g3.appendChild(selectField("Police du corps", prod.typography.body.family, fams, function (v) { prod.typography.body.family = v; touch(); rerender(); }));
+    g3.appendChild(selectField("Police des titres", prod.typography.head.family || "serif", fams, function (v) { prod.typography.head.family = v; touch(); rerender(); }));
+    g3.appendChild(numField("Taille du corps", prod.typography.body.size, function (v) { prod.typography.body.size = v; touch(); rerender(); }, "0.5", "pt"));
+    g3.appendChild(numField("Interligne", prod.typography.body.lh, function (v) { prod.typography.body.lh = v; touch(); rerender(); }, "0.05", "×"));
+    g3.appendChild(numField("Titre de chapitre", prod.typography.chapterSize, function (v) { prod.typography.chapterSize = v; touch(); rerender(); }, "1", "pt"));
+    g3.appendChild(numField("Titre de partie", prod.typography.partSize, function (v) { prod.typography.partSize = v; touch(); rerender(); }, "1", "pt"));
+    box.appendChild(g3);
+    // Paragraphes
+    sec(box, "Paragraphes");
+    var g4 = E("div", "cv-grid");
+    g4.appendChild(selectField("Alignement", prod.paragraph.align, [["left", "Gauche"], ["center", "Centre"], ["right", "Droite"], ["justify", "Justifié"]], function (v) { prod.paragraph.align = v; touch(); rerender(); }));
+    g4.appendChild(numField("Retrait 1re ligne", prod.paragraph.firstIndent, function (v) { prod.paragraph.firstIndent = v; touch(); rerender(); }, "0.05", "po"));
+    g4.appendChild(numField("Espacement après", prod.paragraph.spaceAfter, function (v) { prod.paragraph.spaceAfter = v; touch(); rerender(); }, "0.02", "po"));
+    box.appendChild(g4);
+    // Chapitres
+    sec(box, "Chapitres & parties");
+    var g5 = E("div", "cv-grid");
+    g5.appendChild(selectField("Numéro de chapitre", prod.chapters.numberStyle, [["CHAPITRE N", "CHAPITRE 1"], ["N", "1"], ["none", "Aucun"]], function (v) { prod.chapters.numberStyle = v; touch(); rerender(); }));
+    box.appendChild(g5);
+    box.appendChild(toggleField("Chaque chapitre commence sur une nouvelle page", prod.chapters.chapterBreak, function (v) { prod.chapters.chapterBreak = v; touch(); rerender(); }));
+    // Pagination / en-têtes / pieds
+    sec(box, "Pagination, en-têtes & pieds");
+    var g6 = E("div", "cv-grid");
+    g6.appendChild(selectField("Numéros de page", prod.numbering.mode, [["none", "Sans numéro"], ["bottom-center", "En bas (centré)"], ["bottom-outer", "En bas (extérieur)"], ["top-outer", "En haut (extérieur)"]], function (v) { prod.numbering.mode = v; prod.footers.content = v === "none" ? "none" : "pageNumber"; touch(); rerender(); }));
+    g6.appendChild(selectField("En-tête", prod.headers.content, [["none", "Aucun"], ["bookTitle", "Titre du livre"], ["chapterTitle", "Titre du chapitre"], ["author", "Auteur"]], function (v) { prod.headers.content = v; touch(); rerender(); }));
+    g6.appendChild(selectField("Pied de page", prod.footers.content, [["none", "Aucun"], ["pageNumber", "Numéro de page"], ["author", "Auteur"], ["title", "Titre"], ["custom", "Personnalisé"]], function (v) { prod.footers.content = v; touch(); rerender(); }));
+    box.appendChild(g6);
+    box.appendChild(toggleField("Pages préliminaires en chiffres romains (i, ii…)", prod.numbering.frontRoman, function (v) { prod.numbering.frontRoman = v; touch(); rerender(); }));
+    box.appendChild(toggleField("Mode recto-verso (marges & en-têtes alternés)", prod.duplex, function (v) { prod.duplex = v; touch(); rerender(); }));
+    box.appendChild(E("div", "pp-note", "Recto-verso : aperçu des marges/en-têtes alternés. L’export PDF applique les marges mais pas encore l’inversion recto-verso complète."));
+    // TDM
+    sec(box, "Table des matières");
+    box.appendChild(toggleField("Inclure la table des matières", prod.toc.include, function (v) { prod.toc.include = v; touch(); rerender(); }));
+    box.appendChild(selectField("Niveaux", String(prod.toc.levels), [["1", "Chapitres"], ["2", "Parties + chapitres"]], function (v) { prod.toc.levels = +v; touch(); rerender(); }));
+    // Exports
+    sec(box, "Export");
+    box.appendChild(exportPanel(t, book, prod));
+    // Assistant production (Copilot)
+    sec(box, "Assistant production");
+    var ask = E("div", "ed-ask"); var inp = E("input", "rp-input"); inp.placeholder = "Ex. « format A5 », « ajoute une gouttière », « chapitres sur une nouvelle page »";
+    var go = E("button", "ed-btn ed-go", "Appliquer"); go.onclick = function () { applyCommand(inp.value, prod, book, function () { touch(); rerender(); }); inp.value = ""; };
+    inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } };
+    ask.appendChild(inp); ask.appendChild(go); box.appendChild(ask);
+  }
+  function applyPreset(prod, id) { var P = PRESETS[id]; if (!P) return; prod.preset = id; prod.pageSize = P.pageSize; prod.margins = Object.assign({}, P.margins); prod.typography.body = Object.assign({}, prod.typography.body, P.body); prod.chapters.chapterBreak = P.chapterBreak; }
+
+  /* ---------- Statuts d'export + exports réels ---------- */
+  function badge(status) { var map = { available: ["Disponible", "pp-b-ok"], prepared: ["Préparé", "pp-b-prep"], none: ["Non disponible", "pp-b-no"] }; var s = map[status] || map.none; return '<span class="pp-badge ' + s[1] + '">' + s[0] + '</span>'; }
+  function map2span(status) { var map = { available: ["Disponible", "pp-b-ok"], prepared: ["Préparé", "pp-b-prep"], none: ["Non disponible", "pp-b-no"] }; var s = map[status] || map.none; return E("span", "pp-badge " + s[1], s[0]); }
+  function exportPanel(t, book, prod) {
+    var box = E("div", "pp-exports");
+    var rows = [
+      { id: "pdf", label: "PDF", status: "available", note: "Mise en page réelle (format, marges, pagination, en-têtes/pieds). Polices standard PDF." },
+      { id: "docx", label: "DOCX", status: "available", note: "Structure, styles, titres, paragraphes. Mise en page fine simplifiée." },
+      { id: "epub", label: "EPUB", status: "available", note: "EPUB3 valide (métadonnées, chapitres, navigation/TDM). Format redistribuable (marges/pagination non applicables)." }
+    ];
+    rows.forEach(function (r) {
+      var row = E("div", "pp-exp-row");
+      var b = E("button", "btn sm", "Exporter " + r.label); b.onclick = function () { doExport(r.id, book, prod, b); };
+      var bg = map2span(r.status);
+      row.appendChild(b); row.appendChild(bg);
+      box.appendChild(row);
+      box.appendChild(E("div", "pp-exp-note", r.note));
+    });
+    box.appendChild(E("div", "pp-legend", badge("available") + " prêt · " + badge("prepared") + " architecturé · " + badge("none") + " à intégrer"));
+    return box;
+  }
+  function fileName(book, ext) { return ((book.title || "Livre").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Livre") + "." + ext; }
+  function doExport(kind, book, prod, btn) {
+    var lab = btn.textContent; btn.disabled = true; btn.textContent = "Génération…";
+    Promise.resolve().then(function () {
+      if (kind === "pdf") return exportPDF(book, prod);
+      if (kind === "docx") return exportDOCX(book, prod);
+      if (kind === "epub") return exportEPUB(book, prod);
+    }).then(function () { toast(kind.toUpperCase() + " généré ✓ — téléchargement lancé.", "ok"); })
+      .catch(function (e) { toast("Échec de l’export " + kind.toUpperCase() + " : " + (e.message || e), "err"); })
+      .then(function () { btn.disabled = false; btn.textContent = lab; });
+  }
+
+  function exportPDF(book, prod) {
+    var PDFLibRef = window.PDFLib; if (!PDFLibRef) throw new Error("Moteur PDF indisponible.");
+    var db = W("downloadBlob"); if (!db) throw new Error("Téléchargement indisponible.");
+    var dims = pageDims(prod), PW = dims.w * 72, PH = dims.h * 72;
+    var mTop = prod.margins.top * 72, mBot = prod.margins.bottom * 72, mIn = prod.margins.inner * 72, mOut = prod.margins.outer * 72, gut = num(prod.gutter, 0) * 72;
+    var body = prod.typography.body, fam = FONT_MAP[body.family], headFam = FONT_MAP[prod.typography.head.family || "serif"];
+    var size = body.size, lh = size * body.lh;
+    return (async function () {
+      var doc = await PDFLibRef.PDFDocument.create();
+      var F = await doc.embedFont(PDFLibRef.StandardFonts[fam.pdf]);
+      var FB = await doc.embedFont(PDFLibRef.StandardFonts[fam.pdfB]);
+      var HB = await doc.embedFont(PDFLibRef.StandardFonts[headFam.pdfB]);
+      var textW = PW - mIn - mOut - gut;
+      var page = null, y = 0, arabic = 0;
+      function foot() {
+        if (page && prod.footers.content !== "none") {
+          var txt = footText(prod.footers.content, book, String(arabic), prod);
+          if (txt) { var fs = size * .85, tw = F.widthOfTextAtSize(txt, fs), x = prod.numbering.mode === "bottom-outer" ? (arabic % 2 === 0 ? mOut : PW - mOut - tw) : (PW - tw) / 2; page.drawText(txt, { x: x, y: mBot * .5, size: fs, font: F, color: PDFLibRef.rgb(.4, .4, .4) }); }
+        }
+        if (page && prod.headers.content !== "none") { var ht = runText(prod.headers.content, book, [], prod); if (ht) page.drawText(ht.slice(0, 90), { x: mIn + gut, y: PH - mTop * .6, size: size * .8, font: F, color: PDFLibRef.rgb(.5, .5, .5) }); }
+      }
+      function newPage() { foot(); page = doc.addPage([PW, PH]); arabic++; y = PH - mTop; }
+      function wrap(text, font, fs) { var words = String(text).split(/\s+/), lines = [], line = ""; words.forEach(function (w) { var test = line ? line + " " + w : w; if (font.widthOfTextAtSize(test, fs) > textW && line) { lines.push(line); line = w; } else line = test; }); if (line) lines.push(line); return lines; }
+      function draw(text, font, fs, opts) {
+        opts = opts || {}; var lhh = fs * (opts.lh || body.lh);
+        var lines = wrap(text, font, fs);
+        lines.forEach(function (ln, i) {
+          if (y - lhh < mBot + (prod.footers.content !== "none" ? 16 : 0)) newPage();
+          var x = mIn + gut + (opts.indent && i === 0 ? (prod.paragraph.firstIndent * 72) : 0);
+          if (opts.align === "center") { var tw = font.widthOfTextAtSize(ln, fs); x = (PW - tw) / 2; }
+          page.drawText(ln, { x: x, y: y - fs, size: fs, font: font, color: PDFLibRef.rgb(.1, .1, .12) });
+          y -= lhh;
+        });
+        if (opts.after) y -= opts.after;
+      }
+      var blocks = buildBlocks(book, prod);
+      newPage();
+      blocks.forEach(function (b) {
+        if (b.kind === "titlepage") { newPage(); y = PH * .62; draw(b.text, HB, prod.typography.partSize, { align: "center", lh: 1.2 }); if (b.sub) { y -= 6; draw(b.sub, F, size + 2, { align: "center" }); } if (b.author) { y -= 20; draw(b.author, F, size, { align: "center" }); } return; }
+        if (b.breakBefore) newPage();
+        if (b.kind === "part") { y -= 40; draw(b.text, HB, prod.typography.partSize, { align: "center", after: 30 }); return; }
+        if (b.kind === "chapter") { if (b.numLabel) draw(b.numLabel, F, size, { after: 6 }); draw(b.text, HB, prod.typography.chapterSize, { after: 18 }); return; }
+        if (b.kind === "heading") { draw(b.text, HB, prod.typography.chapterSize * .8, { after: 12 }); return; }
+        if (b.kind === "subheading") { y -= 6; draw(b.text, HB, prod.typography.sectionSize, { after: 6 }); return; }
+        if (b.kind === "quote") { draw(b.text, F, size, { indent: false, after: 6 }); return; }
+        draw(b.text, F, size, { indent: prod.paragraph.firstIndent > 0, align: prod.paragraph.align === "center" ? "center" : "left", after: (prod.paragraph.spaceAfter || 0) * 72 });
+      });
+      foot();
+      var bytes = await doc.save();
+      db(new Blob([bytes], { type: "application/pdf" }), fileName(book, "pdf"));
+    })();
+  }
+
+  function exportDOCX(book, prod) {
+    var f = W("downloadCopilotFile"); if (!f) throw new Error("Export DOCX indisponible.");
+    var body = prod.typography.body, css = FONT_MAP[body.family].css;
+    var h = '<div style="font-family:' + css + ';font-size:' + body.size + 'pt;line-height:' + body.lh + '">';
+    var fm = book.frontMatter || {};
+    if (fm.titlePage) h += '<h1 style="text-align:center">' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p style="text-align:center"><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p style="text-align:center">' + esc(book.author) + '</p>' : '');
+    if (fm.copyright) h += '<p>' + esc(fm.copyright) + '</p>';
+    if (fm.dedication) h += '<p style="text-align:center"><i>' + esc(fm.dedication) + '</i></p>';
+    if (fm.preface) h += '<h2>Préface</h2>' + fm.preface;
+    if (fm.foreword) h += '<h2>Avant-propos</h2>' + fm.foreword;
+    if (prod.toc.include) { h += '<h2>Table des matières</h2>'; (book.parts || []).forEach(function (p) { if (p.title) h += '<p><b>' + esc(p.title) + '</b></p>'; (p.chapters || []).forEach(function (c) { h += '<p>' + esc(c.title || "") + '</p>'; }); }); }
+    var n = 0;
+    (book.parts || []).forEach(function (p) { if (p.title) h += '<h1 style="text-align:center">' + esc(p.title) + '</h1>'; (p.chapters || []).forEach(function (c) { n++; var lbl = prod.chapters.numberStyle === "none" ? "" : (prod.chapters.numberStyle === "N" ? n + ". " : "Chapitre " + n + " — "); h += '<h2>' + esc(lbl + (c.title || "")) + '</h2>' + (c.content || ""); }); });
+    (book.backMatter || []).forEach(function (b) { h += '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""); });
+    h += '</div>';
+    return Promise.resolve(f({ kind: "docx", html: true, name: fileName(book, "docx"), content: h }));
+  }
+
+  function exportEPUB(book, prod) {
+    var JSZipRef = window.JSZip; if (!JSZipRef) throw new Error("JSZip indisponible pour l’EPUB.");
+    var db = W("downloadBlob"); if (!db) throw new Error("Téléchargement indisponible.");
+    var zip = new JSZipRef();
+    zip.file("mimetype", "application/epub+zip", { compression: "STORE" }); // 1er fichier, non compressé (spec EPUB)
+    zip.folder("META-INF").file("container.xml", '<?xml version="1.0"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+    var oebps = zip.folder("OEBPS");
+    oebps.file("style.css", "body{font-family:serif;line-height:1.5;margin:1em}h1,h2{font-family:sans-serif}blockquote{border-left:3px solid #ccc;padding-left:1em;color:#555}");
+    var uid = "urn:uuid:readix-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    var items = [], spine = [], nav = [];
+    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '</body></html>'); }
+    var idx = 0; var fm = book.frontMatter || {};
+    function addDoc(title, html, inNav) { idx++; var name = "s" + idx + ".xhtml"; xhtml(name, title, html); items.push('<item id="s' + idx + '" href="' + name + '" media-type="application/xhtml+xml"/>'); spine.push('<itemref idref="s' + idx + '"/>'); if (inNav) nav.push('<li><a href="' + name + '">' + esc(title) + '</a></li>'); return name; }
+    if (fm.titlePage) addDoc(book.title || "Titre", '<h1>' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p>' + esc(book.author) + '</p>' : ''), false);
+    if (fm.copyright) addDoc("Copyright", '<p>' + esc(fm.copyright) + '</p>', false);
+    if (fm.dedication) addDoc("Dédicace", '<p style="text-align:center"><em>' + esc(fm.dedication) + '</em></p>', false);
+    if (fm.preface) addDoc("Préface", '<h2>Préface</h2>' + fm.preface, true);
+    if (fm.foreword) addDoc("Avant-propos", '<h2>Avant-propos</h2>' + fm.foreword, true);
+    var n = 0;
+    (book.parts || []).forEach(function (p) {
+      if (p.title) { addDoc(p.title, '<h1>' + esc(p.title) + '</h1>', true); }
+      (p.chapters || []).forEach(function (c) { n++; var lbl = prod.chapters.numberStyle === "none" ? "" : (prod.chapters.numberStyle === "N" ? n + ". " : "Chapitre " + n + " — "); addDoc(c.title || ("Chapitre " + n), '<h2>' + esc(lbl + (c.title || "")) + '</h2>' + (c.content || "<p></p>"), true); });
+    });
+    (book.backMatter || []).forEach(function (b) { addDoc(b.title || b.type, '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""), true); });
+    // nav.xhtml (EPUB3)
+    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav></body></html>');
+    items.push('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
+    var opf = '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">' + uid + '</dc:identifier><dc:title>' + esc(book.title || "Livre") + '</dc:title><dc:language>' + (book.language || "fr") + '</dc:language>' + (book.author ? '<dc:creator>' + esc(book.author) + '</dc:creator>' : '') + (book.description ? '<dc:description>' + esc(clampText(book.description, 400)) + '</dc:description>' : '') + '<meta property="dcterms:modified">' + new Date().toISOString().replace(/\.\d+Z$/, "Z") + '</meta></metadata><manifest><item id="css" href="style.css" media-type="text/css"/>' + items.join("") + '</manifest><spine>' + spine.join("") + '</spine></package>';
+    oebps.file("content.opf", opf);
+    return zip.generateAsync({ type: "blob", mimeType: "application/epub+zip", compression: "DEFLATE" }).then(function (blob) { db(blob, fileName(book, "epub")); });
+  }
+  function clampText(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n) : s; }
+
+  /* ---------- Commandes de production (Copilot) + confirmation ---------- */
+  function confirmImportant(msg, onYes) { var dlg = W("dialog"); if (!dlg) { if (window.confirm(msg)) onYes(); return; } var dl = dlg('<h3>Confirmer</h3><p style="font-size:13px">' + esc(msg) + '</p><div class="row"><button class="btn ghost sm" data-a="no">Annuler</button><button class="btn sm" data-a="yes">Appliquer</button></div>'); dl.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "yes") onYes(); dl.close(); }; }
+  function applyCommand(text, prod, book, done) {
+    var s = String(text || "").toLowerCase().trim(); if (!s) return;
+    var m;
+    if ((m = s.match(/\b(6\s*[x×]\s*9|5\s*[x×]\s*8|a5|a4|letter)\b/))) { var f = m[1].replace(/\s/g, "").replace("×", "x"); var map = { "6x9": "6x9", "5x8": "5x8", "a5": "A5", "a4": "A4", "letter": "Letter" }; var fmt = map[f]; if (fmt) { confirmImportant("Changer le format du livre en " + PAGE_SIZES[fmt].label + " ?", function () { prod.pageSize = fmt; prod.preset = null; done(); toast("Format : " + PAGE_SIZES[fmt].label, "ok"); }); return; } }
+    if (/gouttière|gutter/.test(s)) { prod.gutter = prod.gutter > 0 ? prod.gutter : 0.15; done(); toast("Gouttière ajoutée (" + prod.gutter + " po).", "ok"); return; }
+    if (/nouvelle page|saut de page|chapitre.*page/.test(s)) { prod.chapters.chapterBreak = true; done(); toast("Chapitres sur une nouvelle page.", "ok"); return; }
+    if (/num[ée]ro.*page|pagination|page number/.test(s)) { prod.numbering.mode = "bottom-center"; prod.footers.content = "pageNumber"; done(); toast("Numéros de page activés.", "ok"); return; }
+    if (/police.*(sans|arial|inter)/.test(s)) { prod.typography.body.family = "sans"; done(); toast("Police du corps : sans serif.", "ok"); return; }
+    if (/police.*(serif|times|georgia)/.test(s)) { prod.typography.body.family = "serif"; done(); toast("Police du corps : serif.", "ok"); return; }
+    if (/table des mati|toc|sommaire/.test(s)) { prod.toc.include = true; done(); toast("Table des matières incluse.", "ok"); return; }
+    if (/paysage|landscape/.test(s)) { prod.orientation = "landscape"; done(); toast("Orientation : paysage.", "ok"); return; }
+    if (/portrait/.test(s)) { prod.orientation = "portrait"; done(); toast("Orientation : portrait.", "ok"); return; }
+    if (/recto.?verso|duplex/.test(s)) { prod.duplex = true; done(); toast("Mode recto-verso activé.", "ok"); return; }
+    toast("Commande non reconnue. Essayez : « format A5 », « ajoute une gouttière », « numéros de page ».", "warn");
+  }
+
+  /* ---------- API ---------- */
+  ReadixProduction = window.ReadixProduction = {
+    version: "1.0", render: render, upgrade: upgrade, paginate: paginate, presets: PRESETS, pageSizes: PAGE_SIZES,
+    exportPDF: exportPDF, exportDOCX: exportDOCX, exportEPUB: exportEPUB, applyCommand: applyCommand,
+    settings: function () { var A = (typeof APP !== "undefined") ? APP : null; if (!A) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; return (t && t.book) ? upgrade(t.book) : null; }
+  };
+  try { console.info("[Readix] Production Engine v1 — formats, mise en page, pagination, aperçu, exports PDF/DOCX/EPUB réels."); } catch (e) {}
 })();
 
 </script>
