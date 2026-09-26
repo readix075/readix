@@ -9014,42 +9014,46 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 
   function activeTabSafe() { var f = W("activeTab"); if (f) return f(); return (typeof APP !== "undefined" && APP.tabs) ? APP.tabs.filter(function (x) { return x.id === APP.active; })[0] : null; }
 
-  // Découpe le texte OCR en morceaux (respecte les frontières de page) pour l'IA.
-  function chunkPages(raw, maxLen, maxChunks) {
-    var parts = String(raw || "").split(/(?=---\s*Page\s*\d+\s*---)/);
-    var chunks = [], cur = "";
-    for (var i = 0; i < parts.length; i++) {
-      if ((cur + parts[i]).length > maxLen && cur) { chunks.push(cur); cur = parts[i]; }
-      else cur += parts[i];
-      if (cur.length > maxLen && !parts[i + 1]) { chunks.push(cur); cur = ""; }
-    }
-    if (cur.trim()) chunks.push(cur);
-    if (chunks.length > maxChunks) { // regroupe le surplus dans le dernier morceau autorisé
-      var head = chunks.slice(0, maxChunks - 1);
-      head.push(chunks.slice(maxChunks - 1).join("\n"));
-      chunks = head;
-    }
-    return chunks.length ? chunks : [String(raw || "")];
-  }
+  /* ── L'ŒIL DE L'OCR : Claude lit directement l'image de la page scannée ──
+     Si l'IA est disponible, la reconnaissance se fait par VISION (bien plus
+     fiable qu'un OCR classique qui devine caractère par caractère). Sinon,
+     repli automatique et silencieux sur l'OCR classique (Tesseract). Rien
+     n'est inventé ; aucune ouverture ni mention du Copilot. */
+  function visionAvailable() { var a = W("copilotAuthed"), api = W("api"); return !!(api && a && a()); }
+  var VISION_PROMPT = "Tu es le moteur de reconnaissance de texte de Readix. On te fournit l'image d'UNE page d'un document scanné. Transcris FIDÈLEMENT tout le texte visible, dans l'ordre de lecture naturel, en conservant la structure (titres, paragraphes, listes ; rends les tableaux ligne par ligne au mieux). N'invente RIEN : si un mot ou un passage est illisible, écris [illisible] à cet endroit précis. Ne résume pas, ne reformule pas, ne traduis pas, n'ajoute aucun commentaire ni titre. Réponds UNIQUEMENT avec le texte transcrit de cette page.";
 
-  // Nettoyage IA silencieux du texte OCR (aucune ouverture du Copilot, aucune mention).
-  // N'invente rien ; en cas d'indisponibilité (non connecté / quota / réseau) → texte brut conservé.
-  var OCR_CLEAN_SYS = "Tu reçois le résultat BRUT d'un OCR (reconnaissance optique de caractères), souvent avec des erreurs : caractères confondus, mots collés ou coupés, accents et ponctuation manquants, retours à la ligne parasites. Ta tâche : restituer le MÊME texte, mais propre, lisible et cohérent. Corrige les erreurs de reconnaissance et rétablis les mots manifestement altérés d'après le contexte. Conserve la structure d'origine (titres, paragraphes, listes) et les séparateurs de page « --- Page N --- ». N'invente AUCUN contenu absent : si un passage reste illisible, laisse-le tel quel. Ne résume pas, ne reformule pas le sens, ne traduis pas, n'ajoute aucun commentaire. Réponds UNIQUEMENT avec le texte corrigé.";
-  async function enhanceOcrText(raw, onStep) {
-    var ai = W("aiGenerate");
-    if (!ai || !raw || !raw.trim()) return raw;
-    var chunks = chunkPages(raw, 4500, 10), out = [];
-    for (var i = 0; i < chunks.length; i++) {
-      if (onStep) onStep(i + 1, chunks.length);
-      try {
-        var res = await ai("Voici le texte OCR brut à corriger :\n\n" + chunks[i], OCR_CLEAN_SYS, 4000);
-        out.push((res && res.trim()) ? res : chunks[i]);
-      } catch (e) {
-        if (i === 0) return raw; // IA indisponible dès le départ → on garde tout le brut, sans bruit
-        out.push(chunks[i]);
-      }
+  async function renderPageImage(pdf, n, maxW, q) {
+    var pg = await pdf.getPage(n);
+    var v1 = pg.getViewport({ scale: 1 });
+    var s = Math.min(2.6, maxW / Math.max(1, v1.width));
+    var vp = pg.getViewport({ scale: s });
+    var cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    await pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+    return cv.toDataURL("image/jpeg", q || .72);
+  }
+  async function aiVision(prompt, images) {
+    var apiFn = W("api"); if (!apiFn) throw new Error("API indisponible.");
+    var d = await apiFn("/api/ai/generate", { prompt: prompt, system: "", maxTokens: 4000, images: images || [] });
+    return String((d && d.text) || "").trim();
+  }
+  async function readWithVision(pdf, onStep) {
+    var n = pdf.numPages, cap = Math.min(n, 20), out = [];
+    for (var i = 1; i <= cap; i++) {
+      if (onStep) onStep(i, cap);
+      var img = await renderPageImage(pdf, i, 1500, .72);
+      var txt = await aiVision(VISION_PROMPT, [img]); // en cas d'échec, l'appelant bascule en classique
+      out.push("--- Page " + i + " ---\n" + (txt || "").trim());
     }
+    if (n > cap) out.push("--- (" + (n - cap) + " page(s) supplémentaire(s) non traitée(s)) ---");
     return out.join("\n\n");
+  }
+  function openAsEditableDoc(text) {
+    var open = W("openDocInTab");
+    var esc2 = function (s) { return String(s == null ? "" : s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); };
+    var body = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, "").trim();
+    var html = body.split(/\n{2,}/).map(function (p) { return "<p>" + esc2(p).replace(/\n/g, "<br>") + "</p>"; }).join("") || "<p></p>";
+    if (open) { open("Document reconnu.docx", html); toast("Document éditable ouvert dans Document Studio.", "ok"); }
+    else { toast("Ouverture du document impossible.", "err"); }
   }
 
   var busy = false;
@@ -9057,16 +9061,21 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (busy) { toast("Une reconnaissance OCR est déjà en cours…", "warn"); return; }
     var t = activeTabSafe();
     if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF dans le Lecteur pour lancer l’OCR.", "warn"); return; }
-    if (typeof ocrPdfTab !== "function") { toast("Le moteur OCR est indisponible.", "err"); return; }
     busy = true;
     var ov = buildOverlay(); document.body.appendChild(ov.root);
     try {
-      var raw = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
-      // Nettoyage en arrière-plan (API Claude) — invisible pour l'utilisateur, libellé neutre.
-      var clean = raw;
-      try { clean = await enhanceOcrText(raw, function (i, n) { ov.set(n > 1 ? ("Optimisation du texte — partie " + i + " / " + n + "…") : "Optimisation du texte…"); }); }
-      catch (e) { clean = raw; }
-      t.ocrText = (clean && clean.trim()) ? clean : (raw || "");
+      var text = null;
+      // 1) L'œil de l'OCR : lecture directe des images par Claude (si IA disponible)
+      if (visionAvailable()) {
+        try { text = await readWithVision(t.pdf, function (i, n) { ov.set("Lecture du document — page " + i + " / " + n + "…"); }); }
+        catch (e) { text = null; } // bascule silencieuse en classique
+      }
+      // 2) Repli classique (Tesseract) si pas d'IA ou si la vision a échoué
+      if (text == null) {
+        if (typeof ocrPdfTab !== "function") throw new Error("Aucun moteur de reconnaissance disponible.");
+        text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
+      }
+      t.ocrText = text || "";
       ov.done(t.ocrText);
     } catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
     finally { busy = false; }
@@ -9086,6 +9095,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         var preview = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, " ").replace(/\s+/g, " ").trim();
         root.querySelector(".rx-ocr-sub").textContent = preview ? ("« " + preview.slice(0, 130) + "… »") : "Aucun texte détecté sur ce document.";
         var a = root.querySelector(".rx-ocr-actions");
+        a.appendChild(mkBtn("Ouvrir en document éditable", function () { close(); openAsEditableDoc(text); }));
         a.appendChild(mkBtn("Analyser avec le Copilot", function () { close(); var f = W("toggleCopilotFloating"); if (f) f(); toast("Le texte reconnu est prêt : demandez au Copilot de le résumer, l’analyser ou en extraire des données.", "ok"); }));
         a.appendChild(mkBtn("Extraire le texte", function () { close(); var f = W("openTool"); if (f) f("text"); }));
         a.appendChild(mkBtn("Fermer", close, true));
