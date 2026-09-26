@@ -5921,5 +5921,210 @@ $("#rAi").onclick=()=>openAIFloating("__home");
   await initCopilotHistory();
 })();
 </script>
+<script id="readix-core">
+/* ============================================================
+   READIX — COMMON CORE (Phase 1)
+   Façade additive au-dessus des systèmes DÉJÀ présents dans Readix.
+   Ne crée aucun stockage, aucune navigation, aucun rail.
+   Elle nomme et unifie l'existant : Project / Document / Context /
+   Storage / Actions. Toutes les références aux fonctions de Readix
+   sont résolues à l'exécution et protégées (typeof), pour ne jamais
+   casser le socle si un symbole est absent.
+   ============================================================ */
+(function () {
+  "use strict";
+  var RX = (window.Readix = window.Readix || {});
+  if (RX.core) return; // idempotent
+
+  var has = function (name) { try { return typeof eval(name) !== "undefined"; } catch (e) { return false; } };
+  var G = function (name) { try { return eval(name); } catch (e) { return undefined; } };
+
+  RX._recent = RX._recent || [];
+
+  /* ---------- 1.4 STORAGE ENGINE (adaptateur — AUCUN nouveau stockage) ---------- */
+  var storage = {
+    // Onglets/documents (magasin "tabs" existant)
+    saveTab: function (id, state) { return has("idbSave") ? G("idbSave")(id, state) : null; },
+    loadTab: function (id) { return has("idbLoad") ? G("idbLoad")(id) : null; },
+    allTabs: function () { return has("idbAll") ? G("idbAll")() : Promise.resolve([]); },
+    delTab: function (id) { return has("idbDel") ? G("idbDel")(id) : null; },
+    // Projets (magasin "projects" existant + sync serveur best-effort déjà en place)
+    saveProject: function (p) { return has("idbProjectSave") ? G("idbProjectSave")(p) : null; },
+    allProjects: function () { return has("idbProjectAll") ? G("idbProjectAll")() : Promise.resolve([]); },
+    delProject: function (id) { return has("idbProjectDel") ? G("idbProjectDel")(id) : null; },
+    // Conversations Copilot (magasin "copilotChats" existant)
+    saveChat: function (c) { return has("idbChatSave") ? G("idbChatSave")(c) : null; },
+    allChats: function () { return has("idbChatAll") ? G("idbChatAll")() : Promise.resolve([]); },
+    // Préférences légères du core (localStorage, préfixe rx: dédié)
+    pref: function (key, val) {
+      try {
+        if (val === undefined) { var v = localStorage.getItem("rx:" + key); return v == null ? null : JSON.parse(v); }
+        localStorage.setItem("rx:" + key, JSON.stringify(val)); return val;
+      } catch (e) { return null; }
+    }
+  };
+
+  /* ---------- 1.1 PROJECT ENGINE (schéma commun au-dessus de newProject/PROJECT_STATE) ---------- */
+  var SCHEMA = ["id", "name", "description", "domain", "subDomain", "status", "settings",
+    "skills", "tabs", "documents", "generatedObjects", "tasks", "history", "versions",
+    "metadata", "createdAt", "updatedAt"];
+  var projects = {
+    schema: SCHEMA,
+    normalize: function (p) {
+      p = p || {}; var now = Date.now();
+      if (!p.id) p.id = has("projectId") ? G("projectId")() : ("p" + now + Math.floor(Math.random() * 1e4));
+      SCHEMA.forEach(function (k) {
+        if (p[k] === undefined) {
+          p[k] = (k === "createdAt" || k === "updatedAt") ? now
+            : (k === "status") ? "active"
+            : (["tabs", "documents", "generatedObjects", "tasks", "history", "versions", "skills"].indexOf(k) >= 0) ? []
+            : (["settings", "metadata"].indexOf(k) >= 0) ? {}
+            : (k === "name") ? "Nouveau projet" : "";
+        }
+      });
+      return p;
+    },
+    create: function (opts) {
+      var p = has("newProject") ? G("newProject")(opts || {}) : projects.normalize(opts || {});
+      p = projects.normalize(p);
+      storage.saveProject(p);
+      var PS = G("PROJECT_STATE"); if (PS && Array.isArray(PS.projects)) PS.projects.push(p);
+      actions.log("create_project", { id: p.id, name: p.name });
+      return p;
+    },
+    list: function () { return Promise.resolve(storage.allProjects()); },
+    get: function (id) { return Promise.resolve(storage.allProjects()).then(function (all) { return (all || []).filter(function (p) { return p.id === id; })[0] || null; }); },
+    active: function () { var PS = G("PROJECT_STATE"); if (PS && PS.activeId && Array.isArray(PS.projects)) { return PS.projects.filter(function (p) { return p.id === PS.activeId; })[0] || null; } return null; },
+    setActive: function (id) { var PS = G("PROJECT_STATE"); if (PS) PS.activeId = id; actions.log("open_project", { id: id }); },
+    touch: function (p) { if (!p) return; p.updatedAt = Date.now(); storage.saveProject(p); if (has("queueProjectSync")) G("queueProjectSync")(p); },
+    addDocument: function (p, doc) { if (!p) return; (p.documents = p.documents || []).push(doc); projects.touch(p); },
+    addGeneratedObject: function (p, obj) { if (!p) return; (p.generatedObjects = p.generatedObjects || []).push(Object.assign({ at: Date.now() }, obj || {})); projects.touch(p); },
+    logHistory: function (p, entry) { if (!p) return; (p.history = p.history || []).push(Object.assign({ at: Date.now() }, typeof entry === "string" ? { note: entry } : (entry || {}))); projects.touch(p); }
+  };
+
+  /* ---------- 1.2 DOCUMENT ENGINE (représentation commune + registre de formats) ---------- */
+  var FORMATS = {
+    pdf:  { ext: "pdf",  mime: "application/pdf", status: "supported" },
+    docx: { ext: "docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", status: "supported" },
+    txt:  { ext: "txt",  mime: "text/plain", status: "supported" },
+    html: { ext: "html", mime: "text/html", status: "supported" },
+    md:   { ext: "md",   mime: "text/markdown", status: "supported" },
+    png:  { ext: "png",  mime: "image/png", status: "supported" },
+    jpg:  { ext: "jpg",  mime: "image/jpeg", status: "supported" },
+    // Prévus architecturalement (non implémentés en Phase 1 — état honnête)
+    xlsx: { ext: "xlsx", mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", status: "planned" },
+    pptx: { ext: "pptx", mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", status: "planned" },
+    csv:  { ext: "csv",  mime: "text/csv", status: "planned" },
+    epub: { ext: "epub", mime: "application/epub+zip", status: "planned" },
+    svg:  { ext: "svg",  mime: "image/svg+xml", status: "planned" }
+  };
+  var documents = {
+    formats: FORMATS,
+    supports: function (fmt) { var f = FORMATS[fmt]; return !!f && f.status === "supported"; },
+    formatOf: function (name, tool) {
+      if (tool === "docstudio") return "docx";
+      var ext = String(name || "").split(".").pop().toLowerCase();
+      return FORMATS[ext] ? ext : (tool ? "pdf" : "unknown");
+    },
+    describe: function (tab) {
+      tab = tab || (has("activeTab") ? G("activeTab")() : null);
+      if (!tab) return null;
+      var fmt = tab.tool === "docstudio" ? "docx" : (tab.pdf || tab.bytes) ? "pdf" : documents.formatOf(tab.name, tab.tool);
+      return {
+        id: tab.id, name: tab.name, tool: tab.tool, format: fmt,
+        pages: (tab.pdf && tab.pdf.numPages) || null,
+        dirty: !!tab.dirty, projectId: tab.projectId || null
+      };
+    },
+    list: function () { var A = G("APP"); return (A && A.tabs || []).map(function (t) { return documents.describe(t); }); }
+  };
+
+  /* ---------- 1.3 CONTEXT ENGINE (instantané pour l'IA/Copilot) ---------- */
+  var context = {
+    snapshot: function () {
+      var A = G("APP"); var tab = has("activeTab") ? G("activeTab")() : null; var sel = "";
+      try { sel = String((window.getSelection && window.getSelection().toString()) || "").slice(0, 4000); } catch (e) {}
+      var proj = projects.active();
+      return {
+        tool: A ? A.tool : null,
+        tab: tab ? documents.describe(tab) : null,
+        project: proj ? { id: proj.id, name: proj.name } : null,
+        openTabs: (A && A.tabs || []).length,
+        selection: sel,
+        plan: A ? A.plan : null,
+        recent: RX._recent.slice(-10),
+        at: Date.now()
+      };
+    }
+  };
+
+  /* ---------- 1.5 ACTION REGISTRY (chaque action = une fonction RÉELLE) ---------- */
+  var actions = (function () {
+    var reg = {}, history = [];
+    function def(id, label, run) { reg[id] = { id: id, label: label, run: run }; }
+
+    def("open_tool", "Ouverture d’un outil", function (a) { if (has("openTool")) return G("openTool")(a && a.tool); });
+    def("open_pdf_editor", "Ouverture de l’éditeur PDF", function () { if (has("openTool")) return G("openTool")("editpdf"); });
+    def("open_document_studio", "Ouverture de Document Studio", function () { if (has("openTool")) return G("openTool")("docstudio"); });
+    def("open_book_studio", "Ouverture de Book Studio", function () { if (has("openTool")) return G("openTool")("bookstudio"); });
+    def("open_cv_studio", "Ouverture de CV Studio", function () { if (has("openTool")) return G("openTool")("cvbuilder"); });
+    def("create_project", "Création d’un projet", function (a) { return projects.create(a || {}); });
+    def("open_project", "Ouverture d’un projet", function (a) { if (a && a.id) projects.setActive(a.id); });
+    def("new_tab", "Nouvel onglet", function (a) { if (has("createTab")) return G("createTab")(a && a.name); });
+    def("switch_tab", "Changement d’onglet", function (a) { if (has("switchTab")) return G("switchTab")(a && a.id, true); });
+    def("close_tab", "Fermeture d’un onglet", function (a) { var A = G("APP"); if (has("closeTab")) return G("closeTab")((a && a.id) || (A && A.active)); });
+    def("open_file", "Ouverture d’un fichier", function (a) { if (a && a.file && has("openFile")) return G("openFile")(a.file); });
+    def("save_document", "Enregistrement du document", function () { if (has("doSave")) return G("doSave")(); });
+    def("export_pdf", "Export PDF", function () { var t = has("activeTab") ? G("activeTab")() : null; if (t && t.tool === "docstudio" && has("saveDocStudio")) return G("saveDocStudio")(t, "pdf"); if (has("doSave")) return G("doSave")(); });
+    def("export_docx", "Export Word (DOCX)", function () { var t = has("activeTab") ? G("activeTab")() : null; if (t && t.tool === "docstudio" && has("saveDocStudio")) return G("saveDocStudio")(t, "docx"); });
+    def("rename_document", "Renommer le document", function (a) { var t = has("activeTab") ? G("activeTab")() : null; if (t && a && a.name) { t.name = a.name; if (has("renderTabs")) G("renderTabs")(); if (has("scheduleAutosave")) G("scheduleAutosave")(); return true; } return false; });
+
+    return {
+      define: def,
+      has: function (id) { return !!reg[id]; },
+      get: function (id) { return reg[id] || null; },
+      list: function () { return Object.keys(reg).map(function (k) { return { id: k, label: reg[k].label }; }); },
+      run: function (id, args) {
+        var e = reg[id];
+        if (!e) { if (has("toast")) G("toast")("Action inconnue : " + id, "warn"); return { ok: false, error: "unknown_action" }; }
+        try { var r = e.run(args || {}); actionsLog(id, args); return { ok: true, result: r }; }
+        catch (err) { if (has("toast")) G("toast")("Action échouée : " + id, "err"); return { ok: false, error: String(err && err.message || err) }; }
+      },
+      log: function (id, args) { actionsLog(id, args); },
+      history: function () { return history.slice(); }
+    };
+    function actionsLog(id, args) {
+      history.push({ id: id, args: args || null, at: Date.now() }); if (history.length > 200) history.shift();
+      RX._recent.push({ action: id, at: Date.now() }); if (RX._recent.length > 50) RX._recent.shift();
+    }
+  })();
+
+  /* ---------- 1.6 NAVIGATION : on réutilise openTool/switchTab existants (aucun 2e système) ---------- */
+
+  RX.core = {
+    version: "1.0",
+    storage: storage,
+    projects: projects,
+    documents: documents,
+    context: context,
+    actions: actions,
+    /** Diagnostic : ce que le core voit du socle existant (sans rien modifier). */
+    inspect: function () {
+      return {
+        storage: { tabs: has("idbSave"), projects: has("idbProjectSave"), chats: has("idbChatSave") },
+        navigation: { openTool: has("openTool"), tabs: has("createTab") },
+        project: { newProject: has("newProject"), state: has("PROJECT_STATE") },
+        docstudio: !!(window.ReadixWordEngine),
+        actions: actions.list().length
+      };
+    }
+  };
+  // Alias pratiques
+  RX.projects = projects; RX.documents = documents; RX.context = context; RX.actions = actions; RX.storage = storage;
+
+  try { console.info("[Readix] Common Core prêt —", actions.list().length, "actions,", Object.keys(FORMATS).length, "formats."); } catch (e) {}
+})();
+
+</script>
 </body>
 </html>
