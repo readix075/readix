@@ -321,3 +321,18 @@ Le moteur Word intègre désormais un ensemble complet de fonctions de publicati
 - **Correcteur grammatical et dictionnaire de synonymes complets** : nécessitent une grande base lexicale française. Le correcteur orthographique du navigateur (souligné rouge) et le dictionnaire personnel sont fournis à la place.
 - **Sections multiples à orientation/marges mixtes dans un même document** : reportées (nécessitent une refonte de la pagination).
 
+
+## Phase 1 — Common Core (intégration au socle existant)
+
+Le Common Core est une **façade additive** injectée dans `public/app.html` sous le bloc `<script id="readix-core">` (source maintenable : `core/readix-core.js`). Elle **nomme et unifie l'existant** sans rien réécrire ni dupliquer : elle expose `window.Readix.core` avec cinq modules qui délèguent aux systèmes déjà présents.
+
+- **Project Engine** (`Readix.core.projects`) — schéma de projet complet (id, name, description, domain, status, settings, skills, tabs, documents, generatedObjects, tasks, history, versions, metadata, createdAt, updatedAt). S'appuie sur `newProject`, `PROJECT_STATE` et le magasin IndexedDB `projects` **existant** (+ synchro serveur `/api/projects` déjà en place). Création, liste, projet actif, ajout de documents/objets générés, journal d'historique.
+- **Document Engine** (`Readix.core.documents`) — représentation commune d'un document et **registre de formats** : PDF, DOCX, TXT, HTML, MD, PNG, JPG marqués `supported` ; XLSX, PPTX, CSV, EPUB, SVG marqués `planned` (prévus architecturalement, non implémentés — état honnête). `describe(tab)` normalise un onglet ; `supports(fmt)` dit la vérité sur ce qui est réellement pris en charge.
+- **Context Engine** (`Readix.core.context.snapshot()`) — instantané pour l'IA/Copilot : outil actif, onglet/document actif, projet actif, sélection courante, nombre d'onglets, actions récentes.
+- **Storage Engine** (`Readix.core.storage`) — **adaptateur** vers le stockage existant (IndexedDB `readix` : magasins `tabs`, `projects`, `copilotChats`) + préférences légères `localStorage` préfixées `rx:`. **Aucune seconde base de données n'est créée** (règle §1.4 / §9).
+- **Action Registry** (`Readix.core.actions`) — registre où **chaque action est reliée à une fonction réelle** du code (`open_tool`, `open_pdf_editor`, `open_document_studio`, `open_book_studio`, `open_cv_studio`, `create_project`, `open_project`, `new_tab`, `switch_tab`, `close_tab`, `open_file`, `save_document`, `export_pdf`, `export_docx`, `rename_document`). Aucune action fictive (§10) ; `run(id,args)` journalise l'historique et refuse proprement une action inconnue.
+
+**Garanties vérifiées (tests automatisés) :** 31/31 modules du socle strictement identiques à l'original (lecteur PDF, éditeur, fusion, division, remplissage, signature, rails, onglets, stockage, Copilot, Document Studio) ; une seule base IndexedDB `readix` ; création/persistance de projet à travers le magasin existant ; contexte et actions fonctionnels ; **zéro erreur console**. Le Common Core est strictement additif : il ne modifie aucune fonction existante.
+
+**Note produit :** la démo autonome `document-studio-demo.html` a été retirée de `public/` (règle §14 — aucune application autonome dans le produit). Les sources de build du moteur Word (`word-engine/`) et du core (`core/`) ne sont pas servies ; le seul produit est `public/app.html` + `server/`.
+
