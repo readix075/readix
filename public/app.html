@@ -7459,6 +7459,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       box.appendChild(field("Nom", a.name, function (v) { a.name = v; touch(); }));
       box.appendChild(E("div", "bk-hint", "Référence : peut être insérée dans un chapitre lors des phases de production."));
     }
+    // Point d'ancrage éditorial (Phase 4) — additif, facultatif
+    try { if (window.ReadixEditorial && ReadixEditorial.mount) ReadixEditorial.mount({ box: box, t: t, book: book, sel: sel, touch: touch, rerender: rerender, findChapter: findChapter }); } catch (e) { }
   }
 
   /* ---------- IA (réutilise aiGenerate / parseJsonLoose) ---------- */
@@ -7517,6 +7519,287 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     return ReadixBook._orig.renderBookStudio && ReadixBook._orig.bookToHtml;
   }
   (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] Book Engine v1 — structure complète, navigation, TDM, DnD, assets, contexte Copilot."); } catch (e) {} })();
+})();
+
+</script>
+<style id="readix-editorial-css">
+/* ===== Readix Editorial Engine v1 (Phase 4) — additif ===== */
+.ed-panel { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 10px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 5%, #fff), #fff); }
+.ed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ed-badge { font-size: 12px; font-weight: 700; color: var(--brand); }
+.ed-hist-btn { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 3px 9px; font-size: 11px; cursor: pointer; color: var(--ink-soft); }
+.ed-hist-btn:hover { border-color: var(--brand); color: var(--brand); }
+.ed-hint { font-size: 11.5px; color: var(--ink-faint); margin: 2px 0 8px; }
+.ed-group { margin: 8px 0; }
+.ed-group-t { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 5px; }
+.ed-group-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.ed-btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; color: var(--ink); }
+.ed-btn:hover { border-color: var(--brand); color: var(--brand); }
+.ed-split { display: inline-flex; }
+.ed-split .ed-btn { border-radius: 8px 0 0 8px; border-right: none; }
+.ed-caret { border: 1px solid var(--line); background: #fff; border-radius: 0 8px 8px 0; padding: 5px 7px; font-size: 11px; cursor: pointer; color: var(--ink-soft); }
+.ed-caret:hover { border-color: var(--brand); color: var(--brand); }
+.ed-ask { display: flex; gap: 6px; margin-top: 10px; }
+.ed-ask .rp-input { flex: 1; }
+.ed-go { white-space: nowrap; }
+
+.ed-vars { display: flex; flex-wrap: wrap; gap: 6px; }
+.ed-var { }
+.ed-lbl { font-size: 11px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 3px; }
+.ed-result { font-size: 13px; line-height: 1.5; }
+.ed-ro { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 34vh; overflow: auto; white-space: pre-wrap; }
+textarea.ed-result { width: 100%; box-sizing: border-box; }
+.ed-note { font-size: 11.5px; color: var(--ink-faint); font-style: italic; margin-bottom: 6px; }
+.ed-actions { flex-wrap: wrap; gap: 6px; }
+.ed-opts { display: flex; flex-direction: column; gap: 6px; }
+.ed-opt { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; }
+.ed-opt:hover { border-color: var(--brand); }
+.ed-hist { max-height: 46vh; overflow: auto; }
+.ed-hist-row { font-size: 12.5px; padding: 5px 2px; border-bottom: 1px solid var(--line); }
+.ed-hist-t { color: var(--brand); font-weight: 600; margin-right: 6px; }
+
+</style>
+<script id="readix-editorial-engine">
+/* ============================================================
+   READIX EDITORIAL ENGINE — Phase 4 (Book Studio Editorial)
+   Couche éditoriale intelligente branchée sur le Copilot/IA
+   existant (aiGenerate → /api/ai/generate, mêmes auth & quota).
+   Registre d'actions réellement exécutables, contexte pertinent
+   minimal (sélection / chapitre / partie / livre), résultat
+   TOUJOURS révisable (Remplacer / Insérer / Copier / Annuler),
+   historique des actions. S'intègre nativement dans le Book
+   Studio (hook ReadixEditorial.mount) sans second chatbot.
+   Additif : aucune fonction du socle modifiée.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixEditorial) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function stripHtml(s) { return String(s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); }
+  function clamp(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n) + "…" : s; }
+  function gen(prompt, system, max) { var f = W("aiGenerate"); if (!f) throw new Error("Moteur IA indisponible."); return f(prompt, system || "", max || 1200); }
+  function parseLoose(s) { var f = W("parseJsonLoose"); return f ? f(s) : null; }
+
+  /* ---------- Contexte éditorial (source de vérité = ReadixBook.context) ---------- */
+  function activeBookTab() { var A = (typeof APP !== "undefined") ? APP : null; if (!A || !A.tabs) return null; var t = A.tabs.filter(function (x) { return x.id === A.active; })[0]; return (t && t.tool === "bookstudio" && t.book) ? t : null; }
+  function projectName() { try { var R = window.Readix; if (R && R.core && R.core.context && R.core.context.snapshot) { var s = R.core.context.snapshot(); return (s && (s.projectName || (s.project && s.project.name))) || null; } } catch (e) {} return null; }
+  function chapterOf(t, chId) { var find = t && t._edFind; if (find) return find(t.book, chId); if (window.ReadixBook && ReadixBook._find) return ReadixBook._find(t.book, chId); // fallback
+    var b = t.book; for (var i = 0; i < b.parts.length; i++) { for (var j = 0; j < b.parts[i].chapters.length; j++) { if (b.parts[i].chapters[j].id === chId) return { part: b.parts[i], ch: b.parts[i].chapters[j], pi: i, ci: j }; } } return null; }
+  function bookOutline(book) { var n = 0; return (book.parts || []).map(function (p) { return { part: p.title || "(sans titre)", chapters: (p.chapters || []).map(function (c) { n++; return { n: n, title: c.title || "Sans titre", excerpt: clamp(stripHtml(c.content), 280) }; }) }; }); }
+  // contexte pertinent selon le périmètre (limite la charge API — §26/§27)
+  function buildContext(scope, refs) {
+    var t = refs.t, book = refs.book, ctx = { kind: "book", project: projectName(), title: book.title, subtitle: book.subtitle, author: book.author, language: book.language, genre: book.genre };
+    if (scope === "selection") { ctx.selection = refs.selText || ""; ctx.surrounding = refs.surrounding || ""; ctx.chapter = refs.chTitle || ""; }
+    else if (scope === "chapter") { var loc = refs.loc; ctx.chapter = loc ? { title: loc.ch.title, content: clamp(stripHtml(loc.ch.content), 7000) } : null; }
+    else if (scope === "part") { var p = refs.part; ctx.part = p ? { title: p.title, chapters: (p.chapters || []).map(function (c) { return { title: c.title, excerpt: clamp(stripHtml(c.content), 500) }; }) } : null; }
+    else if (scope === "book") { ctx.outline = bookOutline(book); ctx.description = clamp(book.description, 600); }
+    return ctx;
+  }
+
+  /* ---------- Registre d'actions éditoriales ---------- */
+  var STYLES = ["plus fluide", "plus naturel", "plus professionnel", "plus narratif", "plus simple", "plus soutenu", "plus direct"];
+  var SHORT = [["Réduction légère", "d’environ 20 %"], ["Réduction moyenne", "d’environ 40 %"], ["Résumé court", "en 2-3 phrases"]];
+  var SUM_CH = [["En 5 points", "sous forme de 5 points clés"], ["Paragraphe", "en un paragraphe"], ["Une phrase", "en une seule phrase"]];
+  var SYN = [["Court", "environ 80 mots"], ["Moyen", "environ 200 mots"], ["Long", "environ 500 mots"]];
+
+  var ACTIONS = {
+    correct_text: { group: "Édition", label: "Corriger", scope: "selection", kind: "replace", run: function (c) { return gen("Corrige uniquement les fautes (orthographe, grammaire, ponctuation, syntaxe) du passage ci-dessous, sans en changer le sens ni le style. Réponds UNIQUEMENT avec le texte corrigé.\n\nPassage :\n\"\"\"" + c.selection + "\"\"\"", "Tu es un correcteur professionnel de langue française.", 900); } },
+    rewrite_text: { group: "Édition", label: "Reformuler", scope: "selection", kind: "replace", run: function (c, o) { return gen("Reformule le passage ci-dessous " + (o && o.variant ? o.variant : "en conservant le sens") + ". Réponds UNIQUEMENT avec le texte reformulé.\n\nContexte du chapitre : " + (c.chapter || "—") + "\n\nPassage :\n\"\"\"" + c.selection + "\"\"\"", "Tu es un éditeur littéraire.", 1100); } },
+    improve_style: { group: "Édition", label: "Améliorer le style", scope: "selection", kind: "replace", variants: STYLES.map(function (s) { return { label: s, variant: s }; }), run: function (c, o) { return gen("Réécris le passage ci-dessous dans un style " + ((o && o.variant) || "plus fluide") + ", sans changer le sens. Réponds UNIQUEMENT avec le texte réécrit.\n\nPassage :\n\"\"\"" + c.selection + "\"\"\"", "Tu es un éditeur littéraire.", 1100); } },
+    shorten_text: { group: "Édition", label: "Raccourcir", scope: "selection", kind: "replace", variants: SHORT.map(function (s) { return { label: s[0], variant: s[1] }; }), run: function (c, o) { return gen("Raccourcis le passage ci-dessous " + ((o && o.variant) || "d’environ 30 %") + ", en conservant les informations importantes. Réponds UNIQUEMENT avec le texte raccourci.\n\nPassage :\n\"\"\"" + c.selection + "\"\"\"", "Tu es un éditeur.", 900); } },
+    expand_text: { group: "Édition", label: "Développer", scope: "selection", kind: "replace", run: function (c) { return gen("Développe et enrichis le passage ci-dessous en conservant le style et le sens, sans inventer de faits. Réponds UNIQUEMENT avec le texte développé.\n\nContexte du chapitre : " + (c.chapter || "—") + "\n\nPassage :\n\"\"\"" + c.selection + "\"\"\"", "Tu es un auteur professionnel.", 1500); } },
+    summarize_sel: { group: "Édition", label: "Résumer la sélection", scope: "selection", kind: "text", run: function (c) { return gen("Résume le passage ci-dessous en 2-3 phrases :\n\n\"\"\"" + c.selection + "\"\"\"", "Tu es un éditeur.", 500); } },
+    improve_transition: { group: "Structure", label: "Améliorer la transition", scope: "selection", kind: "replace", run: function (c) { return gen("Améliore la fluidité et la transition du passage sélectionné pour qu’il s’enchaîne naturellement avec ce qui précède et ce qui suit. Reste dans le sujet. Réponds UNIQUEMENT avec le passage réécrit.\n\nAvant : \"\"\"" + clamp(c.surrounding, 800) + "\"\"\"\n\nPassage à retravailler : \"\"\"" + c.selection + "\"\"\"", "Tu es un éditeur littéraire.", 1100); } },
+    generate_title: { group: "Structure", label: "Générer un titre", scope: "chapter", kind: "options", apply: "title", run: function (c) { return gen("Propose 5 titres possibles pour ce chapitre. Réponds UNIQUEMENT en JSON : {\"options\":[\"\",\"\",\"\",\"\",\"\"]}.\n\nChapitre : " + (c.chapter ? c.chapter.title + "\n" + clamp(c.chapter.content, 3000) : "—"), "Tu es un éditeur. Réponds UNIQUEMENT avec le JSON.", 500); } },
+    generate_subtitle: { group: "Structure", label: "Générer un sous-titre", scope: "book", kind: "options", apply: "subtitle", run: function (c) { return gen("Propose 5 sous-titres possibles pour ce livre intitulé « " + (c.title || "—") + " » (genre : " + (c.genre || "—") + "). Réponds UNIQUEMENT en JSON : {\"options\":[\"\",\"\",\"\",\"\",\"\"]}.", "Tu es un éditeur. Réponds UNIQUEMENT avec le JSON.", 500); } },
+    analyze_chapter: { group: "Structure", label: "Analyser le chapitre", scope: "chapter", kind: "analysis", run: function (c) { return gen("Analyse ce chapitre et réponds en sections claires (texte, pas de JSON) : Résumé ; Sujet principal ; Idées principales ; Points forts ; Points à améliorer ; Cohérence ; Structure ; Répétitions ; Transitions ; Suggestions. Ce sont des suggestions, pas des vérités.\n\nChapitre : " + (c.chapter ? c.chapter.title + "\n\n" + c.chapter.content : "—"), "Tu es un éditeur littéraire bienveillant.", 1600); } },
+    analyze_part: { group: "Structure", label: "Analyser la partie", scope: "part", kind: "analysis", run: function (c) { return gen("Analyse cette partie du livre (cohérence entre chapitres, progression, répétitions, équilibre, structure, continuité). Réponds en sections claires. Ce sont des suggestions.\n\nPartie : " + (c.part ? c.part.title + "\n" + JSON.stringify(c.part.chapters) : "—"), "Tu es un éditeur littéraire.", 1500); } },
+    analyze_book: { group: "Livre", label: "Analyser le livre", scope: "book", kind: "analysis", run: function (c) { return gen("Analyse la structure générale de ce livre : Structure ; Cohérence ; Progression ; Chapitres ; Parties ; Thèmes ; Répétitions ; Lacunes potentielles ; Cohérence des titres ; Cohérence du style. Ce sont des suggestions que l’auteur peut accepter ou refuser, pas des faits.\n\nLivre : « " + (c.title || "—") + " »\nStructure : " + JSON.stringify(c.outline), "Tu es un éditeur littéraire bienveillant.", 1800); } },
+    generate_synopsis: { group: "Livre", label: "Créer un synopsis", scope: "book", kind: "editable", variants: SYN.map(function (s) { return { label: s[0], variant: s[1] }; }), run: function (c, o) { return gen("Rédige un synopsis (" + ((o && o.variant) || "environ 200 mots") + ") du livre à partir de sa structure et de ses extraits réels. Réponds UNIQUEMENT avec le synopsis.\n\nLivre : « " + (c.title || "—") + " »\nStructure : " + JSON.stringify(c.outline), "Tu es un éditeur.", 1200); } },
+    generate_description: { group: "Livre", label: "Générer une description", scope: "book", kind: "editable", apply: "description", run: function (c) { return gen("Rédige une description commerciale attrayante du livre (pour une page de vente), à partir de son contenu réel. Réponds UNIQUEMENT avec la description.\n\nLivre : « " + (c.title || "—") + " » (genre : " + (c.genre || "—") + ")\nStructure : " + JSON.stringify(c.outline), "Tu es un rédacteur marketing éditorial.", 900); } },
+    generate_blurb: { group: "Livre", label: "Blurb / accroche", scope: "book", kind: "editable", run: function (c) { return gen("Rédige une accroche courte (blurb, 2-3 phrases percutantes) pour ce livre. Réponds UNIQUEMENT avec l’accroche.\n\nLivre : « " + (c.title || "—") + " »\nStructure : " + JSON.stringify(c.outline), "Tu es un rédacteur.", 400); } },
+    generate_keywords: { group: "Livre", label: "Mots-clés", scope: "book", kind: "editable", run: function (c) { return gen("Propose des thèmes, mots-clés, sujets et catégories potentielles pour ce livre (ce sont des suggestions, pas des certitudes). Présente-les par groupes.\n\nLivre : « " + (c.title || "—") + " »\nStructure : " + JSON.stringify(c.outline), "Tu es un documentaliste.", 500); } }
+  };
+
+  /* ---------- Historique des actions ---------- */
+  function history(t) { if (!t._edHistory) t._edHistory = []; return t._edHistory; }
+  function logAction(t, label) { var h = history(t); h.push({ at: Date.now(), label: label }); if (h.length > 100) h.shift(); }
+  function showHistory(t) {
+    var dlg = W("dialog"); if (!dlg) return; var h = history(t);
+    var rows = h.length ? h.slice().reverse().map(function (e) { var d = new Date(e.at); var hh = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); return '<div class="ed-hist-row"><span class="ed-hist-t">' + hh + '</span> ' + esc(e.label) + '</div>'; }).join("") : '<p style="color:var(--ink-faint)">Aucune action éditoriale pour le moment.</p>';
+    var dl = dlg('<h3>Historique des actions IA</h3><div class="ed-hist">' + rows + '</div><div class="row"><button class="btn sm" data-a="x">Fermer</button></div>');
+    dl.root.onclick = function (e) { if (e.target.closest("[data-a]")) dl.close(); };
+  }
+
+  /* ---------- Exécution + révision du résultat ---------- */
+  function selectionInfo(area) {
+    var out = { text: "", range: null, surrounding: "" };
+    try {
+      var s = window.getSelection(); if (!s || !s.rangeCount) return out;
+      var r = s.getRangeAt(0); if (!area.contains(r.commonAncestorContainer)) return out;
+      out.text = s.toString(); out.range = r.cloneRange();
+      var full = area.textContent || ""; var idx = full.indexOf(out.text);
+      if (idx >= 0) out.surrounding = full.slice(Math.max(0, idx - 500), idx) + " [SÉLECTION] " + full.slice(idx + out.text.length, idx + out.text.length + 300);
+    } catch (e) {}
+    return out;
+  }
+  function run(actionId, refs, opts) {
+    var A = ACTIONS[actionId]; if (!A) return;
+    var scope = A.scope, ctx, applyCtx = {};
+    if (scope === "selection") {
+      var si = refs.getSel ? refs.getSel() : { text: "", range: null, surrounding: "" };
+      if (!si.text || !si.text.trim()) { toast("Sélectionnez d’abord un passage dans le chapitre.", "warn"); return; }
+      ctx = buildContext("selection", { t: refs.t, book: refs.book, selText: si.text, surrounding: si.surrounding, chTitle: refs.chTitle });
+      applyCtx.range = si.range; applyCtx.original = si.text;
+    } else if (scope === "chapter") {
+      if (!refs.loc || !stripHtml(refs.loc.ch.content)) { toast("Ce chapitre est vide.", "warn"); return; }
+      ctx = buildContext("chapter", refs);
+    } else if (scope === "part") {
+      if (!refs.part) { toast("Aucune partie sélectionnée.", "warn"); return; }
+      ctx = buildContext("part", refs);
+    } else { // book
+      if (!(refs.book.parts || []).some(function (p) { return p.chapters.length; })) { toast("Ajoutez d’abord des chapitres.", "warn"); return; }
+      ctx = buildContext("book", refs);
+    }
+    var btn = opts && opts.btn;
+    if (btn) { btn._l = btn.textContent; btn.disabled = true; btn.textContent = "…"; }
+    Promise.resolve().then(function () { return A.run(ctx, opts || {}); })
+      .then(function (out) {
+        logAction(refs.t, A.label + (opts && opts.variant ? " (" + opts.variant + ")" : "") + " — " + (scope === "selection" ? "sélection" : scope === "chapter" ? "chapitre" : scope === "part" ? "partie" : "livre"));
+        present(A, actionId, out, refs, applyCtx, opts);
+      })
+      .catch(function (e) { toast(e.message || "Échec de l’action.", "err"); })
+      .then(function () { if (btn) { btn.disabled = false; btn.textContent = btn._l; } });
+  }
+
+  function present(A, actionId, out, refs, applyCtx, opts) {
+    var dlg = W("dialog"); if (!dlg) return;
+    if (A.kind === "analysis" || A.kind === "text") {
+      var body = (A.kind === "analysis") ? '<div class="ed-note">Suggestions éditoriales — à accepter ou refuser librement.</div>' : '';
+      var dl0 = dlg('<h3>' + esc(A.label) + '</h3>' + body + '<div class="ed-result ed-ro">' + esc(String(out || "")).replace(/\n/g, "<br>") + '</div><div class="row"><button class="btn ghost sm" data-a="copy">Copier</button><button class="btn sm" data-a="x">Fermer</button></div>');
+      dl0.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "copy") { navigator.clipboard && navigator.clipboard.writeText(String(out || "")); toast("Copié.", "ok"); } else dl0.close(); };
+      return;
+    }
+    if (A.kind === "options") {
+      var obj = parseLoose(out); var opt = (obj && Array.isArray(obj.options)) ? obj.options : String(out || "").split(/\n+/).filter(Boolean).slice(0, 5);
+      var list = opt.map(function (o, i) { return '<label class="ed-opt"><input type="radio" name="edopt" value="' + i + '"' + (i === 0 ? " checked" : "") + '> ' + esc(o) + '</label>'; }).join("");
+      var dl1 = dlg('<h3>' + esc(A.label) + '</h3><div class="ed-opts">' + list + '</div><div class="row"><button class="btn ghost sm" data-a="x">Annuler</button><button class="btn sm" data-a="apply">Appliquer</button></div>');
+      dl1.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "x") { dl1.close(); return; } var sel = dl1.root.querySelector('input[name=edopt]:checked'); var val = opt[sel ? +sel.value : 0]; applyOption(A, actionId, val, refs); dl1.close(); };
+      return;
+    }
+    // replace / editable → original vs suggestion, éditable, avec actions
+    var isEditable = A.kind === "editable";
+    var original = applyCtx.original || "";
+    var dl = dlg('<h3>' + esc(A.label) + '</h3>'
+      + (original ? '<div class="ed-lbl">Texte original</div><div class="ed-result ed-ro">' + esc(original).replace(/\n/g, "<br>") + '</div>' : '')
+      + '<div class="ed-lbl">Suggestion de l’IA' + (isEditable ? ' (modifiable)' : '') + '</div><textarea class="ed-result rp-input" id="edSug" rows="7">' + esc(String(out || "")) + '</textarea>'
+      + '<div class="row ed-actions">'
+      + (applyCtx.range ? '<button class="btn sm" data-a="replace">Remplacer</button><button class="btn ghost sm" data-a="insert">Insérer</button>' : '')
+      + (isEditable && A.apply ? '<button class="btn sm" data-a="setmeta">Définir comme ' + (A.apply === "description" ? "description" : A.apply) + '</button>' : '')
+      + (isEditable ? '<button class="btn ghost sm" data-a="ds">Document Studio</button>' : '')
+      + '<button class="btn ghost sm" data-a="copy">Copier</button><button class="btn ghost sm" data-a="x">Annuler</button></div>');
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return; var txt = dl.root.querySelector("#edSug").value;
+      if (a.dataset.a === "x") { dl.close(); return; }
+      if (a.dataset.a === "copy") { navigator.clipboard && navigator.clipboard.writeText(txt); toast("Copié.", "ok"); return; }
+      if (a.dataset.a === "replace" && applyCtx.range) { applyToRange(applyCtx.range, txt, false, refs); dl.close(); toast("Texte remplacé ✓", "ok"); return; }
+      if (a.dataset.a === "insert" && applyCtx.range) { applyToRange(applyCtx.range, txt, true, refs); dl.close(); toast("Texte inséré ✓", "ok"); return; }
+      if (a.dataset.a === "setmeta" && A.apply) { refs.book[A.apply] = txt; refs.touch(); dl.close(); toast("Enregistré ✓", "ok"); return; }
+      if (a.dataset.a === "ds") { var f = W("openDocInTab"); if (f) f((A.label || "Texte") + ".docx", "<h1>" + esc(A.label) + "</h1><p>" + esc(txt).replace(/\n/g, "<br>") + "</p>"); dl.close(); return; }
+    };
+  }
+  function applyOption(A, actionId, val, refs) {
+    if (A.apply === "title" && refs.loc) { refs.loc.ch.title = val; refs.touch(); refs.rerender && refs.rerender(); }
+    else if (A.apply === "subtitle") { refs.book.subtitle = val; refs.touch(); refs.rerender && refs.rerender(); }
+    else if (A.apply === "title") { refs.book.title = val; refs.touch(); refs.rerender && refs.rerender(); }
+    toast("Appliqué ✓", "ok");
+  }
+  function applyToRange(range, text, insertAfter, refs) {
+    try {
+      if (insertAfter) { range.collapse(false); range.insertNode(document.createTextNode(" " + text)); }
+      else { range.deleteContents(); range.insertNode(document.createTextNode(text)); }
+      // resynchroniser le contenu du chapitre
+      if (refs.area && refs.loc) { refs.loc.ch.content = refs.area.innerHTML; refs.touch(); }
+    } catch (e) { toast("Impossible d’appliquer au texte (sélection perdue). Utilisez Copier.", "warn"); }
+  }
+
+  /* ---------- Assistant éditorial en langage naturel ---------- */
+  function editorialAsk(instruction, refs) {
+    var text = String(instruction || "").trim(); if (!text) return;
+    var si = refs.getSel ? refs.getSel() : { text: "" };
+    var scope = si.text && si.text.trim() ? "selection" : (refs.loc ? "chapter" : "book");
+    var ctx = buildContext(scope, scope === "selection" ? { t: refs.t, book: refs.book, selText: si.text, surrounding: si.surrounding, chTitle: refs.chTitle } : refs);
+    logAction(refs.t, "Assistant : " + clamp(text, 60));
+    var box = refs._askBtn; if (box) { box._l = box.textContent; box.disabled = true; box.textContent = "…"; }
+    Promise.resolve().then(function () {
+      return gen("Demande de l’auteur : " + text + "\n\nContexte (" + scope + ") :\n" + JSON.stringify(ctx).slice(0, 8000) + "\n\nRéponds de façon utile. Si tu proposes une réécriture d’un passage, donne uniquement le texte proposé.", "Tu es le Copilot éditorial de Readix, un assistant d’écriture. Reste factuel, propose sans imposer.", 1400);
+    }).then(function (out) {
+      var A = { label: "Assistant éditorial", kind: scope === "selection" ? "replace" : "text" };
+      present(A, "ask", out, refs, scope === "selection" ? { range: si.range, original: si.text } : {}, {});
+    }).catch(function (e) { toast(e.message || "Échec.", "err"); })
+      .then(function () { if (box) { box.disabled = false; box.textContent = box._l; } });
+  }
+
+  /* ---------- Montage dans le Book Studio (hook appelé par le Book Engine) ---------- */
+  function groupBar(title, ids, refs) {
+    var g = E("div", "ed-group");
+    g.appendChild(E("div", "ed-group-t", title));
+    var row = E("div", "ed-group-row");
+    ids.forEach(function (id) {
+      var A = ACTIONS[id]; if (!A) return;
+      if (A.variants) {
+        var wrap = E("span", "ed-split");
+        var b = E("button", "ed-btn", A.label); b.onclick = function () { run(id, refs, { btn: b }); };
+        var caret = E("button", "ed-caret", "▾"); caret.title = "Variantes";
+        caret.onclick = function () { var dlg = W("dialog"); if (!dlg) return; var opts = A.variants.map(function (v, i) { return '<button class="btn ghost sm ed-var" data-i="' + i + '">' + esc(v.label) + '</button>'; }).join(""); var dl = dlg('<h3>' + esc(A.label) + '</h3><div class="ed-vars">' + opts + '</div><div class="row"><button class="btn ghost sm" data-a="x">Annuler</button></div>'); dl.root.onclick = function (e) { var v = e.target.closest(".ed-var"); if (v) { var vv = A.variants[+v.dataset.i]; dl.close(); run(id, refs, { variant: vv.variant, btn: b }); } else if (e.target.closest("[data-a]")) dl.close(); }; };
+        wrap.appendChild(b); wrap.appendChild(caret); row.appendChild(wrap);
+      } else { var bt = E("button", "ed-btn", A.label); bt.onclick = function () { run(id, refs, { btn: bt }); }; row.appendChild(bt); }
+    });
+    g.appendChild(row); return g;
+  }
+  function mount(payload) {
+    var sel = payload.sel, t = payload.t, book = payload.book;
+    var refs = { t: t, book: book, touch: payload.touch, rerender: payload.rerender };
+    var panel = E("div", "ed-panel");
+    var head = E("div", "ed-head", '<span class="ed-badge">✨ Assistant éditorial</span>');
+    var hist = E("button", "ed-hist-btn", "Historique"); hist.onclick = function () { showHistory(t); }; head.appendChild(hist);
+    panel.appendChild(head);
+    if (sel.type === "chapter") {
+      var loc = payload.findChapter ? payload.findChapter(book, sel.chId) : null; if (!loc) return;
+      var area = payload.box.querySelector(".bk-rich-area");
+      refs.loc = loc; refs.area = area; refs.chTitle = loc.ch.title;
+      refs.getSel = function () { return selectionInfo(area); };
+      panel.appendChild(E("div", "ed-hint", "Sélectionnez un passage puis choisissez une action ; sinon les actions portent sur le chapitre."));
+      panel.appendChild(groupBar("Édition", ["correct_text", "rewrite_text", "improve_style", "shorten_text", "expand_text", "summarize_sel"], refs));
+      panel.appendChild(groupBar("Structure", ["improve_transition", "generate_title", "analyze_chapter", "analyze_part"], refs));
+      // partie courante pour analyze_part
+      refs.part = loc.part;
+      // assistant langage naturel
+      var askRow = E("div", "ed-ask");
+      var inp = E("input", "rp-input"); inp.placeholder = "Demandez à l’assistant éditorial… (ex. « propose un meilleur titre »)";
+      var go = E("button", "ed-btn ed-go", "Envoyer"); refs._askBtn = go;
+      go.onclick = function () { editorialAsk(inp.value, refs); inp.value = ""; };
+      inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); go.click(); } };
+      askRow.appendChild(inp); askRow.appendChild(go); panel.appendChild(askRow);
+    } else if (sel.type === "book") {
+      panel.appendChild(groupBar("Livre", ["analyze_book", "generate_synopsis", "generate_description", "generate_blurb", "generate_keywords", "generate_subtitle"], refs));
+    } else if (sel.type === "part") {
+      var p = book.parts.filter(function (x) { return x.id === sel.partId; })[0]; refs.part = p;
+      panel.appendChild(groupBar("Partie", ["analyze_part"], refs));
+    } else return;
+    payload.box.appendChild(panel);
+  }
+
+  /* ---------- API publique ---------- */
+  ReadixEditorial = window.ReadixEditorial = {
+    version: "1.0", actions: ACTIONS, mount: mount,
+    context: function () { var t = activeBookTab(); if (!t) return null; return buildContext("book", { t: t, book: t.book }); },
+    history: function () { var t = activeBookTab(); return t ? history(t) : []; }
+  };
+  try { console.info("[Readix] Editorial Engine v1 — actions éditoriales, contexte, révision, historique."); } catch (e) {}
 })();
 
 </script>
