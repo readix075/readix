@@ -563,6 +563,55 @@ ${documentContext ? "CONTEXTE FOURNI PAR READIX :\n" + documentContext : "Aucun 
   }
 });
 
+// Extrait le premier objet JSON complet d'un texte (même entouré de prose), en
+// respectant les chaînes et l'échappement. Évite que le JSON brut fuite à l'écran.
+function firstJsonObject(s) {
+  const i = s.indexOf("{"); if (i < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let j = i; j < s.length; j++) {
+    const ch = s[j];
+    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return s.slice(i, j + 1); }
+  }
+  return null;
+}
+function parseCopilotJSON(raw) {
+  let s = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  let parsed = null;
+  try { parsed = JSON.parse(s); } catch (e) {
+    const obj = firstJsonObject(s);
+    if (obj) { try { parsed = JSON.parse(obj); } catch (e2) {} }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    // Pas de JSON exploitable : on affiche le texte tel quel, débarrassé d'un éventuel bloc JSON résiduel.
+    const cleaned = s.replace(/\{[\s\S]*"answer"[\s\S]*\}\s*$/i, "").trim() || s;
+    return { answer: cleaned, actions: [] };
+  }
+  if (!Array.isArray(parsed.actions)) parsed.actions = [];
+  parsed.answer = String(parsed.answer == null ? "" : parsed.answer);
+  return parsed;
+}
+// Transforme les pièces jointes image (dataURL) en blocs vision pour l'API Anthropic.
+function buildImageBlocks(attachments) {
+  const blocks = [];
+  const add = (src) => {
+    if (blocks.length >= 6 || typeof src !== "string") return;
+    const m = src.match(/^data:(image\/(?:png|jpe?g|webp|gif));base64,([A-Za-z0-9+/=\s]+)$/i);
+    if (!m) return;
+    let media = m[1].toLowerCase(); if (media === "image/jpg") media = "image/jpeg";
+    const data = m[2].replace(/\s+/g, "");
+    if (data.length < 50 || data.length > 4800000) return; // ~3,5 Mo max/image
+    blocks.push({ type: "image", source: { type: "base64", media_type: media, data } });
+  };
+  for (const a of (Array.isArray(attachments) ? attachments : [])) {
+    if (a && typeof a.image === "string") add(a.image);
+    if (a && Array.isArray(a.images)) a.images.forEach(add);
+    if (blocks.length >= 6) break;
+  }
+  return blocks;
+}
 async function handleCopilotAction(req, res) {
   console.log("[COPILOT ACTION]", req.method, req.path, "user=", req.user?.email, "plan=", req.user?.plan);
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error:"Readix Copilot n’est pas configuré sur le serveur (ANTHROPIC_API_KEY manquante)." });
@@ -585,6 +634,8 @@ async function handleCopilotAction(req, res) {
 Ton rôle a deux facettes :
 (1) RÉPONDRE — la grande majorité des demandes n'exigent AUCUNE action technique. Dans ce cas, renvoie "actions":[] et place dans "answer" une réponse réellement complète, bien structurée et directement exploitable. N'écourte jamais artificiellement : donne une réponse à la hauteur de la question, avec le raisonnement, les exemples et les nuances nécessaires. Si la demande est ambiguë, pose une brève question de clarification plutôt que de deviner au hasard. Ne réponds jamais à côté de la question et n'inverse jamais le sens de la demande.
 (2) AGIR — uniquement lorsque la demande nécessite réellement une opération Readix (créer un fichier, manipuler le PDF ouvert, extraire des données…), ajoute la ou les actions correspondantes EN PLUS d'une explication claire dans "answer".
+
+VISION : des images peuvent être jointes au message (fichiers image comme PNG/JPG, ou pages de PDF — y compris des documents scannés rendus en image). Tu les VOIS réellement : analyse-les directement (lis le texte visible, décris le contenu, extrais les informations) sans prétendre avoir besoin d'un OCR séparé lorsqu'une image est déjà fournie. Ne propose l'action ocr_document que pour un PDF scanné OUVERT dont aucune image n'a été jointe.
 
 Tu réponds TOUJOURS avec un JSON valide, sans markdown, selon ce schéma exact :
 Schéma exact : {"answer":"ta réponse complète et utile à afficher à l’utilisateur","actions":[{"type":"...","title":"...","...":...}]}
@@ -625,15 +676,17 @@ ${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — pag
   try {
     let data;
     try {
-      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:message.slice(0,10000)}]});
+      const imageBlocks=buildImageBlocks(attachments);
+      const userContent=imageBlocks.length
+        ? [...imageBlocks,{type:"text",text:message.slice(0,10000)}]
+        : message.slice(0,10000);
+      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:userContent}]});
     } catch(e) {
       console.error("[COPILOT ACTION]", e.message);
       return res.status(502).json({error:e.message});
     }
     const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("\n").trim();
-    let parsed; try { parsed=JSON.parse(raw.replace(/^```json\s*/i,'').replace(/\s*```$/,'')); } catch(e) { parsed={answer:raw,actions:[]}; }
-    if(!parsed||typeof parsed!=='object') parsed={answer:raw,actions:[]};
-    if(!Array.isArray(parsed.actions)) parsed.actions=[];
+    const parsed=parseCopilotJSON(raw);
     await incUsage(req.user.email);
     res.json({answer:String(parsed.answer||""),actions:parsed.actions.slice(0,5),used:used+1,quota,engine:"19.1"});
   } catch(e) { console.error("[COPILOT ACTION]", e); res.status(500).json({error:e.message}); }
