@@ -9014,18 +9014,60 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 
   function activeTabSafe() { var f = W("activeTab"); if (f) return f(); return (typeof APP !== "undefined" && APP.tabs) ? APP.tabs.filter(function (x) { return x.id === APP.active; })[0] : null; }
 
+  // Découpe le texte OCR en morceaux (respecte les frontières de page) pour l'IA.
+  function chunkPages(raw, maxLen, maxChunks) {
+    var parts = String(raw || "").split(/(?=---\s*Page\s*\d+\s*---)/);
+    var chunks = [], cur = "";
+    for (var i = 0; i < parts.length; i++) {
+      if ((cur + parts[i]).length > maxLen && cur) { chunks.push(cur); cur = parts[i]; }
+      else cur += parts[i];
+      if (cur.length > maxLen && !parts[i + 1]) { chunks.push(cur); cur = ""; }
+    }
+    if (cur.trim()) chunks.push(cur);
+    if (chunks.length > maxChunks) { // regroupe le surplus dans le dernier morceau autorisé
+      var head = chunks.slice(0, maxChunks - 1);
+      head.push(chunks.slice(maxChunks - 1).join("\n"));
+      chunks = head;
+    }
+    return chunks.length ? chunks : [String(raw || "")];
+  }
+
+  // Nettoyage IA silencieux du texte OCR (aucune ouverture du Copilot, aucune mention).
+  // N'invente rien ; en cas d'indisponibilité (non connecté / quota / réseau) → texte brut conservé.
+  var OCR_CLEAN_SYS = "Tu reçois le résultat BRUT d'un OCR (reconnaissance optique de caractères), souvent avec des erreurs : caractères confondus, mots collés ou coupés, accents et ponctuation manquants, retours à la ligne parasites. Ta tâche : restituer le MÊME texte, mais propre, lisible et cohérent. Corrige les erreurs de reconnaissance et rétablis les mots manifestement altérés d'après le contexte. Conserve la structure d'origine (titres, paragraphes, listes) et les séparateurs de page « --- Page N --- ». N'invente AUCUN contenu absent : si un passage reste illisible, laisse-le tel quel. Ne résume pas, ne reformule pas le sens, ne traduis pas, n'ajoute aucun commentaire. Réponds UNIQUEMENT avec le texte corrigé.";
+  async function enhanceOcrText(raw, onStep) {
+    var ai = W("aiGenerate");
+    if (!ai || !raw || !raw.trim()) return raw;
+    var chunks = chunkPages(raw, 4500, 10), out = [];
+    for (var i = 0; i < chunks.length; i++) {
+      if (onStep) onStep(i + 1, chunks.length);
+      try {
+        var res = await ai("Voici le texte OCR brut à corriger :\n\n" + chunks[i], OCR_CLEAN_SYS, 4000);
+        out.push((res && res.trim()) ? res : chunks[i]);
+      } catch (e) {
+        if (i === 0) return raw; // IA indisponible dès le départ → on garde tout le brut, sans bruit
+        out.push(chunks[i]);
+      }
+    }
+    return out.join("\n\n");
+  }
+
   var busy = false;
   async function runOcrTool() {
     if (busy) { toast("Une reconnaissance OCR est déjà en cours…", "warn"); return; }
     var t = activeTabSafe();
-    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF dans le Lecteur pour lancer l’OCR.", "warn"); var o = W("openTool"); if (o && (!t || !t.pdf)) {/* ne bascule pas d'outil : simple avertissement */} return; }
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF dans le Lecteur pour lancer l’OCR.", "warn"); return; }
     if (typeof ocrPdfTab !== "function") { toast("Le moteur OCR est indisponible.", "err"); return; }
     busy = true;
     var ov = buildOverlay(); document.body.appendChild(ov.root);
     try {
-      var text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
-      t.ocrText = text || "";
-      ov.done(text);
+      var raw = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
+      // Nettoyage en arrière-plan (API Claude) — invisible pour l'utilisateur, libellé neutre.
+      var clean = raw;
+      try { clean = await enhanceOcrText(raw, function (i, n) { ov.set(n > 1 ? ("Optimisation du texte — partie " + i + " / " + n + "…") : "Optimisation du texte…"); }); }
+      catch (e) { clean = raw; }
+      t.ocrText = (clean && clean.trim()) ? clean : (raw || "");
+      ov.done(t.ocrText);
     } catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
     finally { busy = false; }
   }
