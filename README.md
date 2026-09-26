@@ -336,3 +336,28 @@ Le Common Core est une **façade additive** injectée dans `public/app.html` sou
 
 **Note produit :** la démo autonome `document-studio-demo.html` a été retirée de `public/` (règle §14 — aucune application autonome dans le produit). Les sources de build du moteur Word (`word-engine/`) et du core (`core/`) ne sont pas servies ; le seul produit est `public/app.html` + `server/`.
 
+
+---
+
+## Phase 2 — Readix Shell v2.1 (évolution visuelle, fidèle au prototype)
+
+Cette phase fait **évoluer l'interface** vers le prototype cible (barre latérale sombre, en-tête avec recherche + IA avancée + compte, tableau de bord riche, rail droit d'assistance), **sans remplacer l'application ni casser une seule fonction du socle**. Elle est **strictement additive** : injectée dans `public/app.html` sous les blocs `<style id="readix-shell-css">` et `<script id="readix-shell">`, à partir des sources `shell/readix-shell.css` et `shell/readix-shell.js`. Retirer ces deux blocs restaure l'application d'origine à l'octet près.
+
+**Ce qui change visuellement :**
+
+- **Barre latérale sombre persistante** — marque *Readix*, navigation à plat fidèle au prototype (Accueil, Mes projets, Documents, Book Studio, CV Studio, Document Studio, PDF Reader/Editor, IA/Copilot, Paramètres), indicateur de stockage et carte *Readix Pro*. **Chaque entrée appelle une fonction réelle** (`openTool`, `openBookStudio`, `openCvBuilder`, `toggleCopilotFloating`, ouverture de fichier, menu Projet). L'item actif reflète l'outil courant.
+- **En-tête** — barre de **recherche fonctionnelle** (filtre les outils et ouvre le vrai outil), bouton **IA avancée** (`openAIFloating`), cloche de notifications, puce **compte** (reflète `APP.user`/`APP.plan`, ouvre les Paramètres).
+- **Tableau de bord d'accueil** — bandeau daté « Bonjour », **5 cartes d'outils colorées** (PDF Reader/Editor, IA/Copilot, Book Studio, CV Studio, Document Studio), *Projets récents* (`Readix.core.projects`) et *Fichiers récents* (`Readix.core.storage`) avec badges d'état, **Accès rapide** (6 outils) et **Raccourcis** (Créer, Importer, Ouvrir, Gérer projets, Paramètres).
+- **Rail droit d'accueil** — *Espace IA* (→ IA avancée), *Raccourcis rapides* (Résumé, Traduction, Analyser PDF, Créer image, Aide → Copilot), *Assistant Readix* (→ Copilot) et *Outils de lecture* (Zoom câblé sur `#zIn/#zOut`, Mode nuit sur le thème réel, Plein écran). Affiché **uniquement à l'accueil** ; sur les vues outil, le rail fin d'origine et la barre d'outils native reviennent intacts.
+- **Modale Paramètres** — bascule de thème et sélecteur de langue **pilotant les contrôles réels** existants (`#themeBtn`, `#langSel`).
+- **Repli responsive** (< 1024 px : rail droit escamoté ; < 900 px : barre latérale escamotable, barre d'outils horizontale rétablie).
+
+**Garanties vérifiées (tests automatisés Playwright) :**
+
+- **34/35** modules `render*` du socle **identiques octet pour octet** à l'original (le seul différent, `renderDocStudio`, relève de l'intégration Document Studio livrée précédemment) ; **309/314** fonctions du socle inchangées. **Le shell n'a modifié aucune fonction inline.**
+- La barre latérale native (`.lrail`) et le rail fin (`.rrail`) sont **masqués uniquement à l'accueil** et **réapparaissent** sur les vues outil (non-régression prouvée).
+- La navigation et la recherche ouvrent les **vrais outils** ; Document Studio monte bien le moteur Word A3.
+- `Readix.core` (Common Core) intact, **une seule** base IndexedDB, **zéro erreur console**.
+
+> **Écart connu (prochaine tranche)** : le rail droit de la *vue lecteur PDF* du prototype (Actions rapides / Outils d'édition / Outils IA) et le sélecteur d'espace de travail ne sont pas encore posés — l'accueil (écran principal) est traité en priorité.
+
