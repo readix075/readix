@@ -473,11 +473,16 @@ app.post("/api/ai/generate", auth, async (req, res) => {
   const quota = AI_QUOTA[req.user.plan] ?? 0;
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const images = Array.isArray(req.body && req.body.images) ? req.body.images : [];
+  const imageBlocks = buildImageBlocks(images.map(im => ({ image: im })));
+  const userContent = imageBlocks.length
+    ? [...imageBlocks, { type: "text", text: prompt.slice(0, 14000) }]
+    : prompt.slice(0, 14000);
   try {
     const data = await anthropicMessage({
       max_tokens: maxTokens,
       system: system || "Tu es un assistant de rédaction expert. Réponds en français, de façon claire, structurée et complète.",
-      messages: [{ role: "user", content: prompt.slice(0, 14000) }]
+      messages: [{ role: "user", content: userContent }]
     });
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
     await incUsage(req.user.email);
