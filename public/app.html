@@ -7099,5 +7099,426 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 })();
 
 </script>
+<style id="readix-book-css">
+/* ===== Readix Book Engine v1 — Book Studio (additif) ===== */
+.rxbk-studio .bk-left { display: flex; flex-direction: column; gap: 10px; }
+.bk-toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.bk-toolbar .cv-add { font-size: 12px; }
+
+/* Arbre de navigation */
+.bk-tree { border: 1px solid var(--line); border-radius: 12px; padding: 8px; background: var(--surface-2); max-height: 42vh; overflow: auto; }
+.bk-group { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-faint); margin: 9px 4px 3px; }
+.bk-group-row { display: flex; align-items: center; justify-content: space-between; }
+.bk-add-mini { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 22px; height: 22px; cursor: pointer; color: var(--brand); font-size: 14px; line-height: 1; }
+.bk-node { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.bk-node:hover { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.bk-node.sel { background: color-mix(in srgb, var(--brand) 15%, transparent); font-weight: 600; }
+.bk-node-t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-book { font-weight: 700; }
+.bk-part-node { margin-top: 2px; font-weight: 600; }
+.bk-part-node .bk-node-t { color: var(--ink); }
+.bk-ch-node { margin-left: 16px; }
+.bk-bm-node, .bk-asset-node, .bk-fm-node { }
+.bk-grip { color: var(--ink-faint); cursor: grab; font-size: 12px; }
+.bk-drop { outline: 2px dashed var(--brand); outline-offset: -2px; }
+.bk-x, .bk-mini { border: none; background: none; cursor: pointer; color: var(--ink-faint); font-size: 12px; padding: 2px 4px; border-radius: 5px; }
+.bk-x:hover { color: #c1121f; background: #fdecec; }
+.bk-mini:hover { color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, transparent); }
+.bk-chk { width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 5px; background: #fff; cursor: pointer; font-size: 0; }
+.bk-chk.on { background: var(--brand); border-color: var(--brand); position: relative; }
+.bk-chk.on::after { content: "✓"; color: #fff; font-size: 11px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.bk-asset-mini { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; }
+
+/* Éditeur */
+.bk-editor { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+.bk-editor .cv-sec:first-child { margin-top: 0; }
+.bk-hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+.bk-asset-full { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 8px; }
+
+/* Éditeur riche de chapitre */
+.bk-rich { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 4px; }
+.bk-rich-tb { display: flex; flex-wrap: wrap; gap: 3px; padding: 6px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.bk-rt { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; color: var(--ink-soft); }
+.bk-rt:hover { border-color: var(--brand); color: var(--brand); }
+.bk-rich-area { min-height: 220px; max-height: 46vh; overflow: auto; padding: 12px 14px; font-size: 14px; line-height: 1.6; outline: none; }
+.bk-rich-area:focus { background: #fff; }
+.bk-rich-area h2 { font-size: 18px; margin: 12px 0 6px; }
+.bk-rich-area h3 { font-size: 15px; margin: 10px 0 5px; }
+.bk-rich-area blockquote { border-left: 3px solid var(--brand); margin: 8px 0; padding: 2px 12px; color: var(--ink-soft); }
+
+/* Aperçu du livre : pages liminaires, TDM, chapitres */
+.bk-doc { color: #1a2030; }
+.bk-title-page { text-align: center; padding: 40px 0 28px; border-bottom: 1px solid #eee; margin-bottom: 18px; }
+.bk-title-page h1 { font-size: 26pt; margin: 0 0 8px; }
+.bk-title-page .bk-sub { font-size: 13pt; color: #555; margin-bottom: 18px; }
+.bk-title-page .bk-auth { font-size: 12pt; color: #333; }
+.bk-fm { margin: 14px 0; }
+.bk-ded { text-align: center; color: #555; }
+.bk-epi blockquote { border-left: 3px solid #ccc; padding-left: 12px; color: #555; font-style: italic; }
+.bk-part { text-align: center; margin: 26px 0 14px; }
+.bk-part-h { font-size: 20pt; letter-spacing: .02em; }
+.bk-chapter { margin: 16px 0; }
+.bk-chapter h2 { font-size: 15pt; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+.bk-empty { color: #999; font-style: italic; }
+.bk-toc { margin: 18px 0; }
+.bk-toc h2 { font-size: 15pt; }
+.bk-toc-part { font-weight: 700; margin: 10px 0 4px; }
+.bk-toc-row { display: flex; align-items: baseline; gap: 6px; margin: 2px 0; }
+.bk-toc-t { white-space: nowrap; }
+.bk-toc-d { flex: 1; border-bottom: 1px dotted #bbb; transform: translateY(-3px); }
+.bk-toc-p { color: #555; }
+
+</style>
+<script id="readix-book-engine">
+/* ============================================================
+   READIX BOOK ENGINE — Phase 3 (Book Studio)
+   Additif : enveloppe bookDefault / bookToHtml / renderBookStudio
+   du socle pour apporter une structure de livre complète
+   (métadonnées, pages liminaires/finales, Parties → Chapitres,
+   table des matières générée, navigation, glisser-déposer,
+   duplication, assets), un éditeur de chapitre et le contexte
+   Copilot. RÉUTILISE aiGenerate, parseJsonLoose, bookImportManuscript,
+   buildBookPdf/buildCoverPdf, bookCover/BOOK_COVERS, openDocInTab,
+   downloadCopilotFile, downloadBlob, cvField, dialog, toast.
+   Aucune fonction du socle n'est modifiée. Retirer ce bloc
+   restaure le Book Studio d'origine.
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixBook) return;
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { var f = W("cvEsc"); if (f) return f(s); return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function uid(p) { return (p || "id") + "_" + Math.random().toString(36).slice(2, 9); }
+
+  var FRONT = [
+    { key: "titlePage", label: "Page de titre", type: "toggle" },
+    { key: "copyright", label: "Copyright", type: "text" },
+    { key: "dedication", label: "Dédicace", type: "text" },
+    { key: "epigraph", label: "Épigraphe", type: "text" },
+    { key: "preface", label: "Préface", type: "rich" },
+    { key: "foreword", label: "Avant-propos", type: "rich" },
+    { key: "toc", label: "Table des matières", type: "toggle" }
+  ];
+  var BACK_TYPES = ["Remerciements", "Biographie de l’auteur", "Notes", "Annexes", "Bibliographie", "Ressources", "Autre"];
+
+  /* ---------- Modèle étendu + migration (idempotente, en place) ---------- */
+  function normChapter(ch) { if (!ch || typeof ch !== "object") return { id: uid("ch"), title: "", content: "" }; if (!ch.id) ch.id = uid("ch"); if (ch.title == null) ch.title = ""; if (ch.content == null) ch.content = ""; return ch; }
+  function foldFlatIntoParts(book, title) {
+    if (!Array.isArray(book.chapters) || !book.chapters.length) return;
+    var chs = book.chapters.map(normChapter);
+    book.parts.push({ id: uid("part"), title: title || "", chapters: chs });
+    book.chapters = [];
+  }
+  function upgrade(book) {
+    if (!book || typeof book !== "object") book = {};
+    ["title", "subtitle", "author", "language", "genre", "description", "format", "coverImage"].forEach(function (k) { if (book[k] == null) book[k] = ""; });
+    if (!book.cover) book.cover = "ink";
+    book.frontMatter = book.frontMatter || {};
+    var fm = book.frontMatter;
+    if (fm.titlePage == null) fm.titlePage = true;
+    if (fm.toc == null) fm.toc = true;
+    ["copyright", "dedication", "epigraph", "preface", "foreword"].forEach(function (k) { if (fm[k] == null) fm[k] = ""; });
+    if (!Array.isArray(book.parts)) book.parts = [];
+    if (!Array.isArray(book.chapters)) book.chapters = [];
+    // migration héritée : d'anciens chapitres plats → une partie sans titre
+    if (!book.parts.length && book.chapters.length) foldFlatIntoParts(book, "");
+    book.parts.forEach(function (p) { if (!p.id) p.id = uid("part"); if (p.title == null) p.title = ""; if (!Array.isArray(p.chapters)) p.chapters = []; p.chapters.forEach(normChapter); });
+    if (!Array.isArray(book.backMatter)) book.backMatter = [];
+    book.backMatter.forEach(function (b) { if (!b.id) b.id = uid("bm"); if (b.type == null) b.type = "Autre"; if (b.title == null) b.title = b.type; if (b.content == null) b.content = ""; });
+    if (!Array.isArray(book.assets)) book.assets = [];
+    book.assets.forEach(function (a) { if (!a.id) a.id = uid("as"); if (a.name == null) a.name = ""; if (a.type == null) a.type = "image"; if (a.data == null) a.data = ""; });
+    book.settings = book.settings || {};
+    if (!book.createdAt) book.createdAt = Date.now();
+    book.updatedAt = Date.now();
+    return book;
+  }
+  function syncFlat(book) { var flat = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { flat.push({ title: c.title, content: c.content }); }); }); book.chapters = flat; }
+  function allChapters(book) { var out = []; (book.parts || []).forEach(function (p) { (p.chapters || []).forEach(function (c) { out.push({ part: p, ch: c }); }); }); return out; }
+  function findChapter(book, chId) { for (var i = 0; i < book.parts.length; i++) { var p = book.parts[i]; for (var j = 0; j < p.chapters.length; j++) { if (p.chapters[j].id === chId) return { part: p, ch: p.chapters[j], pi: i, ci: j }; } } return null; }
+
+  /* ---------- Rendu du livre + table des matières générée ---------- */
+  function contentHtml(s) { s = String(s || ""); if (/<[a-z][\s\S]*>/i.test(s)) return s; return s.split(/\n{2,}/).filter(function (x) { return x.trim(); }).map(function (p) { return "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join(""); }
+  function buildToc(book) {
+    var rows = "", n = 0;
+    book.parts.forEach(function (p) {
+      if (p.title) rows += '<div class="bk-toc-part">' + esc(p.title) + '</div>';
+      p.chapters.forEach(function (c) { n++; rows += '<div class="bk-toc-row"><span class="bk-toc-t">' + esc(c.title || ("Chapitre " + n)) + '</span><span class="bk-toc-d"></span><span class="bk-toc-p">' + n + '</span></div>'; });
+    });
+    return '<section class="bk-toc"><h2>Table des matières</h2>' + (rows || '<p class="bk-empty">Ajoutez des chapitres pour générer la table des matières.</p>') + '</section>';
+  }
+  function renderBook(book) {
+    upgrade(book); var fm = book.frontMatter, h = '<div class="bk-doc">';
+    if (fm.titlePage) { h += '<section class="bk-title-page"><h1>' + esc(book.title || "Titre du livre") + '</h1>' + (book.subtitle ? '<div class="bk-sub">' + esc(book.subtitle) + '</div>' : '') + (book.author ? '<div class="bk-auth">' + esc(book.author) + '</div>' : '') + '</section>'; }
+    if (fm.copyright) h += '<section class="bk-fm bk-copy">' + contentHtml(fm.copyright) + '</section>';
+    if (fm.dedication) h += '<section class="bk-fm bk-ded"><p><i>' + esc(fm.dedication).replace(/\n/g, "<br>") + '</i></p></section>';
+    if (fm.epigraph) h += '<section class="bk-fm bk-epi"><blockquote>' + esc(fm.epigraph).replace(/\n/g, "<br>") + '</blockquote></section>';
+    if (fm.preface) h += '<section class="bk-fm"><h2>Préface</h2>' + contentHtml(fm.preface) + '</section>';
+    if (fm.foreword) h += '<section class="bk-fm"><h2>Avant-propos</h2>' + contentHtml(fm.foreword) + '</section>';
+    if (fm.toc) h += buildToc(book);
+    book.parts.forEach(function (p) {
+      if (p.title) h += '<section class="bk-part"><h1 class="bk-part-h">' + esc(p.title) + '</h1></section>';
+      p.chapters.forEach(function (c) { h += '<section class="bk-chapter"><h2>' + esc(c.title || "Sans titre") + '</h2>' + contentHtml(c.content) + '</section>'; });
+    });
+    (book.backMatter || []).forEach(function (b) { h += '<section class="bk-fm bk-back"><h2>' + esc(b.title || b.type) + '</h2>' + contentHtml(b.content) + '</section>'; });
+    return h + '</div>';
+  }
+
+  /* ---------- Studio : navigation (arbre) + éditeur + aperçu ---------- */
+  var DRAG = null;
+  function renderStudio(t, stage) {
+    if (!t.book) t.book = window.bookDefault();
+    upgrade(t.book); var book = t.book;
+    if (!t._sel) t._sel = { type: "book" };
+    var wrap = E("div", "cv-builder rxbk-studio");
+    wrap.innerHTML = '<div class="cv-form bk-left" id="bkLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du livre</span><span style="flex:1"></span>'
+      + '<button class="btn ghost sm" data-x="toc">Régénérer la TDM</button><button class="btn ghost sm" data-x="pdf">PDF</button><button class="btn ghost sm" data-x="cover">Couverture</button><button class="btn ghost sm" data-x="docx">Word</button><button class="btn ghost sm" data-x="ds">Document Studio</button></div>'
+      + '<div class="cv-paper-scroll"><div class="cv-paper" id="bkPaper"></div></div></div>';
+    stage.appendChild(wrap);
+    var paper = wrap.querySelector("#bkPaper"), left = wrap.querySelector("#bkLeft");
+    var refresh = function () { paper.innerHTML = window.bookToHtml(book); };
+    var touch = function () { syncFlat(book); book.updatedAt = Date.now(); t.dirty = true; t.name = (book.title ? ("Livre — " + book.title) : "Mon livre"); var sa = W("scheduleAutosave"); if (sa) sa(); refresh(); var rt = W("renderTabs"); if (rt) rt(); };
+    var rerender = function () { stage.innerHTML = ""; renderStudio(t, stage); };
+    buildLeft(left, t, book, touch, rerender);
+    refresh();
+    wrap.querySelector(".cv-preview-bar").onclick = async function (e) {
+      var b = e.target.closest("[data-x]"); if (!b) return; var x = b.dataset.x;
+      var nm = (book.title || "Livre").replace(/[^\wÀ-ÿ ._-]/g, "_").trim() || "Livre";
+      if (x === "toc") { book.frontMatter.toc = true; refresh(); toast("Table des matières régénérée.", "ok"); return; }
+      if (x === "ds") { var f = W("openDocInTab"); if (f) f(nm + ".docx", window.bookToHtml(book)); return; }
+      if (x === "docx") { var f2 = W("downloadCopilotFile"); if (f2) f2({ kind: "docx", html: true, name: nm + ".docx", content: window.bookToHtml(book) }); return; }
+      var lab = b.textContent; b.disabled = true; b.textContent = "…";
+      try {
+        syncFlat(book);
+        if (x === "pdf") { var bp = W("buildBookPdf"), db = W("downloadBlob"); var bytes = await bp(book); db(new Blob([bytes], { type: "application/pdf" }), nm + ".pdf"); }
+        else if (x === "cover") { var cp = W("buildCoverPdf"), db2 = W("downloadBlob"); var by = await cp(book); db2(new Blob([by], { type: "application/pdf" }), nm + "-couverture.pdf"); }
+        toast("Téléchargement lancé.", "ok");
+      } catch (err) { toast("Échec : " + (err.message || err), "err"); }
+      finally { b.disabled = false; b.textContent = lab; }
+    };
+  }
+
+  function buildLeft(box, t, book, touch, rerender) {
+    box.innerHTML = "";
+    // barre d'actions
+    var bar = E("div", "bk-toolbar");
+    var addPart = E("button", "cv-add", "＋ Partie"); addPart.onclick = function () { book.parts.push({ id: uid("part"), title: "Nouvelle partie", chapters: [] }); touch(); rerender(); };
+    var addCh = E("button", "cv-add", "＋ Chapitre"); addCh.onclick = function () { var p = book.parts[book.parts.length - 1]; if (!p) { p = { id: uid("part"), title: "", chapters: [] }; book.parts.push(p); } var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); };
+    var proj = E("button", "cv-add cv-ghost", "Associer à un projet"); proj.onclick = function () { var pb = document.querySelector("#projBtn"); if (pb) { pb.click(); toast("Choisissez le projet actif pour y rattacher ce livre.", "ok"); } else toast("Project Engine indisponible.", "warn"); };
+    var plan = E("button", "cv-add", "✨ Proposer un plan"); plan.onclick = function () { bookPlanAI(book, rerender, plan); };
+    var imp = E("button", "cv-add", "✨ Importer un manuscrit"); imp.onclick = function () { var f = W("bookImportManuscript"); if (f) f(book, function () { foldFlatIntoParts(book, "Manuscrit importé"); touch(); rerender(); }, imp); };
+    [addPart, addCh, plan, imp, proj].forEach(function (b) { bar.appendChild(b); });
+    box.appendChild(bar);
+    // arbre de navigation
+    box.appendChild(buildTree(t, book, touch, rerender));
+    // éditeur de l'élément sélectionné
+    var ed = E("div", "bk-editor"); buildEditor(ed, t, book, touch, rerender); box.appendChild(ed);
+  }
+
+  function selNode(t, sel) { return t._sel && t._sel.type === sel.type && t._sel.chId === sel.chId && t._sel.fmKey === sel.fmKey && t._sel.bmId === sel.bmId && t._sel.assetId === sel.assetId; }
+  function buildTree(t, book, touch, rerender) {
+    var tree = E("div", "bk-tree");
+    var bookRow = E("div", "bk-node bk-book" + (t._sel.type === "book" ? " sel" : ""), '📖 <span class="bk-node-t">' + esc(book.title || "Mon livre") + '</span>');
+    bookRow.onclick = function () { t._sel = { type: "book" }; rerender(); }; tree.appendChild(bookRow);
+    // pages liminaires
+    var fmHead = E("div", "bk-group", "Pages préliminaires"); tree.appendChild(fmHead);
+    FRONT.forEach(function (f) {
+      var active = f.type === "toggle" ? book.frontMatter[f.key] : !!book.frontMatter[f.key];
+      var row = E("div", "bk-node bk-fm-node" + (t._sel.type === "fm" && t._sel.fmKey === f.key ? " sel" : ""));
+      var tog = E("button", "bk-chk" + (active ? " on" : "")); tog.title = active ? "Activée" : "Désactivée";
+      tog.onclick = function (e) { e.stopPropagation(); if (f.type === "toggle") { book.frontMatter[f.key] = !book.frontMatter[f.key]; } else { if (book.frontMatter[f.key]) book.frontMatter[f.key] = ""; else { book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; } } touch(); rerender(); };
+      row.appendChild(tog); row.appendChild(E("span", "bk-node-t", f.label));
+      if (f.type !== "toggle") row.onclick = function () { if (!book.frontMatter[f.key]) book.frontMatter[f.key] = " "; t._sel = { type: "fm", fmKey: f.key }; rerender(); };
+      tree.appendChild(row);
+    });
+    // parties → chapitres (glisser-déposer)
+    tree.appendChild(E("div", "bk-group", "Corps du livre"));
+    book.parts.forEach(function (p, pi) {
+      var prow = E("div", "bk-node bk-part-node");
+      prow.draggable = true; prow.dataset.part = p.id;
+      prow.addEventListener("dragstart", function (e) { DRAG = { type: "part", partId: p.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
+      prow.addEventListener("dragover", function (e) { if (DRAG) { e.preventDefault(); prow.classList.add("bk-drop"); } });
+      prow.addEventListener("dragleave", function () { prow.classList.remove("bk-drop"); });
+      prow.addEventListener("drop", function (e) { e.preventDefault(); prow.classList.remove("bk-drop"); dropOnPart(book, p, touch, rerender); });
+      prow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(p.title || "(chapitres)") + '</span>';
+      var pdel = E("button", "bk-x", "✕"); pdel.title = "Supprimer la partie"; pdel.onclick = function (e) { e.stopPropagation(); book.parts.splice(pi, 1); touch(); rerender(); };
+      prow.appendChild(pdel);
+      prow.onclick = function () { t._sel = { type: "part", partId: p.id }; rerender(); };
+      tree.appendChild(prow);
+      p.chapters.forEach(function (c) {
+        var crow = E("div", "bk-node bk-ch-node" + (t._sel.type === "chapter" && t._sel.chId === c.id ? " sel" : ""));
+        crow.draggable = true; crow.dataset.ch = c.id; crow.dataset.part = p.id;
+        crow.addEventListener("dragstart", function (e) { e.stopPropagation(); DRAG = { type: "chapter", partId: p.id, chId: c.id }; if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
+        crow.addEventListener("dragover", function (e) { if (DRAG && DRAG.type === "chapter") { e.preventDefault(); crow.classList.add("bk-drop"); } });
+        crow.addEventListener("dragleave", function () { crow.classList.remove("bk-drop"); });
+        crow.addEventListener("drop", function (e) { e.preventDefault(); e.stopPropagation(); crow.classList.remove("bk-drop"); dropOnChapter(book, p, c, touch, rerender); });
+        crow.innerHTML = '<span class="bk-grip">⠿</span><span class="bk-node-t">' + esc(c.title || "Sans titre") + '</span>';
+        var dup = E("button", "bk-mini", "⧉"); dup.title = "Dupliquer"; dup.onclick = function (e) { e.stopPropagation(); var copy = JSON.parse(JSON.stringify(c)); copy.id = uid("ch"); copy.title = (c.title || "Chapitre") + " — Copie"; var idx = p.chapters.indexOf(c); p.chapters.splice(idx + 1, 0, copy); touch(); rerender(); };
+        var cdel = E("button", "bk-x", "✕"); cdel.title = "Supprimer"; cdel.onclick = function (e) { e.stopPropagation(); var idx = p.chapters.indexOf(c); p.chapters.splice(idx, 1); touch(); rerender(); };
+        crow.appendChild(dup); crow.appendChild(cdel);
+        crow.onclick = function () { t._sel = { type: "chapter", chId: c.id }; rerender(); };
+        tree.appendChild(crow);
+      });
+    });
+    // pages finales
+    var bmHead = E("div", "bk-group bk-group-row", "<span>Pages finales</span>");
+    var bmAdd = E("button", "bk-add-mini", "＋"); bmAdd.title = "Ajouter"; bmAdd.onclick = function () { var it = { id: uid("bm"), type: "Remerciements", title: "Remerciements", content: "" }; book.backMatter.push(it); t._sel = { type: "bm", bmId: it.id }; touch(); rerender(); };
+    bmHead.appendChild(bmAdd); tree.appendChild(bmHead);
+    book.backMatter.forEach(function (b) {
+      var row = E("div", "bk-node bk-bm-node" + (t._sel.type === "bm" && t._sel.bmId === b.id ? " sel" : ""), '<span class="bk-node-t">' + esc(b.title || b.type) + '</span>');
+      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.backMatter = book.backMatter.filter(function (z) { return z.id !== b.id; }); touch(); rerender(); };
+      row.appendChild(x); row.onclick = function () { t._sel = { type: "bm", bmId: b.id }; rerender(); }; tree.appendChild(row);
+    });
+    // assets
+    var asHead = E("div", "bk-group bk-group-row", "<span>Assets</span>");
+    var asAdd = E("button", "bk-add-mini", "＋"); asAdd.title = "Ajouter une image"; asAdd.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.assets.push({ id: uid("as"), name: f.name, type: "image", data: rd.result }); touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
+    asHead.appendChild(asAdd); tree.appendChild(asHead);
+    book.assets.forEach(function (a) {
+      var row = E("div", "bk-node bk-asset-node" + (t._sel.type === "asset" && t._sel.assetId === a.id ? " sel" : ""), (a.type === "image" && a.data ? '<img class="bk-asset-mini" src="' + a.data + '">' : '📎') + '<span class="bk-node-t">' + esc(a.name || "asset") + '</span>');
+      var x = E("button", "bk-x", "✕"); x.onclick = function (e) { e.stopPropagation(); book.assets = book.assets.filter(function (z) { return z.id !== a.id; }); touch(); rerender(); };
+      row.appendChild(x); row.onclick = function () { t._sel = { type: "asset", assetId: a.id }; rerender(); }; tree.appendChild(row);
+    });
+    return tree;
+  }
+  function dropOnChapter(book, targetPart, targetCh, touch, rerender) {
+    if (!DRAG || DRAG.type !== "chapter") return;
+    var src = findChapter(book, DRAG.chId); if (!src) { DRAG = null; return; }
+    src.part.chapters.splice(src.ci, 1);
+    var ti = targetPart.chapters.indexOf(targetCh); if (ti < 0) ti = targetPart.chapters.length;
+    targetPart.chapters.splice(ti, 0, src.ch); DRAG = null; touch(); rerender();
+  }
+  function dropOnPart(book, targetPart, touch, rerender) {
+    if (!DRAG) return;
+    if (DRAG.type === "chapter") { var src = findChapter(book, DRAG.chId); if (src) { src.part.chapters.splice(src.ci, 1); targetPart.chapters.push(src.ch); } }
+    else if (DRAG.type === "part" && DRAG.partId !== targetPart.id) { var si = book.parts.findIndex(function (p) { return p.id === DRAG.partId; }); var ti = book.parts.indexOf(targetPart); if (si >= 0) { var mv = book.parts.splice(si, 1)[0]; book.parts.splice(book.parts.indexOf(targetPart) + (si < ti ? 0 : 0), 0, mv); } }
+    DRAG = null; touch(); rerender();
+  }
+
+  /* ---------- Éditeurs ---------- */
+  function field(label, val, on, kind) { var f = W("cvField"); if (f) return f(label, val, on, kind); var w = E("label", "cvf", '<span class="cvf-l">' + esc(label) + '</span>'); var i = kind === "area" ? E("textarea", "rp-input") : E("input", "rp-input"); if (kind === "area") i.rows = 3; i.value = val || ""; i.oninput = function () { on(i.value); }; w.appendChild(i); return w; }
+  function richEditor(html, onChange) {
+    var box = E("div", "bk-rich");
+    var tb = E("div", "bk-rich-tb");
+    [["H2", "formatBlock", "h2"], ["H3", "formatBlock", "h3"], ["¶", "formatBlock", "p"], ["G", "bold"], ["I", "italic"], ["• Liste", "insertUnorderedList"], ["1. Liste", "insertOrderedList"], ["❝", "formatBlock", "blockquote"], ["―", "hr"]].forEach(function (c) {
+      var bt = E("button", "bk-rt", c[0]); bt.type = "button"; bt.onmousedown = function (e) { e.preventDefault(); };
+      bt.onclick = function () { area.focus(); if (c[1] === "hr") document.execCommand("insertHorizontalRule"); else if (c[2]) document.execCommand(c[1], false, c[2]); else document.execCommand(c[1]); onChange(area.innerHTML); };
+      tb.appendChild(bt);
+    });
+    var area = E("div", "bk-rich-area"); area.contentEditable = "true"; area.innerHTML = contentHtml(html);
+    var timer = null; area.oninput = function () { clearTimeout(timer); timer = setTimeout(function () { onChange(area.innerHTML); }, 250); };
+    box.appendChild(tb); box.appendChild(area); return box;
+  }
+  function buildEditor(box, t, book, touch, rerender) {
+    box.innerHTML = ""; var sel = t._sel;
+    if (sel.type === "book") {
+      box.appendChild(E("div", "cv-sec", "Informations du livre"));
+      var g = E("div", "cv-grid");
+      [["Titre", "title"], ["Sous-titre", "subtitle"], ["Auteur", "author"], ["Langue", "language"], ["Genre", "genre"], ["Format de travail", "format"]].forEach(function (p) { g.appendChild(field(p[0], book[p[1]], function (v) { book[p[1]] = v; touch(); })); });
+      box.appendChild(g);
+      box.appendChild(field("Description", book.description, function (v) { book.description = v; touch(); }, "area"));
+      // couverture (structure)
+      box.appendChild(E("div", "cv-sec", "Couverture"));
+      var cov = E("div", "book-covers"); var COVERS = (typeof BOOK_COVERS !== "undefined") ? BOOK_COVERS : [];
+      COVERS.forEach(function (c) { var s = E("button", "book-cov" + (book.cover === c.id ? " sel" : "")); s.style.background = c.bg; s.title = c.name; s.innerHTML = '<span style="color:' + c.fg + '">Aa</span>'; s.onclick = function () { book.cover = c.id; touch(); rerender(); }; cov.appendChild(s); });
+      box.appendChild(cov);
+      var ci = E("div", "cv-photo-row");
+      if (book.coverImage) { var im = E("img", "cv-photo-mini"); im.src = book.coverImage; ci.appendChild(im); }
+      var cb = E("button", "cv-add", book.coverImage ? "Changer l’image" : "Image de couverture"); cb.onclick = function () { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { book.coverImage = rd.result; touch(); rerender(); }; rd.readAsDataURL(f); }; inp.click(); };
+      ci.appendChild(cb); box.appendChild(ci);
+    } else if (sel.type === "part") {
+      var p = book.parts.filter(function (x) { return x.id === sel.partId; })[0]; if (!p) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Partie"));
+      box.appendChild(field("Titre de la partie", p.title, function (v) { p.title = v; touch(); var n = box.parentNode ? box.parentNode.querySelector('.bk-part-node.sel .bk-node-t') : null; }));
+      var ca = E("button", "cv-add", "＋ Ajouter un chapitre"); ca.onclick = function () { var ch = { id: uid("ch"), title: "Nouveau chapitre", content: "" }; p.chapters.push(ch); t._sel = { type: "chapter", chId: ch.id }; touch(); rerender(); }; box.appendChild(ca);
+    } else if (sel.type === "chapter") {
+      var loc = findChapter(book, sel.chId); if (!loc) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      var ch = loc.ch;
+      var head = E("div", "cv-sec cv-sec-row", "<span>Chapitre</span>");
+      var ai = E("button", "cv-add", "✨ Rédiger (IA)"); ai.onclick = function () { bookChapterAI(book, ch, rerender, ai); }; head.appendChild(ai);
+      var sum = E("button", "cv-add cv-ghost", "✨ Résumer"); sum.onclick = function () { bookSummarize(ch, sum); }; head.appendChild(sum);
+      var ods = E("button", "cv-add cv-ghost", "Document Studio"); ods.onclick = function () { var f = W("openDocInTab"); if (f) f((ch.title || "Chapitre") + ".docx", "<h1>" + esc(ch.title || "") + "</h1>" + contentHtml(ch.content)); }; head.appendChild(ods);
+      box.appendChild(head);
+      box.appendChild(field("Titre du chapitre", ch.title, function (v) { ch.title = v; touch(); }));
+      box.appendChild(richEditor(ch.content, function (html) { ch.content = html; touch(); }));
+    } else if (sel.type === "fm") {
+      var f = FRONT.filter(function (x) { return x.key === sel.fmKey; })[0]; if (!f) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", f.label));
+      if (f.type === "rich") box.appendChild(richEditor(book.frontMatter[f.key], function (html) { book.frontMatter[f.key] = html; touch(); }));
+      else box.appendChild(field(f.label, (book.frontMatter[f.key] || "").trim(), function (v) { book.frontMatter[f.key] = v; touch(); }, "area"));
+    } else if (sel.type === "bm") {
+      var b = book.backMatter.filter(function (x) { return x.id === sel.bmId; })[0]; if (!b) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Page finale"));
+      var tw = E("label", "cvf", '<span class="cvf-l">Type</span>'); var selEl = E("select", "cv-sb-sel"); BACK_TYPES.forEach(function (bt) { var o = E("option"); o.value = bt; o.textContent = bt; selEl.appendChild(o); }); selEl.value = b.type; selEl.onchange = function () { b.type = selEl.value; if (!b.title || BACK_TYPES.indexOf(b.title) >= 0) b.title = selEl.value; touch(); rerender(); }; tw.appendChild(selEl); box.appendChild(tw);
+      box.appendChild(field("Titre", b.title, function (v) { b.title = v; touch(); }));
+      box.appendChild(richEditor(b.content, function (html) { b.content = html; touch(); }));
+    } else if (sel.type === "asset") {
+      var a = book.assets.filter(function (x) { return x.id === sel.assetId; })[0]; if (!a) { t._sel = { type: "book" }; return buildEditor(box, t, book, touch, rerender); }
+      box.appendChild(E("div", "cv-sec", "Asset"));
+      if (a.type === "image" && a.data) { var im2 = E("img", "bk-asset-full"); im2.src = a.data; box.appendChild(im2); }
+      box.appendChild(field("Nom", a.name, function (v) { a.name = v; touch(); }));
+      box.appendChild(E("div", "bk-hint", "Référence : peut être insérée dans un chapitre lors des phases de production."));
+    }
+  }
+
+  /* ---------- IA (réutilise aiGenerate / parseJsonLoose) ---------- */
+  function busy(btn, on, label) { if (!btn) return; if (on) { btn._l = btn.textContent; btn.disabled = true; btn.textContent = label || "…"; } else { btn.disabled = false; if (btn._l) btn.textContent = btn._l; } }
+  function bookPlanAI(book, rerender, btn) {
+    var gen = W("aiGenerate"), parse = W("parseJsonLoose"); if (!gen) return;
+    var topic = [book.title, book.subtitle].filter(Boolean).join(" — "); if (!topic) { toast("Donnez d’abord un titre au livre.", "warn"); return; }
+    busy(btn, true, "L’IA réfléchit…");
+    Promise.resolve().then(function () {
+      return gen("Sujet du livre : " + topic + (book.genre ? " (genre : " + book.genre + ")" : "") + (book.description ? "\nDescription : " + book.description.slice(0, 800) : "") + "\n\nPropose un plan structuré en parties et chapitres. Réponds UNIQUEMENT en JSON strict :\n{\"parts\":[{\"title\":\"\",\"chapters\":[{\"title\":\"\"}]}]}", "Tu es un éditeur littéraire. Réponds UNIQUEMENT avec le JSON.", 1500);
+    }).then(function (out) {
+      var obj = parse ? parse(out) : null; if (!obj || !Array.isArray(obj.parts)) throw new Error("Réponse IA non exploitable.");
+      obj.parts.forEach(function (p) { var part = { id: uid("part"), title: p.title || "", chapters: (p.chapters || []).map(function (c) { return { id: uid("ch"), title: c.title || "", content: "" }; }) }; book.parts.push(part); });
+      upgrade(book); toast("Plan ajouté ✓", "ok"); rerender();
+    }).catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+  function bookChapterAI(book, ch, rerender, btn) {
+    var gen = W("aiGenerate"); if (!gen) return; if (!ch.title) { toast("Donnez un titre au chapitre.", "warn"); return; }
+    var topic = [book.title, book.subtitle].filter(Boolean).join(" — ");
+    busy(btn, true, "Rédaction…");
+    Promise.resolve().then(function () {
+      return gen("Livre : " + (topic || "—") + (book.genre ? " (genre : " + book.genre + ")" : "") + "\nChapitre : " + ch.title + "\n\nRédige le contenu de ce chapitre en français (plusieurs paragraphes), en HTML simple (<h2>, <p>, <ul>…), sans <html> ni <body>.", "Tu es un auteur professionnel.", 2200);
+    }).then(function (out) { out = String(out || "").trim(); if (!out) throw new Error("Réponse vide."); if (!/</.test(out)) out = contentHtml(out); ch.content = out; toast("Chapitre rédigé ✓", "ok"); rerender(); })
+      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+  function bookSummarize(ch, btn) {
+    var gen = W("aiGenerate"), dlg = W("dialog"); if (!gen) return;
+    var text = String(ch.content || "").replace(/<[^>]+>/g, " ").trim(); if (!text) { toast("Ce chapitre est vide.", "warn"); return; }
+    busy(btn, true, "Résumé…");
+    Promise.resolve().then(function () { return gen("Résume ce chapitre en 3 à 5 phrases, en français :\n\n" + text.slice(0, 6000), "Tu es un éditeur.", 500); })
+      .then(function (out) { out = String(out || "").trim(); if (dlg) { dlg('<h3>Résumé du chapitre</h3><p style="font-size:13px;line-height:1.5">' + esc(out) + '</p><div class="row"><button class="btn sm" data-a="ok" onclick="this.closest(\'#overlay,.overlay\')&&0">Fermer</button></div>').root.onclick = function (e) { if (e.target.closest("[data-a]")) e.target.closest("[data-a]").dispatchEvent(new Event("close")); }; } else toast(out, "ok"); })
+      .catch(function (e) { toast(e.message || "Échec.", "err"); }).then(function () { busy(btn, false); });
+  }
+
+  /* ---------- Contexte Copilot (préparation Phase 4) ---------- */
+  function structure(book) { return (book.parts || []).map(function (p) { return { part: p.title || "(sans titre)", chapters: (p.chapters || []).map(function (c) { return c.title || "Sans titre"; }) }; }); }
+  function context() {
+    var A = (typeof APP !== "undefined") ? APP : null, tab = A && A.tabs ? A.tabs.filter(function (x) { return x.id === A.active; })[0] : null;
+    if (!tab || tab.tool !== "bookstudio" || !tab.book) return null;
+    var book = tab.book, sel = tab._sel || {}, loc = sel.chId ? findChapter(book, sel.chId) : null;
+    return {
+      kind: "book", title: book.title, subtitle: book.subtitle, author: book.author, language: book.language, genre: book.genre,
+      structure: structure(book),
+      currentPart: loc ? (loc.part.title || "(sans titre)") : (sel.partId ? (book.parts.filter(function (p) { return p.id === sel.partId; })[0] || {}).title : null),
+      currentChapter: loc ? { title: loc.ch.title, content: String(loc.ch.content || "").replace(/<[^>]+>/g, " ").slice(0, 4000) } : null
+    };
+  }
+
+  /* ---------- Enveloppement additif ---------- */
+  ReadixBook = window.ReadixBook = { version: "1.0", upgrade: upgrade, renderBook: renderBook, context: context, structure: structure, _orig: {} };
+  window.rxBookContext = context;
+  function wrap() {
+    if (typeof window.bookDefault === "function" && !ReadixBook._orig.bookDefault) { ReadixBook._orig.bookDefault = window.bookDefault; window.bookDefault = function () { return upgrade(ReadixBook._orig.bookDefault()); }; }
+    if (typeof window.bookToHtml === "function" && !ReadixBook._orig.bookToHtml) { ReadixBook._orig.bookToHtml = window.bookToHtml; window.bookToHtml = function (book) { try { return renderBook(book); } catch (e) { return ReadixBook._orig.bookToHtml(book); } }; }
+    if (typeof window.renderBookStudio === "function" && !ReadixBook._orig.renderBookStudio) { ReadixBook._orig.renderBookStudio = window.renderBookStudio; window.renderBookStudio = function (t, stage) { try { return renderStudio(t, stage); } catch (e) { return ReadixBook._orig.renderBookStudio(t, stage); } }; }
+    return ReadixBook._orig.renderBookStudio && ReadixBook._orig.bookToHtml;
+  }
+  (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] Book Engine v1 — structure complète, navigation, TDM, DnD, assets, contexte Copilot."); } catch (e) {} })();
+})();
+
+</script>
 </body>
 </html>
