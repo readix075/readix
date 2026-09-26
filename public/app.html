@@ -9020,7 +9020,36 @@ body.rx-shell.rx-home .rx-right { display: flex; }
      repli automatique et silencieux sur l'OCR classique (Tesseract). Rien
      n'est inventé ; aucune ouverture ni mention du Copilot. */
   function visionAvailable() { var a = W("copilotAuthed"), api = W("api"); return !!(api && a && a()); }
-  var VISION_PROMPT = "Tu es le moteur de reconnaissance de texte de Readix. On te fournit l'image d'UNE page d'un document scanné. Transcris FIDÈLEMENT tout le texte visible, dans l'ordre de lecture naturel, en conservant la structure (titres, paragraphes, listes ; rends les tableaux ligne par ligne au mieux). N'invente RIEN : si un mot ou un passage est illisible, écris [illisible] à cet endroit précis. Ne résume pas, ne reformule pas, ne traduis pas, n'ajoute aucun commentaire ni titre. Réponds UNIQUEMENT avec le texte transcrit de cette page.";
+  var VISION_PROMPT = "Tu es le moteur de reconnaissance de Readix. On te fournit l'image d'UNE page d'un document scanné. Reconstruis FIDÈLEMENT son contenu en HTML simple et propre, dans l'ordre de lecture : <h1>/<h2>/<h3> pour les titres, <p> pour les paragraphes, <ul>/<ol> et <li> pour les listes, <table>/<tr>/<td> pour les tableaux, <strong>/<em> pour les emphases évidentes. Pour une zone à remplir (ligne vide, pointillés), insère le marqueur « _____ » ; pour une case à cocher, « ☐ ». N'invente AUCUN contenu : si un passage est illisible, écris [illisible]. Ne résume pas, ne reformule pas, ne traduis pas, n'ajoute aucun commentaire. Réponds UNIQUEMENT avec le fragment HTML du corps de la page, sans <html>, <head>, <body>, ni balises de code (pas de ```).";
+  // Nettoyage de sécurité du HTML produit par le modèle (liste blanche de balises, aucun attribut).
+  function escText(s) { return String(s == null ? "" : s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+  var HTML_ALLOWED = { H1: 1, H2: 1, H3: 1, H4: 1, P: 1, UL: 1, OL: 1, LI: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TD: 1, TH: 1, STRONG: 1, EM: 1, B: 1, I: 1, U: 1, BR: 1, HR: 1, BLOCKQUOTE: 1 };
+  var HTML_VOID = { BR: 1, HR: 1 };
+  function sanitizeHtml(html) {
+    try {
+      var s = String(html || "").replace(/```html|```/gi, "");
+      var doc = new DOMParser().parseFromString("<div id='rxr'>" + s + "</div>", "text/html");
+      var root = doc.getElementById("rxr");
+      var build = function (node) {
+        var out = "";
+        [].slice.call(node.childNodes).forEach(function (c) {
+          if (c.nodeType === 3) out += escText(c.nodeValue);
+          else if (c.nodeType === 1) {
+            var tag = c.tagName;
+            if (HTML_ALLOWED[tag]) { var t = tag.toLowerCase(); out += HTML_VOID[tag] ? ("<" + t + ">") : ("<" + t + ">" + build(c) + "</" + t + ">"); }
+            else out += build(c); // balise non autorisée → on garde son contenu
+          }
+        });
+        return out;
+      };
+      return build(root);
+    } catch (e) { return "<p>" + escText(String(html || "").replace(/<[^>]+>/g, "")) + "</p>"; }
+  }
+  function htmlToText(html) {
+    var s = String(html || "").replace(/<\/(p|h1|h2|h3|h4|li|tr|div|blockquote)>/gi, "\n").replace(/<br\s*\/?>/gi, "\n");
+    try { var doc = new DOMParser().parseFromString(s, "text/html"); return (doc.body.textContent || "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(); }
+    catch (e) { return s.replace(/<[^>]+>/g, "").trim(); }
+  }
 
   async function renderPageImage(pdf, n, maxW, q) {
     var pg = await pdf.getPage(n);
@@ -9041,18 +9070,22 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     for (var i = 1; i <= cap; i++) {
       if (onStep) onStep(i, cap);
       var img = await renderPageImage(pdf, i, 1500, .72);
-      var txt = await aiVision(VISION_PROMPT, [img]); // en cas d'échec, l'appelant bascule en classique
-      out.push("--- Page " + i + " ---\n" + (txt || "").trim());
+      var frag = await aiVision(VISION_PROMPT, [img]); // en cas d'échec, l'appelant bascule en classique
+      out.push(sanitizeHtml(frag));
     }
-    if (n > cap) out.push("--- (" + (n - cap) + " page(s) supplémentaire(s) non traitée(s)) ---");
-    return out.join("\n\n");
+    if (n > cap) out.push("<p><em>(" + (n - cap) + " page(s) supplémentaire(s) non traitée(s))</em></p>");
+    return out.join("\n<hr>\n"); // HTML structuré du document
   }
-  function openAsEditableDoc(text) {
+  function openAsEditableDoc(html, text) {
     var open = W("openDocInTab");
-    var esc2 = function (s) { return String(s == null ? "" : s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); };
-    var body = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, "").trim();
-    var html = body.split(/\n{2,}/).map(function (p) { return "<p>" + esc2(p).replace(/\n/g, "<br>") + "</p>"; }).join("") || "<p></p>";
-    if (open) { open("Document reconnu.docx", html); toast("Document éditable ouvert dans Document Studio.", "ok"); }
+    var content;
+    if (html && html.trim()) { content = sanitizeHtml(html); } // document structuré reconstruit par la vision
+    else { // repli : texte plat → paragraphes
+      var body = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, "").trim();
+      content = body.split(/\n{2,}/).map(function (p) { return "<p>" + escText(p).replace(/\n/g, "<br>") + "</p>"; }).join("");
+    }
+    content = content || "<p></p>";
+    if (open) { open("Document reconnu.docx", content); toast("Document éditable ouvert dans Document Studio.", "ok"); }
     else { toast("Ouverture du document impossible.", "err"); }
   }
 
@@ -9064,19 +9097,22 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     busy = true;
     var ov = buildOverlay(); document.body.appendChild(ov.root);
     try {
-      var text = null;
-      // 1) L'œil de l'OCR : lecture directe des images par Claude (si IA disponible)
+      var html = null, text = null;
+      // 1) L'œil de l'OCR : Claude lit directement l'image et reconstruit un document structuré
       if (visionAvailable()) {
-        try { text = await readWithVision(t.pdf, function (i, n) { ov.set("Lecture du document — page " + i + " / " + n + "…"); }); }
-        catch (e) { text = null; } // bascule silencieuse en classique
+        try { html = await readWithVision(t.pdf, function (i, n) { ov.set("Lecture du document — page " + i + " / " + n + "…"); }); }
+        catch (e) { html = null; } // bascule silencieuse en classique
       }
       // 2) Repli classique (Tesseract) si pas d'IA ou si la vision a échoué
-      if (text == null) {
+      if (html != null) {
+        text = htmlToText(html);
+      } else {
         if (typeof ocrPdfTab !== "function") throw new Error("Aucun moteur de reconnaissance disponible.");
         text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
       }
       t.ocrText = text || "";
-      ov.done(t.ocrText);
+      t.ocrHtml = html || "";
+      ov.done(text, html);
     } catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
     finally { busy = false; }
   }
@@ -9089,13 +9125,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     return {
       root: root,
       set: function (m) { var e = root.querySelector(".rx-ocr-msg"); if (e) e.textContent = m; },
-      done: function (text) {
+      done: function (text, html) {
         root.querySelector(".rx-ocr-spin").classList.add("ok");
-        root.querySelector(".rx-ocr-msg").textContent = "Texte reconnu ✓";
+        root.querySelector(".rx-ocr-msg").textContent = html ? "Document reconstruit ✓" : "Texte reconnu ✓";
         var preview = String(text || "").replace(/---\s*Page\s*\d+\s*---/g, " ").replace(/\s+/g, " ").trim();
         root.querySelector(".rx-ocr-sub").textContent = preview ? ("« " + preview.slice(0, 130) + "… »") : "Aucun texte détecté sur ce document.";
         var a = root.querySelector(".rx-ocr-actions");
-        a.appendChild(mkBtn("Ouvrir en document éditable", function () { close(); openAsEditableDoc(text); }));
+        a.appendChild(mkBtn("Ouvrir en document éditable", function () { close(); openAsEditableDoc(html, text); }));
         a.appendChild(mkBtn("Analyser avec le Copilot", function () { close(); var f = W("toggleCopilotFloating"); if (f) f(); toast("Le texte reconnu est prêt : demandez au Copilot de le résumer, l’analyser ou en extraire des données.", "ok"); }));
         a.appendChild(mkBtn("Extraire le texte", function () { close(); var f = W("openTool"); if (f) f("text"); }));
         a.appendChild(mkBtn("Fermer", close, true));
