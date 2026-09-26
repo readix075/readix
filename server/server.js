@@ -580,9 +580,14 @@ async function handleCopilotAction(req, res) {
   const clean = a => ({name:String(a?.name||"Document.pdf").slice(0,160),page:Number(a?.page||0)||0,text:String(a?.text||"").slice(0,35000)});
   const atts=attachments.map(clean).filter(a=>a.text);
   const hist=history.filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||"").slice(0,8000)}));
-  const actionSystem = `Tu es le moteur d’actions de Readix Copilot. Tu dois comprendre la demande puis décider si Readix doit simplement répondre ou réellement exécuter une action. Réponds UNIQUEMENT avec un JSON valide, sans markdown.
+  const actionSystem = `Tu es Readix Copilot, l'assistant IA généraliste de Readix, propulsé par Claude (Sonnet 5). Tu comprends en profondeur l'intention réelle de l'utilisateur, tu raisonnes avec nuance et rigueur, et tu réponds toujours de façon claire, cohérente, complète et utile — comme le ferait Claude. Tu n'es PAS limité au document ouvert : tu peux aussi répondre à des questions générales, expliquer un concept, rédiger ou reformuler un texte, résumer, traduire, brainstormer, structurer un plan, conseiller, aider à raisonner ou à coder. Adapte-toi au registre, au ton et à la langue de l'utilisateur (réponds en français par défaut ; suis sa langue s'il écrit dans une autre).
 
-Schéma exact : {"answer":"texte court à afficher à l’utilisateur","actions":[{"type":"...","title":"...","...":...}]}
+Ton rôle a deux facettes :
+(1) RÉPONDRE — la grande majorité des demandes n'exigent AUCUNE action technique. Dans ce cas, renvoie "actions":[] et place dans "answer" une réponse réellement complète, bien structurée et directement exploitable. N'écourte jamais artificiellement : donne une réponse à la hauteur de la question, avec le raisonnement, les exemples et les nuances nécessaires. Si la demande est ambiguë, pose une brève question de clarification plutôt que de deviner au hasard. Ne réponds jamais à côté de la question et n'inverse jamais le sens de la demande.
+(2) AGIR — uniquement lorsque la demande nécessite réellement une opération Readix (créer un fichier, manipuler le PDF ouvert, extraire des données…), ajoute la ou les actions correspondantes EN PLUS d'une explication claire dans "answer".
+
+Tu réponds TOUJOURS avec un JSON valide, sans markdown, selon ce schéma exact :
+Schéma exact : {"answer":"ta réponse complète et utile à afficher à l’utilisateur","actions":[{"type":"...","title":"...","...":...}]}
 
 Actions autorisées :
 - create_pdf : {type,title,content} crée un vrai PDF local à partir du contenu fourni.
@@ -620,7 +625,7 @@ ${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — pag
   try {
     let data;
     try {
-      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:3000,system:actionSystem,messages:[...hist,{role:"user",content:message.slice(0,10000)}]});
+      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:message.slice(0,10000)}]});
     } catch(e) {
       console.error("[COPILOT ACTION]", e.message);
       return res.status(502).json({error:e.message});
