@@ -8859,5 +8859,86 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 })();
 
 </script>
+<style id="readix-copilot-ux-css">
+/* ===== Readix Copilot UX — indicateur « en cours de traitement » (additif) ===== */
+.rx-thinking {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(760px, 88%);
+  padding: 11px 14px;
+  border-radius: 15px;
+  border-bottom-left-radius: 5px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e6e8ef);
+  box-shadow: 0 5px 16px rgba(20, 24, 45, .05);
+  animation: rxThinkIn .18s ease both;
+}
+@keyframes rxThinkIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.rx-think-dots { display: inline-flex; gap: 5px; align-items: center; }
+.rx-think-dots i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--brand, #4F46E5);
+  opacity: .35;
+  animation: rxThinkBounce 1.2s infinite ease-in-out;
+}
+.rx-think-dots i:nth-child(2) { animation-delay: .18s; }
+.rx-think-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes rxThinkBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: .35; }
+  40% { transform: translateY(-5px); opacity: 1; }
+}
+.rx-think-lbl { font-size: 12px; color: var(--ink-soft, #6b7180); font-style: italic; }
+
+</style>
+<script id="readix-copilot-ux">
+/* ============================================================
+   READIX COPILOT UX — indicateur de traitement (« en cours »)
+   Additif : n'altère aucune fonction du socle. Affiche une bulle
+   animée « Readix réfléchit… » dans le fil de discussion pendant
+   que le Copilot attend la réponse de l'IA, et la retire dès que
+   la réponse arrive. Détection sans modifier le flux d'envoi :
+   la question vient d'être postée (dernier message = utilisateur)
+   ET le bouton d'envoi est désactivé (requête en cours).
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.__rxCopilotThinking) return; window.__rxCopilotThinking = true;
+
+  function feedEl() { return document.querySelector(".ai10-feed"); }
+  function sendEl() { return document.querySelector(".ai10-send"); }
+
+  function makeBubble() {
+    var b = document.createElement("div");
+    b.className = "rx-thinking";
+    b.setAttribute("aria-live", "polite");
+    b.innerHTML = '<span class="rx-think-dots" aria-hidden="true"><i></i><i></i><i></i></span>' +
+                  '<span class="rx-think-lbl">Readix réfléchit…</span>';
+    return b;
+  }
+
+  function tick() {
+    var feed = feedEl(), send = sendEl();
+    if (!feed || !send) return;
+    var msgs = feed.querySelectorAll(".ai10-msg");
+    var last = msgs.length ? msgs[msgs.length - 1] : null;
+    // On attend une réponse si l'envoi est verrouillé ET que le dernier message
+    // affiché est celui de l'utilisateur (la réponse de l'assistant n'est pas encore là).
+    var waiting = !!send.disabled && !!last && last.classList.contains("user");
+    var bubble = feed.querySelector(".rx-thinking");
+    if (waiting) {
+      if (!bubble) { feed.appendChild(makeBubble()); feed.scrollTop = feed.scrollHeight; }
+    } else if (bubble) {
+      bubble.remove();
+    }
+  }
+
+  // Boucle légère : le fil est reconstruit à chaque rendu, donc on réévalue en continu.
+  try { setInterval(tick, 150); } catch (e) {}
+  try { console.info("[Readix] Copilot UX — indicateur de traitement actif."); } catch (e) {}
+})();
+
+</script>
 </body>
 </html>
