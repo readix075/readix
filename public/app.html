@@ -7679,17 +7679,32 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     toast("Commande non reconnue. Essayez : « centre le titre », « auteur en bas », « variante minimaliste ».", "warn");
   }
 
-  /* ---------- IA image : honnête (aucune fausse image) ---------- */
+  /* ---------- IA image : génération réelle par Grok (xAI), côté serveur ---------- */
   function aiGenerateImage(book, btn) {
     var api = W("api");
-    var dlg = W("dialog"); if (!dlg) { toast("Fournisseur de génération d’images non configuré (à intégrer côté serveur).", "warn"); return; }
-    var dl = dlg('<h3>Générer une illustration (IA)</h3><textarea class="rp-input" id="aiPrompt" rows="3" placeholder="Ex. une ville futuriste au crépuscule"></textarea><div class="pp-note">La génération d’images nécessite un fournisseur configuré côté serveur (clé API sécurisée). Aucune image fictive n’est produite si ce n’est pas le cas.</div><div class="row"><button class="btn ghost sm" data-a="x">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>');
-    dl.root.onclick = function (e) { var a = e.target.closest("[data-a]"); if (!a) return; if (a.dataset.a === "x") { dl.close(); return; }
-      var prompt = dl.root.querySelector("#aiPrompt").value.trim(); if (!prompt) { toast("Décrivez l’image.", "warn"); return; }
-      if (!api) { toast("Génération d’images : fournisseur non configuré côté serveur.", "warn"); dl.close(); return; }
-      Promise.resolve().then(function () { return api("/api/ai/image", { prompt: prompt }); })
-        .then(function (r) { if (r && r.image) { addImage(book, r.image); toast("Illustration générée ✓", "ok"); } else throw new Error("no-image"); dl.close(); })
-        .catch(function () { dl.close(); toast("Génération d’images indisponible : aucun fournisseur configuré (à intégrer). Aucune image fictive n’a été créée.", "warn"); });
+    var dlg = W("dialog"); if (!dlg) { toast("Génération d’images indisponible.", "warn"); return; }
+    var dl = dlg('<h3>Générer une illustration (IA)</h3><textarea class="rp-input" id="aiPrompt" rows="3" placeholder="Ex. une ville futuriste au crépuscule, style aquarelle"></textarea><div class="pp-note">L’image est générée par Grok (xAI) sur le serveur, puis ajoutée au canevas. Décrivez précisément le style, l’ambiance et les couleurs.</div><div id="aiMsg" style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;display:none"></div><div class="row"><button class="btn ghost sm" data-a="x">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>');
+    var msg = dl.root.querySelector("#aiMsg");
+    var genBtn = dl.root.querySelector('[data-a="gen"]');
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "x") { dl.close(); return; }
+      if (a.dataset.a !== "gen") return;
+      var prompt = dl.root.querySelector("#aiPrompt").value.trim();
+      if (!prompt) { toast("Décrivez l’image.", "warn"); return; }
+      if (!api) { toast("Génération d’images indisponible.", "warn"); return; }
+      genBtn.disabled = true; genBtn.textContent = "Génération…";
+      msg.style.display = "block"; msg.style.color = "var(--ink-soft)"; msg.textContent = "Grok génère votre illustration… (quelques secondes)";
+      Promise.resolve(api("/api/image/generate", { prompt: prompt }))
+        .then(function (r) {
+          var img = r && r.images && r.images[0];
+          if (!img) throw new Error((r && r.error) || "Aucune image n’a été renvoyée.");
+          addImage(book, img); toast("Illustration générée ✓", "ok"); dl.close();
+        })
+        .catch(function (err) {
+          genBtn.disabled = false; genBtn.textContent = "Générer";
+          msg.style.color = "#dc2626"; msg.textContent = "Échec : " + ((err && (err.message || err.error)) || "génération impossible.");
+        });
     };
   }
 
