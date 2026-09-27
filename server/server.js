@@ -22,6 +22,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+// xAI (Grok) — traitement d'image (génération + retouche). Clé côté serveur uniquement.
+const XAI_API_KEY = process.env.XAI_API_KEY;
+const XAI_BASE = process.env.XAI_API_BASE || "https://api.x.ai/v1";
+const XAI_IMAGE_MODEL = process.env.XAI_IMAGE_MODEL || "grok-2-image";
+const XAI_EDIT_MODEL = process.env.XAI_EDIT_MODEL || "grok-imagine-image-2.0";
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Paliers d'abonnement ----
@@ -167,6 +172,8 @@ app.get("/api/health", (req, res) => res.json({
     database: !!DATABASE_URL,
     aiKey: !!ANTHROPIC_API_KEY,
     aiModel: ANTHROPIC_MODEL,
+    xaiKey: !!XAI_API_KEY,
+    xaiModel: XAI_IMAGE_MODEL,
     stripe: !!process.env.STRIPE_SECRET_KEY,
     clientUrl: CLIENT_URL
   },
@@ -487,6 +494,87 @@ app.post("/api/ai/generate", auth, async (req, res) => {
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
     await incUsage(req.user.email);
     res.json({ text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Traitement d'image par Grok (xAI). Claude reste sur le texte/la lecture ;
+// Grok s'occupe des pixels : génération (couvertures, illustrations) et retouche
+// (suppression d'arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
+// ─────────────────────────────────────────────────────────────────────────
+async function xaiImageCall(path, body) {
+  if (!XAI_API_KEY) throw new Error("XAI_API_KEY manquante");
+  const r = await fetch(XAI_BASE + path, {
+    method: "POST",
+    headers: { "content-type": "application/json", "authorization": "Bearer " + XAI_API_KEY },
+    body: JSON.stringify(body)
+  });
+  const txt = await r.text();
+  if (!r.ok) throw new Error("Erreur image xAI (" + r.status + ") : " + txt.slice(0, 400));
+  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse xAI illisible."); }
+  return data;
+}
+function xaiImagesToUrls(data) {
+  // OpenAI-compatible : { data:[{ b64_json | url }] } ; la retouche peut renvoyer { url } ou { image_url }
+  let arr = Array.isArray(data && data.data) ? data.data
+    : (data && data.url) ? [{ url: data.url }]
+    : (data && data.image_url) ? [{ url: data.image_url }]
+    : [];
+  return arr.map(function (it) {
+    if (it && it.b64_json) return "data:image/png;base64," + it.b64_json;
+    if (it && it.url) return it.url;
+    return null;
+  }).filter(Boolean);
+}
+function imageGateError(req) {
+  if (!XAI_API_KEY) return { code: 503, error: "Traitement d'image non configuré sur le serveur (XAI_API_KEY)." };
+  if (levelOf(req.user.plan) < 2) return { code: 402, error: "Le traitement d'image par IA nécessite le plan Pro ou supérieur." };
+  return null;
+}
+
+app.get("/api/image/status", auth, (req, res) => {
+  res.json({ ok: !!XAI_API_KEY, configured: !!XAI_API_KEY, model: XAI_IMAGE_MODEL, editModel: XAI_EDIT_MODEL });
+});
+
+// Génération d'image à partir d'un texte (couvertures, illustrations).
+app.post("/api/image/generate", auth, async (req, res) => {
+  const gate = imageGateError(req); if (gate) return res.status(gate.code).json({ error: gate.error });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  if (!prompt) return res.status(400).json({ error: "Décrivez l'image à générer." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
+  const body = { model: XAI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), n, response_format: "b64_json" };
+  const ar = req.body && req.body.aspect_ratio; if (ar) body.aspect_ratio = String(ar);
+  const rez = req.body && req.body.resolution; if (rez) body.resolution = String(rez);
+  try {
+    const data = await xaiImageCall("/images/generations", body);
+    const images = xaiImagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par xAI." });
+    await incUsage(req.user.email);
+    res.json({ images });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Retouche d'une image existante (suppression d'arrière-plan/objet, style…).
+// image = data URL (data:image/...;base64,...) ou URL https publique.
+app.post("/api/image/edit", auth, async (req, res) => {
+  const gate = imageGateError(req); if (gate) return res.status(gate.code).json({ error: gate.error });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  const image = String((req.body && req.body.image) || "").trim();
+  if (!prompt) return res.status(400).json({ error: "Décrivez la retouche souhaitée." });
+  if (!image) return res.status(400).json({ error: "Image source manquante." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const body = { model: XAI_EDIT_MODEL, prompt: prompt.slice(0, 2000), image: { url: image, type: "image_url" } };
+  try {
+    const data = await xaiImageCall("/images/edits", body);
+    const images = xaiImagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par xAI." });
+    await incUsage(req.user.email);
+    res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
