@@ -9049,6 +9049,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       ch = insertAfter("extractpages", { id: "crop", name: "Rogner PDF", grp: "Essentiels", ic: '<path d="M7 3v14h14"/><path d="M3 7h14v14"/>' }) || ch;
       ch = insertAfter("watermark", { id: "watermarkpro", name: "Filigrane pro", grp: "Conversion", ic: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M8 15l2.5-6 2.5 6M8.8 13h3.4"/><path d="M15 9v6"/>' }) || ch;
       ch = insertAfter("watermarkpro", { id: "unwatermark", name: "Retirer le filigrane", grp: "Conversion", ic: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M7 16l3-8 3 8"/><path d="M5 5l14 14"/>' }) || ch;
+      ch = insertAfter("unwatermark", { id: "pdf2xlsx", name: "PDF → Excel", grp: "Conversion", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M4 14h16M10 4v16"/>' }) || ch;
+      ch = insertAfter("pdf2xlsx", { id: "pdf2md", name: "PDF → Markdown", grp: "Conversion", ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 15V9l2.5 3L11 9v6"/><path d="M15 9v6M15 15l-2-2m2 2l2-2"/>' }) || ch;
       ch = insertAfter("aiadvanced", { id: "airesume", name: "Résumé par IA", grp: "Intelligence artificielle", ic: '<path d="M5 7h9M5 11h7M5 15h9M5 19h5"/><path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/>' }) || ch;
       ch = insertAfter("airesume", { id: "translate", name: "Traduire le PDF", grp: "Intelligence artificielle", ic: '<path d="M4 5h7M7.5 5v2c0 3-1.5 5-3.5 6"/><path d="M5 9c0 2 2 4 5 4.5"/><path d="M13 20l3.5-9 3.5 9M14.2 17h4.6"/>' }) || ch;
       return ch;
@@ -9084,6 +9086,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (id === "forms") { runFormsPdf(); return; }
       if (id === "watermarkpro") { runWatermarkPro(); return; }
       if (id === "unwatermark") { if (paidLocked("unwatermark")) { toast("« Retirer le filigrane » est une fonction Pro. Passez à un plan Pro pour l’utiliser.", "warn"); return; } runUnwatermark(); return; }
+      if (id === "pdf2xlsx") { runPdfToExcel(); return; }
+      if (id === "pdf2md") { runPdfToMarkdown(); return; }
       return orig.apply(this, arguments);
     };
     window.openTool._rxOcr = true;
@@ -9194,6 +9198,81 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   /* ── Lot 3 : Filigrane pro · Retirer le filigrane (premium préparé) ── */
+  function pickImageFile(cb) { var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/jpeg,image/webp"; inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { cb(rd.result); }; rd.readAsDataURL(f); }; inp.click(); }
+
+  /* Ouverture d'une image en arrière-plan (convertie en PDF). L'écran garde
+     « Ouvrir un PDF » ; on élargit seulement l'input central #hiddenFile et on
+     intercepte les images avant le handler PDF-only du socle. */
+  async function imageToPdfBytes(file) {
+    var P = window.PDFLib;
+    var url = URL.createObjectURL(file);
+    var image = await new Promise(function (res, rej) { var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { rej(new Error("image illisible")); }; im.src = url; });
+    var cv = document.createElement("canvas"); cv.width = image.naturalWidth || image.width; cv.height = image.naturalHeight || image.height;
+    cv.getContext("2d").drawImage(image, 0, 0); URL.revokeObjectURL(url);
+    var png = cv.toDataURL("image/png");
+    var doc = await P.PDFDocument.create();
+    var emb = await doc.embedPng(png);
+    var page = doc.addPage([emb.width, emb.height]);
+    page.drawImage(emb, { x: 0, y: 0, width: emb.width, height: emb.height });
+    return await doc.save();
+  }
+  function enableImageOpen() {
+    try {
+      var hf = document.getElementById("hiddenFile");
+      if (hf) hf.setAttribute("accept", "application/pdf,image/png,image/jpeg,image/webp");
+      if (window.__rxImgOpen) return; window.__rxImgOpen = true;
+      document.addEventListener("change", function (e) {
+        var inp = e.target; if (!inp || inp.id !== "hiddenFile") return;
+        var f = inp.files && inp.files[0]; if (!f) return;
+        if (/^image\//i.test(f.type) || /\.(png|jpe?g|webp)$/i.test(f.name)) {
+          e.stopImmediatePropagation(); e.stopPropagation();
+          (async function () {
+            try { var bytes = await imageToPdfBytes(f); var open = W("openPdfBytes"); if (open) await open(bytes, f.name.replace(/\.(png|jpe?g|webp)$/i, "") + ".pdf"); toast("Image importée et convertie en PDF ✓", "ok"); }
+            catch (err) { toast("Import de l’image impossible : " + ((err && err.message) || err), "err"); }
+            inp.value = "";
+          })();
+        }
+      }, true);
+    } catch (e) {}
+  }
+
+  /* ── Lot 4 : PDF → Excel · PDF → Markdown ── */
+  async function runPdfToExcel() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF contenant des données/tableaux.", "warn"); return; }
+    var ai = W("aiGenerate"); if (!ai) { toast("Extraction indisponible : IA non configurée.", "warn"); return; }
+    if (!W("buildXlsxBlob")) { toast("Export Excel indisponible.", "err"); return; }
+    var ov = buildOverlay("PDF → Excel"); document.body.appendChild(ov.root); ov.set("Lecture du document…");
+    try {
+      var text = t.ocrText || (W("extractPdfText") ? await W("extractPdfText")(t) : "");
+      if (!text || text.trim().length < 10) { ov.fail("Aucun texte exploitable. Pour un scan, lancez d’abord l’OCR."); return; }
+      ov.set("Extraction des données…");
+      var sys = "Tu extrais les données tabulaires d'un document en JSON STRICT : {\"title\":\"...\",\"columns\":[\"...\"],\"rows\":[[\"...\"]]}. Chaque ligne de rows a exactement autant d'éléments que columns. S'il y a plusieurs tableaux, prends le principal. N'invente AUCUNE donnée. Réponds UNIQUEMENT avec le JSON.";
+      var raw = await ai("Extrais les données de ce document en tableau :\n\n" + text.slice(0, 14000), sys, 4000);
+      var data; try { data = JSON.parse((String(raw).match(/\{[\s\S]*\}/) || [raw])[0]); } catch (e) { data = null; }
+      if (!data || !Array.isArray(data.columns) || !Array.isArray(data.rows) || !data.columns.length) { ov.fail("Aucun tableau exploitable détecté dans ce document."); return; }
+      var blob = await W("buildXlsxBlob")({ title: data.title || "Données", columns: data.columns, rows: data.rows });
+      W("downloadBlob")(blob, (t.name || "document").replace(/\.pdf$/i, "") + ".xlsx");
+      ov.doneInfo(data.rows.length + " ligne(s) exportée(s) ✓", "Fichier Excel (.xlsx) téléchargé.");
+    } catch (e) { ov.fail((e && e.message) || "Extraction impossible."); }
+  }
+  async function runPdfToMarkdown() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF.", "warn"); return; }
+    var ai = W("aiGenerate"); if (!ai) { toast("Conversion indisponible : IA non configurée.", "warn"); return; }
+    var ov = buildOverlay("PDF → Markdown"); document.body.appendChild(ov.root); ov.set("Lecture du document…");
+    try {
+      var text = t.ocrText || (W("extractPdfText") ? await W("extractPdfText")(t) : "");
+      if (!text || text.trim().length < 10) { ov.fail("Aucun texte exploitable. Pour un scan, lancez d’abord l’OCR."); return; }
+      ov.set("Conversion en Markdown…");
+      var sys = "Convertis fidèlement le document en Markdown propre : titres (#, ##, ###), listes (-), tableaux Markdown, gras/italique quand c'est évident. Conserve l'ordre et le contenu. N'invente rien, ne résume pas, ne traduis pas. Réponds UNIQUEMENT avec le Markdown, sans balise de code.";
+      var md = await ai("Convertis ce document en Markdown :\n\n" + text.slice(0, 14000), sys, 4000);
+      md = String(md || "").replace(/^```(?:markdown|md)?\s*/i, "").replace(/\s*```$/i, "");
+      if (!md.trim()) { ov.fail("Conversion vide."); return; }
+      W("downloadBlob")(new Blob([md], { type: "text/markdown;charset=utf-8" }), (t.name || "document").replace(/\.pdf$/i, "") + ".md");
+      ov.doneInfo("Markdown prêt ✓", "Fichier .md téléchargé.");
+    } catch (e) { ov.fail((e && e.message) || "Conversion impossible."); }
+  }
   function fontCssName(id) { return id === "sans" ? "Inter, Arial, sans-serif" : id === "mono" ? "'Courier New', monospace" : "Georgia, 'Times New Roman', serif"; }
   function fontMapPdf(P, id) { var S = P.StandardFonts; return id === "sans" ? S.Helvetica : id === "mono" ? S.Courier : S.TimesRoman; }
   function hexRgb(P, hex) { hex = (hex || "#888888").replace("#", ""); if (hex.length === 3) hex = hex.split("").map(function (c) { return c + c; }).join(""); var n = parseInt(hex, 16) || 0x888888; return P.rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); }
@@ -9223,9 +9302,9 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var ctx = canvas.getContext("2d"); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
       if (opt.type === "image") { if (opt._imgObj) { var w = canvas.width * .5, h = w * (opt._imgObj.height / opt._imgObj.width); ctx.globalAlpha = opt.opacity; ctx.drawImage(opt._imgObj, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h); ctx.globalAlpha = 1; } return; }
       ctx.save(); ctx.globalAlpha = opt.opacity; ctx.fillStyle = opt.color; ctx.font = (opt.size * scale) + "px " + fontCssName(opt.font); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      if (opt.style === "tiled") { var sx = ctx.measureText(opt.text).width + 40, sy = opt.size * scale * 3; for (var y = 0; y < canvas.height + sy; y += sy) for (var x = 0; x < canvas.width + sx; x += sx) { ctx.save(); ctx.translate(x, y); ctx.rotate(-(opt.rotation || 30) * Math.PI / 180); ctx.fillText(opt.text, 0, 0); ctx.restore(); } }
+      if (opt.style === "tiled") { var sx = ctx.measureText(opt.text).width + 40, sy = opt.size * scale * 3; for (var y = 0; y < canvas.height + sy; y += sy) for (var x = 0; x < canvas.width + sx; x += sx) { ctx.save(); ctx.translate(x, y); ctx.rotate(-(opt.rotation || 0) * Math.PI / 180); ctx.fillText(opt.text, 0, 0); ctx.restore(); } }
       else if (opt.style === "bottom") { ctx.textBaseline = "bottom"; ctx.fillText(opt.text, canvas.width / 2, canvas.height - 10); }
-      else { var ang = opt.style === "diagonal" ? 45 : (opt.rotation || 0); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-ang * Math.PI / 180); ctx.fillText(opt.text, 0, 0); }
+      else { var ang = opt.rotation || 0; ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-ang * Math.PI / 180); ctx.fillText(opt.text, 0, 0); }
       ctx.restore();
     }
     im.onload = draw; im.src = img || "";
@@ -9238,7 +9317,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         draw();
       };
     });
-    root.querySelector(".rx-wm-img").onclick = function () { importImage(function (data) { opt.imageSrc = data; var o = new Image(); o.onload = function () { opt._imgObj = o; draw(); }; o.src = data; }); };
+    root.querySelector(".rx-wm-img").onclick = function () { pickImageFile(function (data) { opt.imageSrc = data; var o = new Image(); o.onload = function () { opt._imgObj = o; draw(); }; o.src = data; }); };
     root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") { root.remove(); return; } root.remove(); onApply(); };
     return root;
   }
@@ -9256,7 +9335,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           var s = p.getSize();
           if (opt.style === "tiled") { var tw = font.widthOfTextAtSize(opt.text, opt.size); var stepX = Math.max(tw + 40, opt.size * 4), stepY = opt.size * 3.2; for (var y = -stepY; y < s.height + stepY; y += stepY) for (var x = -stepX; x < s.width + stepX; x += stepX) p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(opt.rotation || 30) }); }
           else if (opt.style === "bottom") { var tw2 = font.widthOfTextAtSize(opt.text, opt.size); p.drawText(opt.text, { x: (s.width - tw2) / 2, y: 24, size: opt.size, font: font, color: col, opacity: opt.opacity }); }
-          else { var ang = opt.style === "diagonal" ? 45 : (opt.rotation || 0); var tw3 = font.widthOfTextAtSize(opt.text, opt.size); var rad = ang * Math.PI / 180; var x = s.width / 2 - (tw3 / 2) * Math.cos(rad); var y = s.height / 2 - (tw3 / 2) * Math.sin(rad); p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(ang) }); }
+          else { var ang = opt.rotation || 0; var tw3 = font.widthOfTextAtSize(opt.text, opt.size); var rad = ang * Math.PI / 180; var x = s.width / 2 - (tw3 / 2) * Math.cos(rad); var y = s.height / 2 - (tw3 / 2) * Math.sin(rad); p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(ang) }); }
         });
       }
       var bytes = await doc.save();
@@ -9550,6 +9629,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var renamed = renameTools();
     wrapOpenTool();
     wrapRenderToolsUX();
+    enableImageOpen();
     if ((added || renamed) && typeof renderTools === "function") { try { renderTools(); } catch (e) {} }
     markPremiumTools();
   }
@@ -9558,7 +9638,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   var tries = 0;
   var iv = setInterval(function () {
     tries++;
-    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate", "watermarkpro", "unwatermark"];
+    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate", "watermarkpro", "unwatermark", "pdf2xlsx", "pdf2md"];
     var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && need.every(function (id) { return TOOLS.some(function (t) { return t.id === id; }); }) && window.openTool && window.openTool._rxOcr);
     if (!ready) init();
     if (ready || tries > 20) clearInterval(iv);
