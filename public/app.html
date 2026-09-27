@@ -8501,6 +8501,34 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   .rx-search { max-width: none; }
 }
 
+/* ── Bibliothèque « Mes projets » ── */
+.rxlib{min-width:min(600px,90vw);max-width:640px}
+.rxlib-h{margin-bottom:14px}
+.rxlib-h b{font-size:18px;color:var(--ink,#1a1d29)}
+.rxlib-h span{display:block;font-size:12.5px;color:var(--ink-soft,#6b7180);margin-top:3px}
+.rxlib-body{max-height:60vh;overflow:auto;display:flex;flex-direction:column;gap:18px}
+.rxlib-st{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint,#9aa0ae);margin-bottom:8px}
+.rxlib-list{display:flex;flex-direction:column;gap:6px}
+.rxlib-empty{font-size:13px;color:var(--ink-soft,#6b7180);padding:10px 4px}
+.rxlib-row{display:flex;align-items:center;gap:11px;padding:9px 11px;border:1px solid var(--line,#e6e8ef);border-radius:10px;background:var(--surface,#fff)}
+.rxlib-row:hover{background:var(--surface-2,#f6f7fb)}
+.rxlib-ic{width:30px;height:30px;display:grid;place-items:center;color:var(--brand,#4F46E5);flex:none}
+.rxlib-ic svg{width:20px;height:20px}
+.rxlib-txt{flex:1;min-width:0}
+.rxlib-txt b{display:block;font-size:13.5px;color:var(--ink,#1a1d29);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rxlib-txt em{font-style:normal;font-size:11.5px;color:var(--ink-soft,#6b7180)}
+.rxlib-acts{display:flex;gap:6px;flex:none}
+.rxlib-open{border:none;background:var(--brand,#4F46E5);color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
+.rxlib-open:hover{filter:brightness(1.07)}
+.rxlib-del{border:1px solid var(--line,#e6e8ef);background:transparent;font-size:14px;padding:5px 8px;border-radius:8px;cursor:pointer;line-height:1}
+.rxlib-del:hover{background:rgba(220,38,38,.1);border-color:rgba(220,38,38,.3)}
+.rxlib-foot{margin-top:16px;display:flex;justify-content:flex-end}
+/* corbeille sur les items récents (accueil) */
+.rx-item{cursor:pointer}
+.rx-item-del{border:none;background:transparent;font-size:13px;padding:4px 6px;border-radius:7px;cursor:pointer;line-height:1;opacity:0;flex:none;margin-left:2px;transition:opacity .12s}
+.rx-item:hover .rx-item-del{opacity:.75}
+.rx-item-del:hover{background:rgba(220,38,38,.12);opacity:1}
+
 </style>
 <script id="readix-shell">
 /* ============================================================
@@ -8560,7 +8588,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   // Registre d'outils — chaque run() est une fonction RÉELLE du socle
   var T = {
     home:      { label: "Accueil",            ic: IC.home,     match: ["home", "view"], run: function () { call("openTool", "home") || (window.openTool && openTool("home")); } },
-    projects:  { label: "Mes projets",        ic: IC.projects, run: function () { clickId("projBtn"); } },
+    projects:  { label: "Mes projets",        ic: IC.projects, run: function () { openLibrary(); } },
     documents: { label: "Documents",          ic: IC.documents,run: function () { clickId("hiddenFile"); } },
     editpdf:   { label: "PDF Reader / Editor", sub: "Lire, annoter, modifier un PDF", ic: IC.pdf, color: "red",    match: ["editpdf"],   run: function () { window.openTool && openTool("editpdf"); } },
     copilot:   { label: "IA / Copilot",        sub: "Votre assistant intelligent",     ic: IC.copilot, color: "purple", run: function () { call("toggleCopilotFloating"); } },
@@ -8745,6 +8773,63 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var b = ce("button", "rx-sk", '<span class="rx-sk-ic">' + svg(icon) + '</span><span>' + label + '</span><span class="rx-sk-ch">' + svg(IC.chevron) + '</span>');
     b.onclick = run; return b;
   }
+  /* ── « Mes projets » : bibliothèque de travaux ─────────────────────────────
+     Rouvrir un projet ou un fichier pour continuer, ou le supprimer. Remplace la
+     délégation vers #projBtn (masqué). 100 % additif : s'appuie sur les API du
+     socle (idbAll/idbLoad/idbDel, setActiveProject/deleteProject, switchTab…). */
+  function W(n) { try { return window[n]; } catch (e) { return undefined; } }
+  function libProjects() { try { return (typeof PROJECT_STATE !== "undefined" && PROJECT_STATE.projects) || []; } catch (e) { return []; } }
+  function openStoredFile(id) {
+    try {
+      var tabs = (typeof APP !== "undefined" && APP.tabs) || [];
+      for (var k = 0; k < tabs.length; k++) if (tabs[k].id === id) { if (W("switchTab")) W("switchTab")(id, true); if (W("toast")) W("toast")("Document rouvert.", "ok"); return; }
+      var load = W("idbLoad"); if (!load) { if (W("toast")) W("toast")("Impossible de rouvrir ce fichier.", "warn"); return; }
+      Promise.resolve(load(id)).then(function (s) {
+        if (!s) { if (W("toast")) W("toast")("Fichier introuvable.", "warn"); return; }
+        if (s.tool === "docstudio" && s.doc && W("openDocInTab")) W("openDocInTab")(s.name || "Document", s.doc);
+        else if (s.bytes && W("openPdfBytes")) W("openPdfBytes")(new Uint8Array(s.bytes), s.name || "document.pdf");
+        else if (W("toast")) W("toast")("Ce document ne peut pas être rouvert directement.", "warn");
+      });
+    } catch (e) {}
+  }
+  function deleteStoredFile(id, after) {
+    try {
+      if (W("idbDel")) W("idbDel")(id);
+      var tabs = (typeof APP !== "undefined" && APP.tabs) || [], i = -1;
+      for (var k = 0; k < tabs.length; k++) if (tabs[k].id === id) { i = k; break; }
+      if (i >= 0) { var wasActive = APP.active === id; tabs.splice(i, 1); if (wasActive) { APP.active = tabs.length ? tabs[tabs.length - 1].id : null; if (W("renderView")) W("renderView")(); } }
+      if (W("toast")) W("toast")("Fichier retiré de la liste.", "ok");
+    } catch (e) {}
+    if (after) after();
+  }
+  function openProjectById(id) { try { if (W("setActiveProject")) W("setActiveProject")(id); if (W("toast")) W("toast")("Projet ouvert — vos documents de ce projet sont affichés.", "ok"); } catch (e) {} }
+  function deleteProjectById(id, after) {
+    try { var f = W("deleteProject"); if (f) { Promise.resolve(f(id)).then(function () { if (W("toast")) W("toast")("Projet supprimé.", "ok"); if (after) after(); }); return; } } catch (e) {}
+    if (after) after();
+  }
+  function openLibrary() {
+    var dlg = W("dialog"); if (!dlg) { clickId("projBtn"); return; }
+    var d = dlg('<div class="rxlib"><div class="rxlib-h"><b>Mes projets</b><span>Rouvrez un travail pour continuer, ou faites le ménage.</span></div><div class="rxlib-body"><div class="rxlib-sec"><div class="rxlib-st">Projets</div><div class="rxlib-list" id="rxlibProjList"></div></div><div class="rxlib-sec"><div class="rxlib-st">Fichiers récents</div><div class="rxlib-list" id="rxlibFileList"></div></div></div><div class="rxlib-foot"><button class="btn ghost sm" data-a="x">Fermer</button></div></div>');
+    var xb = d.root.querySelector('[data-a=x]'); if (xb) xb.onclick = function () { d.close(); };
+    function refresh() {
+      var pl = d.root.querySelector("#rxlibProjList");
+      var ps = libProjects().slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+      if (!ps.length) pl.innerHTML = '<div class="rxlib-empty">Aucun projet pour le moment.</div>';
+      else pl.innerHTML = ps.map(function (p) { return '<div class="rxlib-row"><span class="rxlib-ic">' + svg(IC.folder) + '</span><span class="rxlib-txt"><b>' + esc(p.name || "Projet") + '</b><em>' + fmtDate(p.updatedAt) + '</em></span><span class="rxlib-acts"><button class="rxlib-open" data-pid="' + esc(p.id) + '">Ouvrir</button><button class="rxlib-del" data-pid="' + esc(p.id) + '" title="Supprimer le projet">🗑</button></span></div>'; }).join("");
+      var fl = d.root.querySelector("#rxlibFileList");
+      Promise.resolve(W("idbAll") ? W("idbAll")() : []).then(function (ts) {
+        ts = (ts || []).slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        if (!ts.length) { fl.innerHTML = '<div class="rxlib-empty">Aucun fichier récent.</div>'; return; }
+        fl.innerHTML = ts.map(function (t) { var nm = t.name || "Document"; var ext = (nm.split(".").pop() || "").toUpperCase(); return '<div class="rxlib-row"><span class="rxlib-ic">' + svg(IC.documents) + '</span><span class="rxlib-txt"><b>' + esc(nm) + '</b><em>' + esc(ext || "Fichier") + ' · ' + fmtDate(t.ts) + '</em></span><span class="rxlib-acts"><button class="rxlib-open" data-fid="' + esc(t.id) + '">Ouvrir</button><button class="rxlib-del" data-fid="' + esc(t.id) + '" title="Supprimer">🗑</button></span></div>'; }).join("");
+      });
+    }
+    d.root.addEventListener("click", function (e) {
+      var open = e.target.closest(".rxlib-open"), del = e.target.closest(".rxlib-del");
+      if (open) { var pid = open.getAttribute("data-pid"), fid = open.getAttribute("data-fid"); d.close(); if (pid) openProjectById(pid); else if (fid) openStoredFile(fid); return; }
+      if (del) { var pid2 = del.getAttribute("data-pid"), fid2 = del.getAttribute("data-fid"); if (pid2) deleteProjectById(pid2, refresh); else if (fid2) deleteStoredFile(fid2, refresh); return; }
+    });
+    refresh();
+  }
   function buildDashEl() {
     var d = ce("div", "rx-dash"); d.id = "rxDash";
     var hr = new Date().getHours();
@@ -8770,36 +8855,42 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     slist.appendChild(link(IC.plus, "Créer un nouveau projet", function () { clickId("createBtn"); }));
     slist.appendChild(link(IC.upload, "Importer un fichier", function () { clickId("hiddenFile"); }));
     slist.appendChild(link(IC.documents, "Ouvrir un document", function () { clickId("hiddenDocFile"); }));
-    slist.appendChild(link(IC.folder, "Gérer mes projets", function () { clickId("projBtn"); }));
+    slist.appendChild(link(IC.folder, "Gérer mes projets", function () { openLibrary(); }));
     slist.appendChild(link(IC.settings, "Paramètres", function () { openSettings(); }));
     sk.appendChild(slist); low.appendChild(sk);
     d.appendChild(low);
     fillRecents(d);
-    setTimeout(function () { var vp = byId("rxVoirP"); if (vp) vp.onclick = function () { clickId("projBtn"); }; var vf = byId("rxVoirF"); if (vf) vf.onclick = function () { clickId("hiddenFile"); }; }, 0);
+    setTimeout(function () { var vp = byId("rxVoirP"); if (vp) vp.onclick = function () { openLibrary(); }; var vf = byId("rxVoirF"); if (vf) vf.onclick = function () { openLibrary(); }; }, 0);
     return d;
   }
   function fillRecents(root) {
     root = root || document;
     try {
-      if (!(window.Readix && Readix.core)) return;
-      Promise.resolve(Readix.core.projects.list()).then(function (ps) {
+      (function () {
         var box = root.querySelector ? root.querySelector("#rxRecentP") : byId("rxRecentP"); if (!box) return;
-        ps = (ps || []).slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); }).slice(0, 4);
+        var ps = libProjects().slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); }).slice(0, 4);
         if (!ps.length) return;
         box.innerHTML = ps.map(function (p) {
           var st = (p.status || "").toLowerCase(); var badge = st ? '<span class="rx-badge ' + (st.indexOf("termin") >= 0 ? "done" : "prog") + '">' + esc(p.status) + '</span>' : '';
-          return '<button class="rx-item" data-pid="' + esc(p.id) + '"><span class="rx-item-ic">' + svg(IC.folder) + '</span><span class="rx-item-b"><span class="rx-item-n">' + esc(p.name || "Projet") + '</span><span class="rx-item-s">' + esc(p.domain || "Projet") + '</span></span>' + badge + '<span class="rx-item-m">' + fmtDate(p.updatedAt) + '</span></button>';
+          return '<div class="rx-item" role="button" tabindex="0" data-pid="' + esc(p.id) + '"><span class="rx-item-ic">' + svg(IC.folder) + '</span><span class="rx-item-b"><span class="rx-item-n">' + esc(p.name || "Projet") + '</span><span class="rx-item-s">Projet</span></span>' + badge + '<span class="rx-item-m">' + fmtDate(p.updatedAt) + '</span><button class="rx-item-del" title="Supprimer">🗑</button></div>';
         }).join("");
-        [].forEach.call(box.querySelectorAll(".rx-item"), function (b) { b.onclick = function () { clickId("projBtn"); }; });
-      });
-      Promise.resolve(Readix.core.storage.allTabs()).then(function (ts) {
+        [].forEach.call(box.querySelectorAll(".rx-item"), function (b) {
+          b.onclick = function (e) { if (e.target.closest(".rx-item-del")) return; openProjectById(b.getAttribute("data-pid")); };
+          var del = b.querySelector(".rx-item-del"); if (del) del.onclick = function (e) { e.stopPropagation(); deleteProjectById(b.getAttribute("data-pid"), function () { fillRecents(root); }); };
+        });
+      })();
+      Promise.resolve(W("idbAll") ? W("idbAll")() : []).then(function (ts) {
         var box = root.querySelector ? root.querySelector("#rxRecentF") : byId("rxRecentF"); if (!box) return;
         ts = (ts || []).slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); }).slice(0, 4);
         if (!ts.length) return;
         box.innerHTML = ts.map(function (t) {
           var nm = t.name || "Document"; var ext = (nm.split(".").pop() || "").toUpperCase();
-          return '<div class="rx-item"><span class="rx-item-ic">' + svg(IC.documents) + '</span><span class="rx-item-b"><span class="rx-item-n">' + esc(nm) + '</span><span class="rx-item-s">' + esc(ext || "Fichier") + '</span></span><span class="rx-item-m">' + fmtDate(t.ts) + '</span></div>';
+          return '<div class="rx-item" role="button" tabindex="0" data-fid="' + esc(t.id) + '"><span class="rx-item-ic">' + svg(IC.documents) + '</span><span class="rx-item-b"><span class="rx-item-n">' + esc(nm) + '</span><span class="rx-item-s">' + esc(ext || "Fichier") + '</span></span><span class="rx-item-m">' + fmtDate(t.ts) + '</span><button class="rx-item-del" title="Supprimer">🗑</button></div>';
         }).join("");
+        [].forEach.call(box.querySelectorAll(".rx-item"), function (b) {
+          b.onclick = function (e) { if (e.target.closest(".rx-item-del")) return; openStoredFile(b.getAttribute("data-fid")); };
+          var del = b.querySelector(".rx-item-del"); if (del) del.onclick = function (e) { e.stopPropagation(); deleteStoredFile(b.getAttribute("data-fid"), function () { fillRecents(root); }); };
+        });
       });
     } catch (e) {}
   }
@@ -9005,6 +9096,17 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rx-wm-canvas { max-width: 100%; box-shadow: 0 4px 16px rgba(20,24,45,.14); }
 
 .rx-pro-badge { margin-left: auto; font-size: 8.5px; font-weight: 800; letter-spacing: .05em; color: #fff; background: linear-gradient(135deg, #6d28d9, #4F46E5); padding: 1px 5px; border-radius: 5px; align-self: center; }
+
+/* ── Document Studio : en-tête « Readix ᵂᵒʳᵈ » (Word en exposant, réduit) ── */
+.rxw-logo span{position:relative}
+.rxw-logo span::after{content:"Word";font-size:.56em;font-weight:800;vertical-align:super;margin-left:3px;letter-spacing:.3px;opacity:.92}
+
+/* ── Document Studio : garder le curseur de zoom TOUJOURS visible ──
+   .rxw-status coupait le zoom (overflow:hidden). On rend la barre défilable
+   horizontalement et on épingle le contrôle de zoom à droite. */
+.rxw-status{overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none}
+.rxw-status::-webkit-scrollbar{height:0!important;display:none!important}
+.rxw-zoomctl{position:sticky;right:0;flex:none!important;background:var(--rx-status,#eef3fa);padding-left:10px;z-index:1}
 
 </style>
 <script id="readix-ui-ext">
