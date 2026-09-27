@@ -9055,6 +9055,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       ch = insertAfter("watermarkpro", { id: "unwatermark", name: "Retirer le filigrane", grp: "Conversion", ic: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M7 16l3-8 3 8"/><path d="M5 5l14 14"/>' }) || ch;
       ch = insertAfter("unwatermark", { id: "pdf2xlsx", name: "PDF → Excel", grp: "Conversion", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M4 14h16M10 4v16"/>' }) || ch;
       ch = insertAfter("pdf2xlsx", { id: "pdf2md", name: "PDF → Markdown", grp: "Conversion", ic: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 15V9l2.5 3L11 9v6"/><path d="M15 9v6M15 15l-2-2m2 2l2-2"/>' }) || ch;
+      ch = insertAfter("pdf2md", { id: "protect", name: "Protéger par mot de passe", grp: "Sécurité", ic: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/><circle cx="12" cy="15.5" r="1.3"/>' }) || ch;
+      ch = insertAfter("protect", { id: "unlock", name: "Déverrouiller (mot de passe)", grp: "Sécurité", ic: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-2"/><circle cx="12" cy="15.5" r="1.3"/>' }) || ch;
       ch = insertAfter("aiadvanced", { id: "airesume", name: "Résumé par IA", grp: "Intelligence artificielle", ic: '<path d="M5 7h9M5 11h7M5 15h9M5 19h5"/><path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/>' }) || ch;
       ch = insertAfter("airesume", { id: "translate", name: "Traduire le PDF", grp: "Intelligence artificielle", ic: '<path d="M4 5h7M7.5 5v2c0 3-1.5 5-3.5 6"/><path d="M5 9c0 2 2 4 5 4.5"/><path d="M13 20l3.5-9 3.5 9M14.2 17h4.6"/>' }) || ch;
       return ch;
@@ -9092,6 +9094,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (id === "unwatermark") { if (paidLocked("unwatermark")) { toast("« Retirer le filigrane » est une fonction Pro. Passez à un plan Pro pour l’utiliser.", "warn"); return; } runUnwatermark(); return; }
       if (id === "pdf2xlsx") { runPdfToExcel(); return; }
       if (id === "pdf2md") { runPdfToMarkdown(); return; }
+      if (id === "protect") { runProtect(); return; }
+      if (id === "unlock") { runUnlock(); return; }
       return orig.apply(this, arguments);
     };
     window.openTool._rxOcr = true;
@@ -9352,6 +9356,76 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   // Retirer le filigrane : best-effort honnête (retrait des filigranes de type annotation/tampon).
+  /* ══ Chiffrement PDF réel (qpdf compilé en WebAssembly) ══
+     Tout se passe dans le navigateur. Le moteur (≈1,3 Mo) n'est chargé QUE la
+     première fois qu'on protège/déverrouille un PDF. Chiffrement AES-256. */
+  var _qpdfFactory = null;
+  function qpdfBase() { return (typeof window !== "undefined" && window.__QPDF_BASE) || "https://cdn.jsdelivr.net/npm/@jspawn/qpdf-wasm@0.0.2"; }
+  async function loadQpdf() {
+    if (_qpdfFactory) return _qpdfFactory;
+    var base = qpdfBase();
+    var m = await import(base + "/qpdf.mjs");
+    _qpdfFactory = m.default || m;
+    return _qpdfFactory;
+  }
+  async function runQpdf(args, files) {
+    var factory = await loadQpdf();
+    var base = qpdfBase(); var err = "";
+    var mod = await factory({ noInitialRun: true, locateFile: function (p) { return base + "/" + p; }, print: function () {}, printErr: function (t) { err += t + "\n"; } });
+    for (var n in files) if (files.hasOwnProperty(n)) mod.FS.writeFile(n, files[n]);
+    var code; try { code = mod.callMain(args); } catch (e) { code = (e && e.status != null) ? e.status : 1; }
+    return { mod: mod, code: code, err: err };
+  }
+  function askPassword(title, intro, confirm) {
+    return new Promise(function (resolve) {
+      var dlg = W("dialog"); if (!dlg) { resolve(null); return; }
+      var extra = confirm ? '<input id="rxPw2" type="password" class="rp-input" placeholder="Confirmez le mot de passe" style="width:100%;box-sizing:border-box;margin-top:8px">' : "";
+      var d = dlg('<h3>' + escText(title) + '</h3><p style="font-size:13px;color:var(--ink-soft)">' + escText(intro) + '</p><input id="rxPw1" type="password" class="rp-input" placeholder="Mot de passe" style="width:100%;box-sizing:border-box">' + extra + '<div id="rxPwErr" style="color:#dc2626;font-size:12.5px;margin-top:8px;display:none"></div><div class="row" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" data-a="x">Annuler</button><button class="btn sm" data-a="go">Valider</button></div>');
+      var p1 = d.root.querySelector("#rxPw1"), p2 = d.root.querySelector("#rxPw2"), ee = d.root.querySelector("#rxPwErr");
+      if (p1) p1.focus();
+      var go = function () {
+        var v1 = (p1 && p1.value) || "";
+        if (v1.length < 3) { ee.textContent = "Le mot de passe doit contenir au moins 3 caractères."; ee.style.display = "block"; return; }
+        if (confirm && p2 && p2.value !== v1) { ee.textContent = "Les deux mots de passe ne correspondent pas."; ee.style.display = "block"; return; }
+        d.close(); resolve(v1);
+      };
+      d.root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") { d.close(); resolve(null); } else go(); };
+      [p1, p2].forEach(function (el) { if (el) el.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } }; });
+    });
+  }
+  async function runProtect() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF à protéger.", "warn"); return; }
+    var pw = await askPassword("Protéger par mot de passe", "Le PDF sera chiffré en AES-256. Il faudra ce mot de passe pour l’ouvrir. Notez-le : il est impossible de le récupérer.", true);
+    if (!pw) return;
+    var ov = buildOverlay("Protéger le PDF"); document.body.appendChild(ov.root); ov.set("Chargement du moteur de chiffrement…");
+    try {
+      var u8f = W("u8"); var input = (u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0);
+      ov.set("Chiffrement AES-256 en cours…");
+      var r = await runQpdf(["in.pdf", "--encrypt", pw, pw, "256", "--", "out.pdf"], { "in.pdf": input });
+      var out; try { out = r.mod.FS.readFile("out.pdf"); } catch (e) { out = null; }
+      if (r.code !== 0 || !out) { ov.fail("Le chiffrement a échoué. " + (r.err || "").split("\n")[0]); return; }
+      ov.doneDownload(new Blob([out], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-protege.pdf", "PDF protégé ✓", "Le document est chiffré en AES-256. Il demandera le mot de passe à l’ouverture.");
+    } catch (e) { ov.fail((e && e.message) || "Chiffrement impossible. Vérifiez votre connexion (le moteur se télécharge au premier usage)."); }
+  }
+  async function runUnlock() {
+    var t = activeTabSafe();
+    if (!t || !t.bytes) { toast("Ouvrez d’abord le PDF protégé à déverrouiller.", "warn"); return; }
+    var pw = await askPassword("Déverrouiller le PDF", "Entrez le mot de passe du document pour retirer la protection.", false);
+    if (!pw) return;
+    var ov = buildOverlay("Déverrouiller le PDF"); document.body.appendChild(ov.root); ov.set("Chargement du moteur…");
+    try {
+      var u8f = W("u8"); var input = (u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0);
+      ov.set("Vérification du mot de passe…");
+      var r = await runQpdf(["--password=" + pw, "--decrypt", "in.pdf", "out.pdf"], { "in.pdf": input });
+      var out; try { out = r.mod.FS.readFile("out.pdf"); } catch (e) { out = null; }
+      if (r.code !== 0 || !out) { var wrong = !r.err.trim() || /password/i.test(r.err); ov.fail(wrong ? "Mot de passe incorrect. Le document n’a pas été modifié." : ("Déverrouillage impossible. " + (r.err || "").split("\n")[0])); return; }
+      var openB = W("openPdfBytes");
+      if (openB) { await openB(out, (t.name || "document").replace(/\.pdf$/i, "") + "-deverrouille.pdf"); ov.doneDownload(new Blob([out], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-deverrouille.pdf", "Protection retirée ✓", "Le document déverrouillé est ouvert. Téléchargez-le aussi si besoin."); }
+      else ov.doneDownload(new Blob([out], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-deverrouille.pdf", "Protection retirée ✓", "Le mot de passe a été retiré. Téléchargez le document.");
+    } catch (e) { ov.fail((e && e.message) || "Déverrouillage impossible."); }
+  }
+
   /* Diagnostic en LECTURE SEULE du type de filigrane (aucune modification du PDF).
      'raster' = page numérisée (image), 'vector' = contenu vectoriel incrusté. */
   async function diagnoseWatermark(t) {
@@ -9684,7 +9758,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   var tries = 0;
   var iv = setInterval(function () {
     tries++;
-    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate", "watermarkpro", "unwatermark", "pdf2xlsx", "pdf2md"];
+    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate", "watermarkpro", "unwatermark", "pdf2xlsx", "pdf2md", "protect", "unlock"];
     var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && need.every(function (id) { return TOOLS.some(function (t) { return t.id === id; }); }) && window.openTool && window.openTool._rxOcr);
     if (!ready) init();
     if (ready || tries > 20) clearInterval(iv);
