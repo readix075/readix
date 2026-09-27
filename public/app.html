@@ -8986,6 +8986,22 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rx-crop-hd { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; background: #fff; border: 2px solid var(--brand, #4F46E5); border-radius: 3px; cursor: nwse-resize; }
 .rx-crop-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 
+/* Filigrane pro */
+.rx-wm-card { width: min(640px, 95vw); max-height: 92vh; overflow: auto; background: var(--surface, #fff); border: 1px solid var(--line, #e6e8ef); border-radius: 16px; box-shadow: 0 24px 60px rgba(20, 24, 45, .3); padding: 18px 20px; }
+.rx-wm-body { display: grid; grid-template-columns: 1fr 320px; gap: 18px; margin-top: 6px; }
+@media (max-width: 620px) { .rx-wm-body { grid-template-columns: 1fr; } }
+.rx-wm-ctrl { display: flex; flex-direction: column; gap: 10px; }
+.rx-wm-f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-soft, #6b7180); }
+.rx-wm-f > span { font-weight: 600; }
+.rx-wm-f select, .rx-wm-f input[type=text], .rx-wm-f input:not([type]) { border: 1px solid var(--line, #e6e8ef); border-radius: 8px; padding: 7px 9px; font-size: 13px; background: var(--surface, #fff); color: var(--ink, #1a1d29); }
+.rx-wm-f input[type=range] { width: 100%; }
+.rx-wm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rx-wm-col input[type=color] { width: 100%; height: 32px; border: 1px solid var(--line, #e6e8ef); border-radius: 8px; background: none; cursor: pointer; }
+.rx-wm-preview { background: #eef0f4; border-radius: 10px; display: grid; place-items: center; padding: 10px; overflow: hidden; }
+.rx-wm-canvas { max-width: 100%; box-shadow: 0 4px 16px rgba(20,24,45,.14); }
+
+.rx-pro-badge { margin-left: auto; font-size: 8.5px; font-weight: 800; letter-spacing: .05em; color: #fff; background: linear-gradient(135deg, #6d28d9, #4F46E5); padding: 1px 5px; border-radius: 5px; align-self: center; }
+
 </style>
 <script id="readix-ui-ext">
 /* ============================================================
@@ -9005,6 +9021,15 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function W(n) { return typeof window[n] === "function" ? window[n] : null; }
   function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
 
+  /* Couche payante — PRÉPARÉE mais NON ACTIVÉE.
+     Tant que enabled=false, les outils premium restent entièrement gratuits
+     (on n'active le paiement qu'à la finalisation). Quand enabled passera à
+     true, un outil premium exigera un plan Pro (copilotAuthed + plan). */
+  var RX_PAID = window.RX_PAID = { enabled: false, premium: { unwatermark: true } };
+  function userHasPro() { var a = W("copilotAuthed"); try { return !!(a && a()); } catch (e) { return false; } }
+  function isPremium(id) { return !!RX_PAID.premium[id]; }
+  function paidLocked(id) { return RX_PAID.enabled && isPremium(id) && !userHasPro(); }
+
   /* 1) Enregistrer l'outil OCR (défini + rattaché à son rôle) */
   function insertAfter(afterId, entry) {
     if (TOOLS.some(function (t) { return t.id === entry.id; })) return false;
@@ -9022,6 +9047,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       ch = insertAfter("split", { id: "extractpages", name: "Extraction de pages", grp: "Essentiels", ic: '<rect x="5" y="3" width="10" height="15" rx="1.5"/><path d="M8 3v15"/><path d="M16 9l3 3-3 3"/><path d="M19 12h-6"/>' }) || ch;
       ch = insertAfter("fillsign", { id: "forms", name: "Formulaires PDF", grp: "Essentiels", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7 9h6"/><rect x="14.5" y="7.5" width="3" height="3" rx=".5"/><path d="M7 14h10M7 17h6"/>' }) || ch;
       ch = insertAfter("extractpages", { id: "crop", name: "Rogner PDF", grp: "Essentiels", ic: '<path d="M7 3v14h14"/><path d="M3 7h14v14"/>' }) || ch;
+      ch = insertAfter("watermark", { id: "watermarkpro", name: "Filigrane pro", grp: "Conversion", ic: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M8 15l2.5-6 2.5 6M8.8 13h3.4"/><path d="M15 9v6"/>' }) || ch;
+      ch = insertAfter("watermarkpro", { id: "unwatermark", name: "Retirer le filigrane", grp: "Conversion", ic: '<rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M7 16l3-8 3 8"/><path d="M5 5l14 14"/>' }) || ch;
       ch = insertAfter("aiadvanced", { id: "airesume", name: "Résumé par IA", grp: "Intelligence artificielle", ic: '<path d="M5 7h9M5 11h7M5 15h9M5 19h5"/><path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/>' }) || ch;
       ch = insertAfter("airesume", { id: "translate", name: "Traduire le PDF", grp: "Intelligence artificielle", ic: '<path d="M4 5h7M7.5 5v2c0 3-1.5 5-3.5 6"/><path d="M5 9c0 2 2 4 5 4.5"/><path d="M13 20l3.5-9 3.5 9M14.2 17h4.6"/>' }) || ch;
       return ch;
@@ -9055,12 +9082,22 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (id === "crop") { runCropPdf(); return; }
       if (id === "translate") { runTranslatePdf(); return; }
       if (id === "forms") { runFormsPdf(); return; }
+      if (id === "watermarkpro") { runWatermarkPro(); return; }
+      if (id === "unwatermark") { if (paidLocked("unwatermark")) { toast("« Retirer le filigrane » est une fonction Pro. Passez à un plan Pro pour l’utiliser.", "warn"); return; } runUnwatermark(); return; }
       return orig.apply(this, arguments);
     };
     window.openTool._rxOcr = true;
   }
 
   function activeTabSafe() { var f = W("activeTab"); if (f) return f(); return (typeof APP !== "undefined" && APP.tabs) ? APP.tabs.filter(function (x) { return x.id === APP.active; })[0] : null; }
+  // Réapplique le badge « Pro » après chaque rendu du rail (le rail est reconstruit à la navigation).
+  function wrapRenderToolsUX() {
+    if (typeof window.renderTools === "function" && !window.renderTools._rxPremium) {
+      var prev = window.renderTools;
+      window.renderTools = function () { var r = prev.apply(this, arguments); try { markPremiumTools(); } catch (e) {} return r; };
+      window.renderTools._rxPremium = true;
+    }
+  }
 
   /* ── Lot 2 : Rogner · Traduire · Formulaires ── */
 
@@ -9154,6 +9191,127 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (openB) { await openB(bytes, (t.name || "formulaire").replace(/\.pdf$/i, "") + "-formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Le formulaire remplissable est ouvert. Les positions sont estimées par l’IA : ajustez au besoin dans « Remplir & Signer »."); }
       else { W("downloadBlob")(new Blob([bytes], { type: "application/pdf" }), "formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Formulaire téléchargé."); }
     } catch (e) { ov.fail((e && e.message) || "Préparation du formulaire impossible."); }
+  }
+
+  /* ── Lot 3 : Filigrane pro · Retirer le filigrane (premium préparé) ── */
+  function fontCssName(id) { return id === "sans" ? "Inter, Arial, sans-serif" : id === "mono" ? "'Courier New', monospace" : "Georgia, 'Times New Roman', serif"; }
+  function fontMapPdf(P, id) { var S = P.StandardFonts; return id === "sans" ? S.Helvetica : id === "mono" ? S.Courier : S.TimesRoman; }
+  function hexRgb(P, hex) { hex = (hex || "#888888").replace("#", ""); if (hex.length === 3) hex = hex.split("").map(function (c) { return c + c; }).join(""); var n = parseInt(hex, 16) || 0x888888; return P.rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); }
+
+  function buildWatermarkOverlay(img, opt, onApply) {
+    var root = document.createElement("div"); root.className = "rx-crop-ov";
+    root.innerHTML =
+      '<div class="rx-wm-card"><div class="rx-crop-h"><b>Filigrane pro</b><span>Filigrane professionnel appliqué à toutes les pages. Ajustez et prévisualisez.</span></div>' +
+      '<div class="rx-wm-body"><div class="rx-wm-ctrl">' +
+      '<label class="rx-wm-f"><span>Type</span><select data-k="type"><option value="text">Texte</option><option value="image">Image</option></select></label>' +
+      '<label class="rx-wm-f rx-wm-text"><span>Texte</span><input data-k="text" value="' + escText(opt.text) + '"></label>' +
+      '<label class="rx-wm-f rx-wm-text"><span>Police</span><select data-k="font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select></label>' +
+      '<div class="rx-wm-row"><label class="rx-wm-f"><span>Taille</span><input type="range" min="12" max="140" data-k="size" value="' + opt.size + '"></label><label class="rx-wm-f rx-wm-col"><span>Couleur</span><input type="color" data-k="color" value="' + opt.color + '"></label></div>' +
+      '<div class="rx-wm-row"><label class="rx-wm-f"><span>Opacité</span><input type="range" min="5" max="100" data-k="opacity" value="' + Math.round(opt.opacity * 100) + '"></label><label class="rx-wm-f"><span>Rotation</span><input type="range" min="0" max="90" data-k="rotation" value="' + opt.rotation + '"></label></div>' +
+      '<label class="rx-wm-f"><span>Disposition</span><select data-k="style"><option value="diagonal">Diagonale</option><option value="center">Centré</option><option value="tiled">Mosaïque</option><option value="bottom">Bas de page</option></select></label>' +
+      '<button class="rx-ocr-btn ghost rx-wm-img" style="display:none">Choisir une image…</button>' +
+      '</div><div class="rx-wm-preview"><canvas class="rx-wm-canvas"></canvas></div></div>' +
+      '<div class="rx-crop-actions"><button class="rx-ocr-btn ghost" data-a="x">Annuler</button><button class="rx-ocr-btn" data-a="go">Appliquer</button></div></div>';
+    // init select values
+    root.querySelector('[data-k="type"]').value = opt.type;
+    root.querySelector('[data-k="font"]').value = opt.font;
+    root.querySelector('[data-k="style"]').value = opt.style;
+    var canvas = root.querySelector(".rx-wm-canvas"), im = new Image();
+    function draw() {
+      if (!im.width) return;
+      var maxW = 300, scale = maxW / im.width; canvas.width = maxW; canvas.height = Math.round(im.height * scale);
+      var ctx = canvas.getContext("2d"); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+      if (opt.type === "image") { if (opt._imgObj) { var w = canvas.width * .5, h = w * (opt._imgObj.height / opt._imgObj.width); ctx.globalAlpha = opt.opacity; ctx.drawImage(opt._imgObj, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h); ctx.globalAlpha = 1; } return; }
+      ctx.save(); ctx.globalAlpha = opt.opacity; ctx.fillStyle = opt.color; ctx.font = (opt.size * scale) + "px " + fontCssName(opt.font); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (opt.style === "tiled") { var sx = ctx.measureText(opt.text).width + 40, sy = opt.size * scale * 3; for (var y = 0; y < canvas.height + sy; y += sy) for (var x = 0; x < canvas.width + sx; x += sx) { ctx.save(); ctx.translate(x, y); ctx.rotate(-(opt.rotation || 30) * Math.PI / 180); ctx.fillText(opt.text, 0, 0); ctx.restore(); } }
+      else if (opt.style === "bottom") { ctx.textBaseline = "bottom"; ctx.fillText(opt.text, canvas.width / 2, canvas.height - 10); }
+      else { var ang = opt.style === "diagonal" ? 45 : (opt.rotation || 0); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-ang * Math.PI / 180); ctx.fillText(opt.text, 0, 0); }
+      ctx.restore();
+    }
+    im.onload = draw; im.src = img || "";
+    root.querySelectorAll("[data-k]").forEach(function (el) {
+      el.oninput = el.onchange = function () {
+        var k = el.getAttribute("data-k"); var v = el.value;
+        if (k === "opacity") opt.opacity = (+v) / 100; else if (k === "size" || k === "rotation") opt[k] = +v; else opt[k] = v;
+        root.querySelectorAll(".rx-wm-text").forEach(function (n) { n.style.display = opt.type === "image" ? "none" : ""; });
+        root.querySelector(".rx-wm-img").style.display = opt.type === "image" ? "" : "none";
+        draw();
+      };
+    });
+    root.querySelector(".rx-wm-img").onclick = function () { importImage(function (data) { opt.imageSrc = data; var o = new Image(); o.onload = function () { opt._imgObj = o; draw(); }; o.src = data; }); };
+    root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") { root.remove(); return; } root.remove(); onApply(); };
+    return root;
+  }
+  async function applyWatermark(t, opt) {
+    try {
+      var P = window.PDFLib, u8f = W("u8"), db = W("downloadBlob");
+      var doc = await P.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
+      var pages = doc.getPages();
+      if (opt.type === "image" && opt.imageSrc) {
+        var img = /image\/png/i.test(opt.imageSrc) ? await doc.embedPng(opt.imageSrc) : await doc.embedJpg(opt.imageSrc);
+        pages.forEach(function (p) { var s = p.getSize(); var w = s.width * .5, h = w * (img.height / img.width); p.drawImage(img, { x: (s.width - w) / 2, y: (s.height - h) / 2, width: w, height: h, opacity: opt.opacity }); });
+      } else {
+        var font = await doc.embedFont(fontMapPdf(P, opt.font)), col = hexRgb(P, opt.color);
+        pages.forEach(function (p) {
+          var s = p.getSize();
+          if (opt.style === "tiled") { var tw = font.widthOfTextAtSize(opt.text, opt.size); var stepX = Math.max(tw + 40, opt.size * 4), stepY = opt.size * 3.2; for (var y = -stepY; y < s.height + stepY; y += stepY) for (var x = -stepX; x < s.width + stepX; x += stepX) p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(opt.rotation || 30) }); }
+          else if (opt.style === "bottom") { var tw2 = font.widthOfTextAtSize(opt.text, opt.size); p.drawText(opt.text, { x: (s.width - tw2) / 2, y: 24, size: opt.size, font: font, color: col, opacity: opt.opacity }); }
+          else { var ang = opt.style === "diagonal" ? 45 : (opt.rotation || 0); var tw3 = font.widthOfTextAtSize(opt.text, opt.size); var rad = ang * Math.PI / 180; var x = s.width / 2 - (tw3 / 2) * Math.cos(rad); var y = s.height / 2 - (tw3 / 2) * Math.sin(rad); p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(ang) }); }
+        });
+      }
+      var bytes = await doc.save();
+      db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-filigrane.pdf");
+      toast("Filigrane appliqué ✓ — téléchargement lancé.", "ok");
+    } catch (e) { toast("Échec du filigrane : " + ((e && e.message) || e), "err"); }
+  }
+  async function runWatermarkPro() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF pour appliquer un filigrane.", "warn"); return; }
+    var img = ""; try { img = await renderPageImage(t.pdf, 1, 700, .85); } catch (e) {}
+    var opt = { type: "text", text: "CONFIDENTIEL", font: "serif", size: 48, color: "#888888", opacity: 0.25, style: "diagonal", rotation: 45, imageSrc: "" };
+    document.body.appendChild(buildWatermarkOverlay(img, opt, function () { applyWatermark(t, opt); }));
+  }
+
+  // Retirer le filigrane : best-effort honnête (retrait des filigranes de type annotation/tampon).
+  async function runUnwatermark() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF.", "warn"); return; }
+    var ov = buildOverlay("Retirer le filigrane"); document.body.appendChild(ov.root); ov.set("Analyse du document…");
+    try {
+      var P = window.PDFLib, u8f = W("u8");
+      var doc = await P.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
+      var removed = 0;
+      doc.getPages().forEach(function (page) {
+        try {
+          var annots = page.node.Annots && page.node.Annots(); if (!annots || !annots.asArray) return;
+          var keep = [];
+          annots.asArray().forEach(function (ref) {
+            try { var dict = doc.context.lookup(ref); var sub = dict && dict.get(P.PDFName.of("Subtype")); if (/Watermark|Stamp/i.test(String(sub))) removed++; else keep.push(ref); }
+            catch (e) { keep.push(ref); }
+          });
+          var na = P.PDFArray.withContext(doc.context); keep.forEach(function (r) { na.push(r); });
+          page.node.set(P.PDFName.of("Annots"), na);
+        } catch (e) {}
+      });
+      if (removed > 0) {
+        var bytes = await doc.save(); var openB = W("openPdfBytes");
+        if (openB) await openB(bytes, (t.name || "document").replace(/\.pdf$/i, "") + "-sans-filigrane.pdf");
+        else W("downloadBlob")(new Blob([bytes], { type: "application/pdf" }), "sans-filigrane.pdf");
+        ov.doneInfo(removed + " filigrane(s) retiré(s) ✓", "Filigranes de type annotation/tampon supprimés.");
+      } else {
+        ov.fail("Aucun filigrane de type annotation détecté. Un filigrane incrusté dans la page ou dans une image scannée ne peut pas être retiré proprement sans effacement par IA (non configuré) — aucune fausse suppression n’est effectuée.");
+      }
+    } catch (e) { ov.fail((e && e.message) || "Opération impossible."); }
+  }
+
+  // Badge « Pro » sur les outils premium (visuel ; ne bloque pas tant que la couche payante est désactivée).
+  function markPremiumTools() {
+    try {
+      Object.keys(RX_PAID.premium).forEach(function (id) {
+        var btn = document.querySelector('#lrailScroll .tool[data-tool="' + id + '"]');
+        if (btn && !btn.querySelector(".rx-pro-badge")) { var s = document.createElement("span"); s.className = "rx-pro-badge"; s.textContent = "PRO"; btn.appendChild(s); }
+      });
+    } catch (e) {}
   }
 
   /* ── L'ŒIL DE L'OCR : Claude lit directement l'image de la page scannée ──
@@ -9391,14 +9549,16 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var added = ensureTools();
     var renamed = renameTools();
     wrapOpenTool();
+    wrapRenderToolsUX();
     if ((added || renamed) && typeof renderTools === "function") { try { renderTools(); } catch (e) {} }
+    markPremiumTools();
   }
   init();
   // Filet de sécurité si le socle finit de se charger juste après ce bloc.
   var tries = 0;
   var iv = setInterval(function () {
     tries++;
-    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate"];
+    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate", "watermarkpro", "unwatermark"];
     var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && need.every(function (id) { return TOOLS.some(function (t) { return t.id === id; }); }) && window.openTool && window.openTool._rxOcr);
     if (!ready) init();
     if (ready || tries > 20) clearInterval(iv);
