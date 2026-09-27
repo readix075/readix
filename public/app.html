@@ -8974,6 +8974,18 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rx-ocr-btn.ghost { background: transparent; color: var(--ink-soft, #6b7180); border: 1px solid var(--line, #e6e8ef); }
 .rx-ocr-result { margin-top: 12px; max-height: 46vh; overflow: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.6; color: var(--ink, #1a1d29); background: var(--surface-2, #f6f7fb); border: 1px solid var(--line, #e6e8ef); border-radius: 10px; padding: 12px 14px; }
 
+/* Rogner PDF */
+.rx-crop-ov { position: fixed; inset: 0; z-index: 9000; background: rgba(20, 24, 45, .5); display: grid; place-items: center; animation: rxOcrIn .15s ease both; }
+.rx-crop-card { width: min(560px, 94vw); max-height: 92vh; overflow: auto; background: var(--surface, #fff); border: 1px solid var(--line, #e6e8ef); border-radius: 16px; box-shadow: 0 24px 60px rgba(20, 24, 45, .3); padding: 18px 20px; }
+.rx-crop-h { margin-bottom: 12px; }
+.rx-crop-h b { display: block; font-size: 15px; color: var(--ink, #1a1d29); }
+.rx-crop-h span { font-size: 12.5px; color: var(--ink-soft, #6b7180); }
+.rx-crop-stage { position: relative; display: inline-block; width: 100%; text-align: center; background: #eef0f4; border-radius: 10px; overflow: hidden; }
+.rx-crop-img { max-width: 100%; max-height: 60vh; display: block; margin: 0 auto; user-select: none; -webkit-user-drag: none; }
+.rx-crop-rect { position: absolute; border: 2px solid var(--brand, #4F46E5); background: rgba(79, 70, 229, .12); cursor: move; box-shadow: 0 0 0 9999px rgba(20, 24, 45, .28); }
+.rx-crop-hd { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; background: #fff; border: 2px solid var(--brand, #4F46E5); border-radius: 3px; cursor: nwse-resize; }
+.rx-crop-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
 </style>
 <script id="readix-ui-ext">
 /* ============================================================
@@ -9008,7 +9020,10 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       ch = insertAfter("ocr", { id: "scan2doc", name: "Scanné → éditable", grp: "Conversion", ic: '<rect x="3" y="3" width="12" height="18" rx="1.5"/><path d="M7 8h4M7 12h4M7 16h3"/><path d="M15 15l3 2.5-3 2.5"/><path d="M18 17.5h-5"/>' }) || ch;
       ch = insertAfter("scan2doc", { id: "word2pdf", name: "Word → PDF", grp: "Conversion", ic: '<rect x="3" y="3" width="12" height="18" rx="1.5"/><path d="M5.5 8l1.3 5 1.4-5 1.4 5 1.3-5"/><path d="M15 15l3 2.5-3 2.5"/><path d="M18 17.5h-5"/>' }) || ch;
       ch = insertAfter("split", { id: "extractpages", name: "Extraction de pages", grp: "Essentiels", ic: '<rect x="5" y="3" width="10" height="15" rx="1.5"/><path d="M8 3v15"/><path d="M16 9l3 3-3 3"/><path d="M19 12h-6"/>' }) || ch;
+      ch = insertAfter("fillsign", { id: "forms", name: "Formulaires PDF", grp: "Essentiels", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M7 9h6"/><rect x="14.5" y="7.5" width="3" height="3" rx=".5"/><path d="M7 14h10M7 17h6"/>' }) || ch;
+      ch = insertAfter("extractpages", { id: "crop", name: "Rogner PDF", grp: "Essentiels", ic: '<path d="M7 3v14h14"/><path d="M3 7h14v14"/>' }) || ch;
       ch = insertAfter("aiadvanced", { id: "airesume", name: "Résumé par IA", grp: "Intelligence artificielle", ic: '<path d="M5 7h9M5 11h7M5 15h9M5 19h5"/><path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/>' }) || ch;
+      ch = insertAfter("airesume", { id: "translate", name: "Traduire le PDF", grp: "Intelligence artificielle", ic: '<path d="M4 5h7M7.5 5v2c0 3-1.5 5-3.5 6"/><path d="M5 9c0 2 2 4 5 4.5"/><path d="M13 20l3.5-9 3.5 9M14.2 17h4.6"/>' }) || ch;
       return ch;
     } catch (e) { return false; }
   }
@@ -9037,12 +9052,109 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (id === "word2pdf") { runWord2Pdf(); return; }
       if (id === "extractpages") { runExtractPages(); return; }
       if (id === "airesume") { runResumeIA(); return; }
+      if (id === "crop") { runCropPdf(); return; }
+      if (id === "translate") { runTranslatePdf(); return; }
+      if (id === "forms") { runFormsPdf(); return; }
       return orig.apply(this, arguments);
     };
     window.openTool._rxOcr = true;
   }
 
   function activeTabSafe() { var f = W("activeTab"); if (f) return f(); return (typeof APP !== "undefined" && APP.tabs) ? APP.tabs.filter(function (x) { return x.id === APP.active; })[0] : null; }
+
+  /* ── Lot 2 : Rogner · Traduire · Formulaires ── */
+
+  // Rogner PDF : cadre visuel sur la page 1, appliqué à toutes les pages (setCropBox).
+  function buildCropOverlay(img, onApply) {
+    var root = document.createElement("div"); root.className = "rx-crop-ov";
+    root.innerHTML = '<div class="rx-crop-card"><div class="rx-crop-h"><b>Rogner le PDF</b><span>Ajustez le cadre, puis Appliquer. Le rognage s’applique à toutes les pages.</span></div><div class="rx-crop-stage"><img class="rx-crop-img" src="' + img + '" alt=""><div class="rx-crop-rect"><span class="rx-crop-hd"></span></div></div><div class="rx-crop-actions"><button class="rx-ocr-btn ghost" data-a="x">Annuler</button><button class="rx-ocr-btn" data-a="go">Appliquer</button></div></div>';
+    var imgEl = root.querySelector(".rx-crop-img"), rect = root.querySelector(".rx-crop-rect");
+    var st = { x: .08, y: .08, w: .84, h: .84 };
+    function layout() { var W2 = imgEl.clientWidth || 1, H2 = imgEl.clientHeight || 1; rect.style.left = (st.x * W2) + "px"; rect.style.top = (st.y * H2) + "px"; rect.style.width = (st.w * W2) + "px"; rect.style.height = (st.h * H2) + "px"; }
+    imgEl.onload = layout; setTimeout(layout, 80);
+    rect.onpointerdown = function (e) { if (e.target.classList.contains("rx-crop-hd")) return; e.preventDefault(); var sx = e.clientX, sy = e.clientY, ox = st.x, oy = st.y; function mv(ev) { st.x = Math.min(1 - st.w, Math.max(0, ox + (ev.clientX - sx) / imgEl.clientWidth)); st.y = Math.min(1 - st.h, Math.max(0, oy + (ev.clientY - sy) / imgEl.clientHeight)); layout(); } function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); } document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); };
+    root.querySelector(".rx-crop-hd").onpointerdown = function (e) { e.stopPropagation(); e.preventDefault(); var sx = e.clientX, sy = e.clientY, ow = st.w, oh = st.h; function mv(ev) { st.w = Math.min(1 - st.x, Math.max(.05, ow + (ev.clientX - sx) / imgEl.clientWidth)); st.h = Math.min(1 - st.y, Math.max(.05, oh + (ev.clientY - sy) / imgEl.clientHeight)); layout(); } function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); } document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); };
+    root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") { root.remove(); return; } root.remove(); onApply({ x: st.x, y: st.y, w: st.w, h: st.h }); };
+    return root;
+  }
+  async function runCropPdf() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF pour le rogner.", "warn"); return; }
+    var img; try { img = await renderPageImage(t.pdf, 1, 900, .85); } catch (e) { toast("Impossible d’afficher la page.", "err"); return; }
+    var ov = buildCropOverlay(img, async function (r) {
+      try {
+        var PDFLibRef = window.PDFLib, u8f = W("u8"), db = W("downloadBlob");
+        var src = await PDFLibRef.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
+        src.getPages().forEach(function (p) { var mb = p.getMediaBox(); var cx = mb.x + r.x * mb.width, cw = r.w * mb.width, chh = r.h * mb.height, cy = mb.y + (1 - r.y - r.h) * mb.height; try { p.setCropBox(cx, cy, cw, chh); } catch (e) {} });
+        var bytes = await src.save();
+        db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-rogne.pdf");
+        toast("PDF rogné ✓ — téléchargement lancé.", "ok");
+      } catch (e) { toast("Échec du rognage : " + ((e && e.message) || e), "err"); }
+    });
+    document.body.appendChild(ov);
+  }
+
+  // Traduire le PDF : langue cible → traduction structurée ouverte comme document éditable.
+  function runTranslatePdf() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF à traduire.", "warn"); return; }
+    var ai = W("aiGenerate"); if (!ai) { toast("Traduction indisponible : IA non configurée.", "warn"); return; }
+    var dlg = W("dialog"); if (!dlg) { toast("Interface indisponible.", "err"); return; }
+    var langs = ["Anglais", "Français", "Espagnol", "Allemand", "Portugais", "Italien", "Arabe", "Chinois", "Néerlandais", "Russe"];
+    var opts = langs.map(function (l) { return '<option value="' + l + '">' + l + '</option>'; }).join("");
+    var d = dlg('<h3>Traduire le PDF</h3><p style="font-size:13px;color:var(--ink-soft)">Choisissez la langue cible. La traduction s’ouvrira comme document éditable.</p><select id="rxLang" class="rp-input" style="width:100%;box-sizing:border-box">' + opts + '</select><div class="row" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" data-a="x">Annuler</button><button class="btn sm" data-a="go">Traduire</button></div>');
+    d.root.onclick = async function (e) {
+      var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") { d.close(); return; }
+      var lang = d.root.querySelector("#rxLang").value; d.close();
+      var ov = buildOverlay("Traduction (" + lang + ")"); document.body.appendChild(ov.root); ov.set("Lecture du document…");
+      try {
+        var text = t.ocrText || (W("extractPdfText") ? await W("extractPdfText")(t) : "");
+        if (!text || text.trim().length < 20) { ov.fail("Aucun texte exploitable. Pour un document scanné, lancez d’abord « Scanné → éditable »."); return; }
+        ov.set("Traduction en cours…");
+        var sys = "Tu es un traducteur professionnel. Traduis fidèlement le document vers " + lang + ", en conservant le sens, le ton et la structure. Rends le résultat en HTML simple (<h1>-<h3>, <p>, <ul>/<li>, <table>). Ne résume pas, n’ajoute aucun commentaire. Réponds uniquement avec le fragment HTML traduit.";
+        var res = await ai("Traduis vers " + lang + " :\n\n" + text.slice(0, 14000), sys, 4000);
+        var open = W("openDocInTab");
+        if (open && res) { open("Traduction (" + lang + ").docx", sanitizeHtml(res)); ov.doneInfo("Traduction prête ✓", "Ouverte dans Document Studio (" + lang + "). Sur un document long, seule la première partie est traduite."); }
+        else ov.fail("Traduction impossible.");
+      } catch (e) { ov.fail((e && e.message) || "Traduction impossible."); }
+    };
+  }
+
+  // Formulaires PDF : la vision de Claude détecte les champs → champs remplissables (AcroForm) réels.
+  var FORM_PROMPT = "Tu analyses l'image d'UNE page de formulaire. Repère les CHAMPS À REMPLIR (lignes vides, cadres à compléter, cases à cocher) avec leur libellé. Réponds UNIQUEMENT en JSON strict : {\"fields\":[{\"label\":\"...\",\"type\":\"text\"|\"checkbox\",\"x\":0.0,\"y\":0.0,\"w\":0.0,\"h\":0.0}]}. Coordonnées normalisées (0 à 1), origine en HAUT À GAUCHE ; x,y = coin supérieur gauche du champ ; w,h = largeur,hauteur. N'invente aucun champ inexistant. Aucun champ → {\"fields\":[]}.";
+  async function runFormsPdf() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF (formulaire) à préparer.", "warn"); return; }
+    if (!visionAvailable()) { toast("La détection de champs nécessite l’IA (vision). Connectez-vous pour l’utiliser.", "warn"); return; }
+    var ov = buildOverlay("Formulaires PDF"); document.body.appendChild(ov.root);
+    try {
+      var PDFLibRef = window.PDFLib, u8f = W("u8");
+      var src = await PDFLibRef.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
+      var form = src.getForm(), pages = src.getPages();
+      var cap = Math.min(t.pdf.numPages, 10), total = 0, fid = 0;
+      for (var i = 1; i <= cap; i++) {
+        ov.set("Détection des champs — page " + i + " / " + cap + "…");
+        var img = await renderPageImage(t.pdf, i, 1400, .72);
+        var raw = await aiVision(FORM_PROMPT, [img]);
+        var data; try { data = JSON.parse((String(raw).match(/\{[\s\S]*\}/) || [raw])[0]); } catch (e) { data = { fields: [] }; }
+        var fields = (data && Array.isArray(data.fields)) ? data.fields : [];
+        var page = pages[i - 1], mb = page.getMediaBox();
+        fields.slice(0, 40).forEach(function (f) {
+          var w = Math.max(10, (+f.w || 0.15) * mb.width), h = Math.max(10, (+f.h || 0.028) * mb.height);
+          var x = mb.x + (+f.x || 0) * mb.width, y = mb.y + (1 - (+f.y || 0) - (+f.h || 0.028)) * mb.height;
+          try {
+            if (f.type === "checkbox") { var cb = form.createCheckBox("rxf_" + (fid++)); cb.addToPage(page, { x: x, y: y, width: Math.min(w, h, 18), height: Math.min(w, h, 18) }); total++; }
+            else { var tf = form.createTextField("rxf_" + (fid++)); tf.addToPage(page, { x: x, y: y, width: w, height: h }); total++; }
+          } catch (e) {}
+        });
+      }
+      if (!total) { ov.fail("Aucun champ détecté sur ce document."); return; }
+      var bytes = await src.save();
+      var openB = W("openPdfBytes");
+      if (openB) { await openB(bytes, (t.name || "formulaire").replace(/\.pdf$/i, "") + "-formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Le formulaire remplissable est ouvert. Les positions sont estimées par l’IA : ajustez au besoin dans « Remplir & Signer »."); }
+      else { W("downloadBlob")(new Blob([bytes], { type: "application/pdf" }), "formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Formulaire téléchargé."); }
+    } catch (e) { ov.fail((e && e.message) || "Préparation du formulaire impossible."); }
+  }
 
   /* ── L'ŒIL DE L'OCR : Claude lit directement l'image de la page scannée ──
      Si l'IA est disponible, la reconnaissance se fait par VISION (bien plus
@@ -9286,7 +9398,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   var tries = 0;
   var iv = setInterval(function () {
     tries++;
-    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume"];
+    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume", "forms", "crop", "translate"];
     var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && need.every(function (id) { return TOOLS.some(function (t) { return t.id === id; }); }) && window.openTool && window.openTool._rxOcr);
     if (!ready) init();
     if (ready || tries > 20) clearInterval(iv);
