@@ -22,7 +22,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
-// OpenAI — traitement d'image (génération + retouche). Clé côté serveur uniquement.
+// Service d'image Readix — génération + retouche. Clé côté serveur uniquement.
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_BASE = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
@@ -172,8 +172,8 @@ app.get("/api/health", (req, res) => res.json({
     database: !!DATABASE_URL,
     aiKey: !!ANTHROPIC_API_KEY,
     aiModel: ANTHROPIC_MODEL,
-    openaiKey: !!OPENAI_API_KEY,
-    openaiModel: OPENAI_IMAGE_MODEL,
+    imageReady: !!OPENAI_API_KEY,
+    imageModel: OPENAI_IMAGE_MODEL,
     stripe: !!process.env.STRIPE_SECRET_KEY,
     clientUrl: CLIENT_URL
   },
@@ -398,7 +398,7 @@ const AI_PROMPTS = {
   smartsearch: `Tu es le moteur de recherche sémantique de Readix. La demande de l'utilisateur est une recherche dans un PDF. Identifie les passages réellement pertinents même si les mots employés diffèrent. Retourne une liste courte des résultats les plus pertinents avec [Page N], un titre court et un extrait fidèle du document. Si aucun passage pertinent n'est trouvé, indique-le. Ne fabrique aucune citation.`,
   extractdata: `Tu es le moteur d'extraction structurée de Readix. Transforme le document en données exploitables. Retourne UNIQUEMENT un JSON valide, sans markdown ni commentaire. Adapte les champs au contenu : dates, montants, devises, personnes, organisations, références, numéros, adresses, échéances, tableaux, etc. Chaque élément important doit comporter une source de page sous la clé page quand elle est identifiable. Si aucune donnée d'une catégorie n'existe, ne l'invente pas.`,
   compareai: `Tu es le moteur de comparaison intelligente de Readix. Compare DOCUMENT A et DOCUMENT B, pas seulement les mots mais aussi le contenu et le sens. Présente les ajouts, suppressions et modifications significatives. Pour chaque différence, indique la source avec [Page N] lorsqu'elle est identifiable. Distingue les changements certains des interprétations. Réponds en français.`,
-  copilot: `Tu es Readix Copilot, l'assistant contextuel de Readix Reader. Tu connais le document fourni et aides l'utilisateur à comprendre son contenu et à utiliser les outils Readix. Réponds en français. Pour les informations provenant du document, utilise [Page N]. Tu peux expliquer comment réaliser une action dans Readix (fusionner, diviser, signer, organiser, caviarder, etc.), mais n'affirme pas avoir exécuté une opération que le serveur ne t'a pas réellement demandé d'exécuter. Si la demande concerne le document, privilégie le document ouvert comme source. Readix peut générer des images par IA (OpenAI, gpt-image-1) : pour une image, une illustration ou une couverture, n'affirme jamais que c'est impossible — oriente l'utilisateur vers le raccourci « Créer une image » du panneau IA, ou vers les studios « Couverture »/« Illustrations » d'un livre, sans prétendre générer l'image toi-même (la génération demande un compte connecté et un plan Pro ou supérieur).`,
+  copilot: `Tu es Readix Copilot, l'assistant contextuel de Readix Reader. Tu connais le document fourni et aides l'utilisateur à comprendre son contenu et à utiliser les outils Readix. Réponds en français. Pour les informations provenant du document, utilise [Page N]. Tu peux expliquer comment réaliser une action dans Readix (fusionner, diviser, signer, organiser, caviarder, etc.), mais n'affirme pas avoir exécuté une opération que le serveur ne t'a pas réellement demandé d'exécuter. Si la demande concerne le document, privilégie le document ouvert comme source. Readix peut générer des images par IA : pour une image, une illustration ou une couverture, n'affirme jamais que c'est impossible — oriente l'utilisateur vers le raccourci « Créer une image » du panneau IA, ou vers les studios « Couverture »/« Illustrations » d'un livre, sans prétendre générer l'image toi-même (la génération demande un compte connecté et un plan Pro ou supérieur).`,
 };
 const AI_MIN_LEVEL = { workspace:2, smartsearch:2, extractdata:2, compareai:2, copilot:2 };
 
@@ -450,7 +450,7 @@ app.post("/api/ai/chatbot", auth, async (req, res) => {
   const manual = `Tu es l'Assistant Readix Reader, un GUIDE D'UTILISATION intégré à l'interface. Ta mission est uniquement d'expliquer comment utiliser Readix et d'orienter l'utilisateur vers les bons outils et les bonnes étapes.
 Règles : réponds en français sauf demande contraire; sois concret, court et structuré; n'invente jamais un outil ou une fonction qui n'existe pas; si une fonction dépend d'un compte, d'un plan, de Stripe ou d'une clé IA, indique-le clairement.
 Tu ne dois pas générer de contenu de document, de texte à insérer, de PDF, de fichier, de signature, de contrat, de code ou de résultat créatif. Tu ne dois pas exécuter une opération à la place de l'utilisateur. Tu expliques seulement quoi cliquer, dans quel ordre, et pourquoi.
-IMPORTANT — Readix DISPOSE d'une génération d'images par IA (OpenAI, modèle gpt-image-1). Si l'utilisateur veut une image, une illustration ou une couverture, n'affirme JAMAIS que c'est impossible : oriente-le vers le raccourci « Créer une image » du panneau IA (à droite), ou vers les studios « Couverture » et « Illustrations » d'un livre. Explique comment s'en servir, sans produire l'image toi-même (c'est le serveur qui la génère quand l'utilisateur clique). La génération d'images nécessite un compte connecté et un plan Pro ou supérieur.
+IMPORTANT — Readix DISPOSE d'une génération d'images par IA. Si l'utilisateur veut une image, une illustration ou une couverture, n'affirme JAMAIS que c'est impossible : oriente-le vers le raccourci « Créer une image » du panneau IA (à droite), ou vers les studios « Couverture » et « Illustrations » d'un livre. Explique comment s'en servir, sans produire l'image toi-même (c'est le serveur qui la génère quand l'utilisateur clique). La génération d'images nécessite un compte connecté et un plan Pro ou supérieur.
 Outils disponibles : Lecteur, Modifier, Remplir & Signer, Organiser, Fusionner, Diviser/Extraire, Caviarder, Comparer, Extraire le texte, OCR, Protection, Métadonnées, Créer une image (génération IA), et les fonctions IA premium.
 Remplir & Signer permet de déplacer/redimensionner une signature puis de la désélectionner en cliquant dans le document.
 Les opérations PDF locales sont réalisées dans le navigateur. Les comptes, abonnements et fonctions IA utilisent le serveur Readix.
@@ -499,12 +499,12 @@ app.post("/api/ai/generate", auth, async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-// Traitement d'image par OpenAI (gpt-image-1). Claude reste sur le texte/la
-// lecture ; OpenAI s'occupe des pixels : génération (couvertures, illustrations)
+// Traitement d'image Readix. Claude reste sur le texte/la
+// lecture ; le service d'image s'occupe des pixels : génération (couvertures, illustrations)
 // et retouche (arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
 // ──────────────────────────────────────────────────────────────────────────
 
-// Appel JSON (génération). gpt-image-1 renvoie toujours du base64 : pas de response_format.
+// Appel JSON (génération). Le modèle renvoie toujours du base64 : pas de response_format.
 async function openaiImageJson(path, body) {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
   const r = await fetch(OPENAI_BASE + path, {
@@ -513,12 +513,12 @@ async function openaiImageJson(path, body) {
     body: JSON.stringify(body)
   });
   const txt = await r.text();
-  if (!r.ok) throw new Error("Erreur image OpenAI (" + r.status + ") : " + openaiErrText(txt));
-  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse OpenAI illisible."); }
+  if (!r.ok) throw new Error("Erreur de génération d'image (" + r.status + ") : " + openaiErrText(txt));
+  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse du service d'image illisible."); }
   return data;
 }
 
-// Appel multipart (retouche). OpenAI exige multipart/form-data avec le fichier image.
+// Appel multipart (retouche). Le service exige multipart/form-data avec le fichier image.
 async function openaiImageEdit(fields) {
   if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
   const form = new FormData();
@@ -534,12 +534,12 @@ async function openaiImageEdit(fields) {
     body: form
   });
   const txt = await r.text();
-  if (!r.ok) throw new Error("Erreur retouche OpenAI (" + r.status + ") : " + openaiErrText(txt));
-  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse OpenAI illisible."); }
+  if (!r.ok) throw new Error("Erreur de retouche d'image (" + r.status + ") : " + openaiErrText(txt));
+  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse du service d'image illisible."); }
   return data;
 }
 
-// Extrait un message d'erreur lisible du corps d'erreur OpenAI.
+// Extrait un message d'erreur lisible du corps d'erreur du service d'image.
 function openaiErrText(txt) {
   try { const j = JSON.parse(txt); if (j && j.error && j.error.message) return j.error.message; } catch (e) {}
   return String(txt || "").slice(0, 400);
@@ -554,7 +554,7 @@ async function sourceToBlob(src) {
     const buf = m[2] ? Buffer.from(m[3], "base64") : Buffer.from(decodeURIComponent(m[3]));
     return { blob: new Blob([buf], { type: mime }), name: "image." + extFromMime(mime) };
   }
-  const rr = await fetch(src); // URL distante : OpenAI n'accepte pas d'URL en retouche, on récupère les octets.
+  const rr = await fetch(src); // URL distante : le service n'accepte pas d'URL en retouche, on récupère les octets.
   if (!rr.ok) throw new Error("Image source inaccessible (" + rr.status + ").");
   const ab = await rr.arrayBuffer();
   const mime = rr.headers.get("content-type") || "image/png";
@@ -568,7 +568,7 @@ function extFromMime(m) {
   return "png";
 }
 
-// Réponse OpenAI → data URLs affichables ({ data:[{ b64_json | url }] }).
+// Réponse du service → data URLs affichables ({ data:[{ b64_json | url }] }).
 function imagesToUrls(data) {
   let arr = Array.isArray(data && data.data) ? data.data
     : (data && data.url) ? [{ url: data.url }]
@@ -580,7 +580,7 @@ function imagesToUrls(data) {
   }).filter(Boolean);
 }
 
-// Ratio → taille gpt-image-1 (1024x1024 | 1536x1024 | 1024x1536 | auto).
+// Ratio → taille du modèle (1024x1024 | 1536x1024 | 1024x1536 | auto).
 function sizeFromAspect(ar) {
   const s = String(ar || "").toLowerCase();
   if (/1\s*[:x]\s*1|square|carr/.test(s)) return "1024x1024";
@@ -590,13 +590,13 @@ function sizeFromAspect(ar) {
 }
 
 function imageGateError(req) {
-  if (!OPENAI_API_KEY) return { code: 503, error: "Traitement d'image non configuré sur le serveur (OPENAI_API_KEY)." };
+  if (!OPENAI_API_KEY) return { code: 503, error: "La génération d'image n'est pas encore configurée sur le serveur." };
   if (levelOf(req.user.plan) < 2) return { code: 402, error: "Le traitement d'image par IA nécessite le plan Pro ou supérieur." };
   return null;
 }
 
 app.get("/api/image/status", auth, (req, res) => {
-  res.json({ ok: !!OPENAI_API_KEY, configured: !!OPENAI_API_KEY, model: OPENAI_IMAGE_MODEL, editModel: OPENAI_EDIT_MODEL });
+  res.json({ ok: !!OPENAI_API_KEY, configured: !!OPENAI_API_KEY });
 });
 
 // Génération d'image à partir d'un texte (couvertures, illustrations).
@@ -617,7 +617,7 @@ app.post("/api/image/generate", auth, async (req, res) => {
   try {
     const data = await openaiImageJson("/images/generations", body);
     const images = imagesToUrls(data);
-    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par OpenAI." });
+    if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
     await incUsage(req.user.email);
     res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -640,7 +640,7 @@ app.post("/api/image/edit", auth, async (req, res) => {
   try {
     const data = await openaiImageEdit(fields);
     const images = imagesToUrls(data);
-    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par OpenAI." });
+    if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
     await incUsage(req.user.email);
     res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
