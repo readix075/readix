@@ -6944,8 +6944,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
 .bk-toc-p { color: #555; }
 
 </style>
-<script id="readix-book-engine">
-/* ============================================================
+<script id="readix-book-engine">/* ============================================================
    READIX BOOK ENGINE — Phase 3 (Book Studio)
    Additif : enveloppe bookDefault / bookToHtml / renderBookStudio
    du socle pour apporter une structure de livre complète
@@ -7072,11 +7071,11 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
       if (x === "toc") { book.frontMatter.toc = true; refresh(); toast("Table des matières régénérée.", "ok"); return; }
       if (x === "ds") { var f = W("openDocInTab"); if (f) f(nm + ".docx", window.bookToHtml(book)); return; }
       if (x === "docx") { var f2 = W("downloadCopilotFile"); if (f2) f2({ kind: "docx", html: true, name: nm + ".docx", content: window.bookToHtml(book) }); return; }
+      if (x === "cover") { t._mode = "cover"; rerender(); return; } // ouvre le studio couverture (génération d'illustrations IA)
       var lab = b.textContent; b.disabled = true; b.textContent = "…";
       try {
         syncFlat(book);
         if (x === "pdf") { var bp = W("buildBookPdf"), db = W("downloadBlob"); var bytes = await bp(book); db(new Blob([bytes], { type: "application/pdf" }), nm + ".pdf"); }
-        else if (x === "cover") { var cp = W("buildCoverPdf"), db2 = W("downloadBlob"); var by = await cp(book); db2(new Blob([by], { type: "application/pdf" }), nm + "-couverture.pdf"); }
         toast("Téléchargement lancé.", "ok");
       } catch (err) { toast("Échec : " + (err.message || err), "err"); }
       finally { b.disabled = false; b.textContent = lab; }
@@ -7318,7 +7317,6 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
   }
   (function ready() { if (!wrap()) return setTimeout(ready, 150); try { console.info("[Readix] Book Engine v1 — structure complète, navigation, TDM, DnD, assets, contexte Copilot."); } catch (e) {} })();
 })();
-
 </script>
 <style id="readix-cover-css">
 /* ===== Readix Cover & Illustration Engine v1 (Phase 6) — additif ===== */
@@ -8558,8 +8556,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 @media(max-width:520px){.rxnp-tiles{grid-template-columns:1fr}}
 
 </style>
-<script id="readix-shell">
-/* ============================================================
+<script id="readix-shell">/* ============================================================
    READIX SHELL v2.1 — Interface fidèle au prototype
    Additif : barre latérale sombre, en-tête (recherche + IA avancée
    + compte), tableau de bord d'accueil, rail droit (Espace IA,
@@ -8748,7 +8745,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     sc.appendChild(shortcut(IC.summary, "Générer un résumé", function () { call("toggleCopilotFloating"); }));
     sc.appendChild(shortcut(IC.translate, "Traduire un document", function () { call("toggleCopilotFloating"); }));
     sc.appendChild(shortcut(IC.analyze, "Analyser un PDF", function () { window.openTool && openTool("editpdf"); }));
-    sc.appendChild(shortcut(IC.image, "Créer une image", function () { call("toggleCopilotFloating"); }));
+    sc.appendChild(shortcut(IC.image, "Créer une image", function () { if (window.openImageStudio) window.openImageStudio(); else call("toggleCopilotFloating"); }));
     sc.appendChild(shortcut(IC.help, "Aide et conseils", function () { call("toggleCopilotFloating"); }));
     r.appendChild(sc);
     var asst = ce("div", "rx-rr-card");
@@ -9012,6 +9009,64 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     setTimeout(function () { t.classList.remove("on"); setTimeout(function () { t.remove(); }, 250); }, 2200);
   }
 
+  /* ---------- Créer une image : génération réelle par OpenAI (gpt-image-1) ---------- */
+  function openImageStudio(preset) {
+    var dlg = window.dialog, apiFn = window.api;
+    if (typeof dlg !== "function") { call("toggleCopilotFloating"); return; }
+    var dl = dlg(
+      '<h3 style="margin:0 0 4px">✨ Créer une image (IA)</h3>' +
+      '<p style="margin:0 0 10px;font-size:12.5px;color:#64748b">Décrivez l’image en langage naturel : elle est générée par OpenAI (gpt-image-1) sur le serveur Readix, puis proposée au téléchargement.</p>' +
+      '<textarea id="rxImgPrompt" rows="3" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d7dbe4;border-radius:10px;font:inherit;resize:vertical" placeholder="Ex. une ville futuriste au crépuscule, style aquarelle, tons violets"></textarea>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' +
+        '<label style="font-size:12.5px;color:#64748b">Format</label>' +
+        '<select id="rxImgAr" style="padding:6px 8px;border:1px solid #d7dbe4;border-radius:8px;font:inherit">' +
+          '<option value="">Auto</option><option value="1:1">Carré</option><option value="portrait">Portrait</option><option value="paysage">Paysage</option>' +
+        '</select>' +
+      '</div>' +
+      '<div id="rxImgMsg" style="display:none;margin-top:10px;font-size:12.5px"></div>' +
+      '<div id="rxImgOut" style="margin-top:12px"></div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn ghost sm" data-a="close">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>'
+    );
+    var ta0 = dl.root.querySelector("#rxImgPrompt"); if (preset && ta0) ta0.value = preset;
+    var msg = dl.root.querySelector("#rxImgMsg"), out = dl.root.querySelector("#rxImgOut");
+    function say(txt, color) { msg.style.display = "block"; msg.style.color = color || "#64748b"; msg.textContent = txt; }
+    dl.root.onclick = function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "close") { dl.close(); return; }
+      if (a.dataset.a !== "gen") return;
+      var ta = dl.root.querySelector("#rxImgPrompt"), prompt = ((ta && ta.value) || "").trim();
+      var ar = ((dl.root.querySelector("#rxImgAr") || {}).value) || "";
+      if (!prompt) { say("Décrivez d’abord l’image à générer.", "#dc2626"); return; }
+      if (typeof apiFn !== "function") { say("Service indisponible.", "#dc2626"); return; }
+      var gen = a, lab = gen.textContent; gen.disabled = true; gen.textContent = "Génération…";
+      out.innerHTML = ""; say("OpenAI génère votre image… (quelques secondes)");
+      Promise.resolve(apiFn("/api/image/generate", ar ? { prompt: prompt, aspect_ratio: ar } : { prompt: prompt }))
+        .then(function (r) {
+          var img = r && r.images && r.images[0];
+          if (!img) throw new Error((r && r.error) || "Aucune image n’a été renvoyée.");
+          msg.style.display = "none";
+          out.innerHTML = '<img src="' + img + '" alt="Image générée" style="max-width:100%;border-radius:12px;border:1px solid #e6e8ef;display:block"/>' +
+            '<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-a="close">Fermer</button><button class="btn sm" id="rxImgDl">⤓ Télécharger</button></div>';
+          out.querySelector("#rxImgDl").onclick = function () {
+            fetch(img).then(function (rr) { return rr.blob(); }).then(function (b) {
+              var db = window.downloadBlob;
+              if (db) db(b, "readix-image.png");
+              else { var u = URL.createObjectURL(b), an = document.createElement("a"); an.href = u; an.download = "readix-image.png"; an.click(); setTimeout(function () { URL.revokeObjectURL(u); }, 1500); }
+            });
+          };
+          gen.disabled = false; gen.textContent = lab;
+        })
+        .catch(function (err) {
+          gen.disabled = false; gen.textContent = lab;
+          var st = err && err.status, m;
+          if (st === 401) m = "Connectez-vous à votre compte Readix pour générer des images.";
+          else m = (err && (err.serverMessage || err.message)) || "génération impossible.";
+          say("Échec : " + m, "#dc2626");
+        });
+    };
+  }
+  try { window.openImageStudio = openImageStudio; } catch (e) {}
+
   var raf = 0;
   function tick() { try { document.body.classList.toggle("rx-home", isHome()); } catch (e) {} syncActive(); maybeDash(); syncZoom(); try { pruneRailStudios(); } catch (e) {} }
   function observe() {
@@ -9028,7 +9083,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(init, 200); });
   else setTimeout(init, 200);
 })();
-
 </script>
 <style id="readix-copilot-ux-css">
 /* ===== Readix Copilot UX — indicateur « en cours de traitement » (additif) ===== */
