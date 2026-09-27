@@ -8529,6 +8529,21 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rx-item:hover .rx-item-del{opacity:.75}
 .rx-item-del:hover{background:rgba(220,38,38,.12);opacity:1}
 
+/* ── Nouveau projet : dialogue « Démarrer avec » ── */
+.rxnp{min-width:min(520px,92vw)}
+.rxnp h3{margin:0 0 4px;font-size:18px;color:var(--ink,#1a1d29)}
+.rxnp-lbl{font-size:12px;color:var(--ink-soft,#6b7180);margin:12px 0 5px}
+.rxnp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rxnp-tile{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line,#e6e8ef);border-radius:10px;background:var(--surface,#fff);cursor:pointer;text-align:left}
+.rxnp-tile:hover{background:var(--surface-2,#f6f7fb)}
+.rxnp-tile.sel{border-color:var(--brand,#4F46E5);box-shadow:0 0 0 2px var(--brand-glow,rgba(79,70,229,.2)) inset}
+.rxnp-ic{width:30px;height:30px;flex:none;display:grid;place-items:center;color:var(--brand,#4F46E5)}
+.rxnp-ic svg{width:20px;height:20px}
+.rxnp-tl{min-width:0}
+.rxnp-tl b{display:block;font-size:13px;color:var(--ink,#1a1d29)}
+.rxnp-tl em{font-style:normal;font-size:11px;color:var(--ink-soft,#6b7180)}
+@media(max-width:520px){.rxnp-tiles{grid-template-columns:1fr}}
+
 </style>
 <script id="readix-shell">
 /* ============================================================
@@ -8618,7 +8633,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     });
     nav.appendChild(scroll);
     nav.appendChild(ce("div", "rx-nav-foot",
-      '<div class="rx-store"><div class="rx-store-h"><span>Stockage</span><span id="rxStoreTxt">— / 10 Go</span></div><div class="rx-store-bar"><i id="rxStoreFill" style="width:24%"></i></div></div>' +
       '<div class="rx-pro"><div class="rx-pro-h">' + svg('<path d="M4 8l4 3 4-6 4 6 4-3-1.5 9h-13z"/>') + '<b>Readix Pro</b></div><div class="rx-pro-s">Accédez à toutes les fonctionnalités</div><button class="rx-pro-b" id="rxProBtn">Voir les avantages</button></div>'));
     document.body.insertBefore(nav, document.body.firstChild);
     document.body.classList.add("rx-shell");
@@ -8631,15 +8645,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (!active && (t === "" || t === "home" || t === "view")) active = "home";
     Object.keys(itemsById).forEach(function (id) { itemsById[id].el.classList.toggle("on", id === active); });
   }
-  function updateStorage() {
-    try {
-      Promise.resolve(window.Readix && Readix.core ? Readix.core.storage.allTabs() : []).then(function (tabs) {
-        var n = (tabs || []).length, txt = byId("rxStoreTxt"), fill = byId("rxStoreFill");
-        if (txt) txt.textContent = (n ? (n + " doc" + (n > 1 ? "s" : "")) : "0 doc") + " · 10 Go";
-        if (fill) fill.style.width = Math.min(90, 8 + n * 6) + "%";
-      });
-    } catch (e) {}
-  }
+  function updateStorage() { /* indicateur « 10 Go » retiré : le stockage réel est géré par le navigateur (IndexedDB). */ }
 
   /* ---------------- En-tête : recherche + IA avancée + compte ---------------- */
   function buildTopbar() {
@@ -8830,6 +8836,58 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     });
     refresh();
   }
+  /* ── Nouveau projet : nom + description + « Démarrer avec » (sans domaine) ──
+     Remplace l'ancien dialogue (qui imposait un domaine). Un projet est un espace
+     de travail nommé ; on propose donc une première action pour ne pas rester vide. */
+  var NP_START = [
+    { k: "pdf", label: "Importer un PDF", sub: "Ouvrir un document existant", ic: IC.upload },
+    { k: "word", label: "Document Word", sub: "Rédiger dans Document Studio", ic: IC.doc || IC.documents },
+    { k: "book", label: "Livre", sub: "Écrire un livre (Book Studio)", ic: IC.book },
+    { k: "cv", label: "CV", sub: "Créer un CV (CV Studio)", ic: IC.cv },
+    { k: "blank", label: "Vide", sub: "Je verrai plus tard", ic: IC.folder }
+  ];
+  function startProject(kind) {
+    try {
+      if (kind === "pdf") clickId("hiddenFile");
+      else if (kind === "word") runTool("docstudio");
+      else if (kind === "book") runTool("book");
+      else if (kind === "cv") runTool("cv");
+      // "blank" : on reste sur l'espace du projet
+    } catch (e) {}
+  }
+  function openNewProjectFlow() {
+    var dlg = W("dialog"); if (!dlg) return;
+    var picked = "pdf";
+    var tiles = NP_START.map(function (t) {
+      return '<button type="button" class="rxnp-tile' + (t.k === picked ? ' sel' : '') + '" data-k="' + t.k + '"><span class="rxnp-ic">' + svg(t.ic) + '</span><span class="rxnp-tl"><b>' + esc(t.label) + '</b><em>' + esc(t.sub) + '</em></span></button>';
+    }).join("");
+    var d = dlg('<div class="rxnp"><h3>Nouveau projet</h3>' +
+      '<div class="rxnp-lbl">Nom du projet</div><input id="rxnpName" class="rp-input" placeholder="Ex. Maison Dupont · Mon roman · Dossier RH" maxlength="120">' +
+      '<div class="rxnp-lbl">Description (facultatif)</div><textarea id="rxnpDesc" class="rp-input" rows="2" placeholder="En quelques mots…" maxlength="500" style="resize:vertical"></textarea>' +
+      '<div class="rxnp-lbl">Démarrer avec</div><div class="rxnp-tiles" id="rxnpTiles">' + tiles + '</div>' +
+      '<div class="row" style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" data-a="x">Annuler</button><button class="btn sm" data-a="ok">Créer le projet</button></div></div>');
+    var tilesBox = d.root.querySelector("#rxnpTiles");
+    tilesBox.onclick = function (e) { var b = e.target.closest(".rxnp-tile"); if (!b) return; picked = b.getAttribute("data-k"); [].forEach.call(tilesBox.querySelectorAll(".rxnp-tile"), function (x) { x.classList.toggle("sel", x === b); }); };
+    setTimeout(function () { var n = d.root.querySelector("#rxnpName"); if (n) n.focus(); }, 60);
+    d.root.onclick = async function (e) {
+      var a = e.target.closest("[data-a]"); if (!a) return;
+      if (a.dataset.a === "x") { d.close(); return; }
+      if (a.dataset.a === "ok") {
+        var name = (d.root.querySelector("#rxnpName").value || "").trim();
+        if (!name) { if (W("toast")) W("toast")("Donnez un nom au projet.", "warn"); return; }
+        var description = (d.root.querySelector("#rxnpDesc").value || "").trim();
+        var cp = W("createProject"); if (!cp) { d.close(); return; }
+        var p = await cp({ name: name, description: description });
+        try { if (W("setActiveProject")) W("setActiveProject")(p.id); } catch (e2) {}
+        d.close();
+        if (W("toast")) W("toast")("Projet « " + name + " » créé.", "ok");
+        startProject(picked);
+      }
+    };
+  }
+  // Rediriger TOUS les points d'entrée « nouveau projet » vers ce flux (sans domaine).
+  try { window.openNewProjectDialog = openNewProjectFlow; } catch (e) {}
+
   function buildDashEl() {
     var d = ce("div", "rx-dash"); d.id = "rxDash";
     var hr = new Date().getHours();
@@ -8852,7 +8910,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var qgrid = ce("div", "rx-qgrid"); ["editpdf", "copilot", "book", "cv", "docstudio", "projects"].forEach(function (id) { qgrid.appendChild(qbtn(id)); }); qa.appendChild(qgrid); low.appendChild(qa);
     var sk = ce("div", "rx-col"); sk.innerHTML = '<div class="rx-col-h"><b>Raccourcis</b><span class="rx-col-sub">Accédez rapidement aux principales fonctionnalités</span></div>';
     var slist = ce("div", "rx-sklist");
-    slist.appendChild(link(IC.plus, "Créer un nouveau projet", function () { clickId("createBtn"); }));
+    slist.appendChild(link(IC.plus, "Créer un nouveau projet", function () { openNewProjectFlow(); }));
     slist.appendChild(link(IC.upload, "Importer un fichier", function () { clickId("hiddenFile"); }));
     slist.appendChild(link(IC.documents, "Ouvrir un document", function () { clickId("hiddenDocFile"); }));
     slist.appendChild(link(IC.folder, "Gérer mes projets", function () { openLibrary(); }));
