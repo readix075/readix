@@ -7578,6 +7578,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     ask.appendChild(inp); ask.appendChild(go); box.appendChild(ask);
     // IA image (honnête)
     var aiImg = E("button", "cv-add cv-ghost", "✨ Générer une illustration (IA)"); aiImg.onclick = function () { aiGenerateImage(book, aiImg); }; box.appendChild(aiImg);
+    var aiCompose = E("button", "cv-add", "🎨 Composer la couverture (IA)"); aiCompose.onclick = function () { composeCoverAI(book, aiCompose, function () { touch(); rerender(); }); }; box.appendChild(aiCompose);
   }
 
   function buildProps(box, book, el, touch, rerender, draw) {
@@ -7676,11 +7677,11 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     toast("Commande non reconnue. Essayez : « centre le titre », « auteur en bas », « variante minimaliste ».", "warn");
   }
 
-  /* ---------- IA image : génération réelle par OpenAI (gpt-image-1), côté serveur ---------- */
+  /* ---------- IA image : génération d'illustration Readix, côté serveur ---------- */
   function aiGenerateImage(book, btn) {
     var api = W("api");
     var dlg = W("dialog"); if (!dlg) { toast("Génération d’images indisponible.", "warn"); return; }
-    var dl = dlg('<h3>Générer une illustration (IA)</h3><textarea class="rp-input" id="aiPrompt" rows="3" placeholder="Ex. une ville futuriste au crépuscule, style aquarelle"></textarea><div class="pp-note">L’image est générée par OpenAI (gpt-image-1) sur le serveur, puis ajoutée au canevas. Décrivez précisément le style, l’ambiance et les couleurs.</div><div id="aiMsg" style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;display:none"></div><div class="row"><button class="btn ghost sm" data-a="x">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>');
+    var dl = dlg('<h3>Générer une illustration (IA)</h3><textarea class="rp-input" id="aiPrompt" rows="3" placeholder="Ex. une ville futuriste au crépuscule, style aquarelle"></textarea><div class="pp-note">L’illustration est générée par Readix, puis ajoutée au canevas. Décrivez précisément le style, l’ambiance et les couleurs.</div><div id="aiMsg" style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;display:none"></div><div class="row"><button class="btn ghost sm" data-a="x">Fermer</button><button class="btn sm" data-a="gen">Générer</button></div>');
     var msg = dl.root.querySelector("#aiMsg");
     var genBtn = dl.root.querySelector('[data-a="gen"]');
     dl.root.onclick = function (e) {
@@ -7691,7 +7692,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
       if (!prompt) { toast("Décrivez l’image.", "warn"); return; }
       if (!api) { toast("Génération d’images indisponible.", "warn"); return; }
       genBtn.disabled = true; genBtn.textContent = "Génération…";
-      msg.style.display = "block"; msg.style.color = "var(--ink-soft)"; msg.textContent = "OpenAI génère votre illustration… (quelques secondes)";
+      msg.style.display = "block"; msg.style.color = "var(--ink-soft)"; msg.textContent = "Readix génère votre illustration… (quelques secondes)";
       Promise.resolve(api("/api/image/generate", { prompt: prompt }))
         .then(function (r) {
           var img = r && r.images && r.images[0];
@@ -7703,6 +7704,77 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
           msg.style.color = "#dc2626"; msg.textContent = "Échec : " + ((err && (err.message || err.error)) || "génération impossible.");
         });
     };
+  }
+
+  /* ---------- Composer la couverture (IA) : illustration de fond + titre/auteur ---------- */
+  async function composeCoverAI(book, btn, done) {
+    var api = W("api"), aiGen = W("aiGenerate");
+    if (!api) { toast("Service indisponible.", "warn"); return; }
+    var title = String(book.title || "").trim() || "Sans titre";
+    var author = String(book.author || "").trim();
+    var subtitle = String(book.subtitle || "").trim();
+    var lab = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Direction artistique…"; }
+    try {
+      // 1) Direction artistique par IA (repli déterministe si indisponible)
+      var art = null;
+      if (aiGen) {
+        try {
+          var sys = "Tu es directeur artistique de couvertures de livres. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.";
+          var ask = "Livre : titre « " + title + " »"
+            + (subtitle ? (", sous-titre « " + subtitle + " »") : "")
+            + (author ? (", auteur « " + author + " »") : "")
+            + ". Propose une direction artistique de couverture cohérente avec ce titre. "
+            + 'Renvoie STRICTEMENT ce JSON : {"imagePrompt":"description visuelle riche pour une illustration de fond (ambiance, style, couleurs) SANS aucun texte ni lettre dans l\'image","titleColor":"#RRGGBB très lisible par-dessus l\'illustration","authorColor":"#RRGGBB","titlePosition":"top|center|bottom","overlay":"dark|light|none"}';
+          var raw = await aiGen(ask, sys, 500);
+          art = JSON.parse(String(raw).replace(/```json|```/g, "").trim());
+        } catch (e) { art = null; }
+      }
+      if (!art || typeof art !== "object") art = {};
+      if (!art.imagePrompt) art.imagePrompt = title + " — illustration de couverture évocatrice, ambiance soignée, cohérente avec le thème du titre";
+      if (!/#[0-9a-f]{6}/i.test(art.titleColor || "")) art.titleColor = "#ffffff";
+      if (!/#[0-9a-f]{6}/i.test(art.authorColor || "")) art.authorColor = "#f1f5f9";
+      if (["top", "center", "bottom"].indexOf(art.titlePosition) < 0) art.titlePosition = "bottom";
+      if (["dark", "light", "none"].indexOf(art.overlay) < 0) art.overlay = "dark";
+      var imgPrompt = art.imagePrompt + ". Illustration seule, SANS texte, sans lettres, sans mots, sans titre, sans logo, adaptée à une couverture de livre au format portrait.";
+
+      // 2) Générer l'illustration de fond (portrait)
+      if (btn) btn.textContent = "Génération de l’illustration…";
+      var r = await api("/api/image/generate", { prompt: imgPrompt, aspect_ratio: "portrait" });
+      var img = r && r.images && r.images[0];
+      if (!img) throw new Error((r && r.error) || "Aucune image n’a pu être générée.");
+
+      // 3) Mise en page automatique sur la face avant (remplace la composition auto précédente)
+      if (btn) btn.textContent = "Mise en page…";
+      var c = book.coverDesign, d = bookDims(book), W_ = d.w, H_ = d.h;
+      c.elements = c.elements.filter(function (e) { return !e._auto && e._bound !== "title" && e._bound !== "author"; });
+      var z = 0;
+      var imEl = { id: uid(), _auto: true, kind: "image", panel: "front", src: img, fit: "cover", x: 0, y: 0, w: W_, h: H_, rotation: 0, opacity: 1, z: z++ };
+      var probe = new Image(); probe.onload = function () { imEl._nw = probe.naturalWidth; imEl._nh = probe.naturalHeight; }; probe.src = img;
+      c.elements.push(imEl);
+      var pos = art.titlePosition, ov = art.overlay;
+      if (ov !== "none") {
+        var fill = ov === "light" ? "rgba(255,255,255,.60)" : "rgba(0,0,0,.52)";
+        var oy = pos === "top" ? 0 : pos === "center" ? H_ * 0.34 : H_ * 0.54;
+        var oh = pos === "center" ? H_ * 0.34 : (pos === "top" ? H_ * 0.30 : H_ * 0.46);
+        c.elements.push({ id: uid(), _auto: true, kind: "shape", shapeType: "rect", panel: "front", fill: fill, stroke: "", strokeW: 0, x: 0, y: oy, w: W_, h: oh, rotation: 0, opacity: 1, z: z++ });
+      }
+      var ty = pos === "top" ? H_ * 0.09 : pos === "center" ? H_ * 0.42 : H_ * 0.64;
+      c.elements.push({ id: uid(), _auto: true, _bound: "title", kind: "text", panel: "front", text: title, font: "serif", size: 40, weight: "700", italic: false, align: "center", color: art.titleColor, x: 0.4, y: ty, w: W_ - 0.8, h: 1.7, rotation: 0, opacity: 1, z: z + 1 });
+      if (subtitle) c.elements.push({ id: uid(), _auto: true, kind: "text", panel: "front", text: subtitle, font: "serif", size: 19, weight: "400", italic: true, align: "center", color: art.titleColor, x: 0.6, y: ty + 1.5, w: W_ - 1.2, h: 0.7, rotation: 0, opacity: 1, z: z + 1 });
+      if (author) c.elements.push({ id: uid(), _auto: true, _bound: "author", kind: "text", panel: "front", text: author, font: "serif", size: 18, weight: "600", italic: false, align: "center", color: art.authorColor, x: 0.4, y: H_ - 0.95, w: W_ - 0.8, h: 0.6, rotation: 0, opacity: 1, z: z + 1 });
+
+      SEL = null;
+      toast("Couverture composée par Readix ✓", "ok");
+      if (done) done();
+    } catch (err) {
+      var st = err && err.status, m;
+      if (st === 401) m = "Connectez-vous (plan Pro ou Studio) pour composer la couverture.";
+      else m = (err && (err.serverMessage || err.message)) || "composition impossible.";
+      toast("Échec : " + m, "err");
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = lab; }
+    }
   }
 
   /* ---------- Sérialisation SVG + exports réels ---------- */
@@ -9009,13 +9081,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     setTimeout(function () { t.classList.remove("on"); setTimeout(function () { t.remove(); }, 250); }, 2200);
   }
 
-  /* ---------- Créer une image : génération réelle par OpenAI (gpt-image-1) ---------- */
+  /* ---------- Créer une image : génération d'image Readix ---------- */
   function openImageStudio(preset) {
     var dlg = window.dialog, apiFn = window.api;
     if (typeof dlg !== "function") { call("toggleCopilotFloating"); return; }
     var dl = dlg(
       '<h3 style="margin:0 0 4px">✨ Créer une image (IA)</h3>' +
-      '<p style="margin:0 0 10px;font-size:12.5px;color:#64748b">Décrivez l’image en langage naturel : elle est générée par OpenAI (gpt-image-1) sur le serveur Readix, puis proposée au téléchargement.</p>' +
+      '<p style="margin:0 0 10px;font-size:12.5px;color:#64748b">Décrivez l’image en langage naturel : elle est générée par Readix, puis proposée au téléchargement.</p>' +
       '<textarea id="rxImgPrompt" rows="3" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d7dbe4;border-radius:10px;font:inherit;resize:vertical" placeholder="Ex. une ville futuriste au crépuscule, style aquarelle, tons violets"></textarea>' +
       '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' +
         '<label style="font-size:12.5px;color:#64748b">Format</label>' +
@@ -9039,7 +9111,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (!prompt) { say("Décrivez d’abord l’image à générer.", "#dc2626"); return; }
       if (typeof apiFn !== "function") { say("Service indisponible.", "#dc2626"); return; }
       var gen = a, lab = gen.textContent; gen.disabled = true; gen.textContent = "Génération…";
-      out.innerHTML = ""; say("OpenAI génère votre image… (quelques secondes)");
+      out.innerHTML = ""; say("Readix génère votre image… (quelques secondes)");
       Promise.resolve(apiFn("/api/image/generate", ar ? { prompt: prompt, aspect_ratio: ar } : { prompt: prompt }))
         .then(function (r) {
           var img = r && r.images && r.images[0];
