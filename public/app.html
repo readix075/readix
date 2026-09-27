@@ -8958,7 +8958,11 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 /* Overlay de progression OCR */
 .rx-ocr-ov { position: fixed; inset: 0; z-index: 9000; background: rgba(20, 24, 45, .38); display: grid; place-items: center; animation: rxOcrIn .15s ease both; }
 @keyframes rxOcrIn { from { opacity: 0; } to { opacity: 1; } }
-.rx-ocr-card { width: min(440px, 92vw); background: var(--surface, #fff); border: 1px solid var(--line, #e6e8ef); border-radius: 16px; box-shadow: 0 24px 60px rgba(20, 24, 45, .28); padding: 20px 22px; }
+.rx-ocr-card { position: relative; width: min(440px, 92vw); background: var(--surface, #fff); border: 1px solid var(--line, #e6e8ef); border-radius: 16px; box-shadow: 0 24px 60px rgba(20, 24, 45, .28); padding: 20px 22px; }
+.rx-ocr-x { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border: none; background: transparent; color: var(--ink-soft, #9aa0ae); font-size: 22px; line-height: 1; border-radius: 8px; cursor: pointer; display: grid; place-items: center; transition: background .12s, color .12s; }
+.rx-ocr-x:hover { background: rgba(220, 38, 38, .1); color: #dc2626; }
+.rx-ocr-btn.rx-ocr-dl { background: #16a34a; }
+.rx-ocr-btn.rx-ocr-dl:hover { filter: brightness(1.07); }
 .rx-ocr-h { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink, #1a1d29); margin-bottom: 10px; }
 .rx-ocr-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--line, #d9dce6); border-top-color: var(--brand, #4F46E5); animation: rxOcrSpin .8s linear infinite; }
 .rx-ocr-spin.ok { border: none; animation: none; }
@@ -9128,8 +9132,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         var src = await PDFLibRef.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
         src.getPages().forEach(function (p) { var mb = p.getMediaBox(); var cx = mb.x + r.x * mb.width, cw = r.w * mb.width, chh = r.h * mb.height, cy = mb.y + (1 - r.y - r.h) * mb.height; try { p.setCropBox(cx, cy, cw, chh); } catch (e) {} });
         var bytes = await src.save();
-        db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-rogne.pdf");
-        toast("PDF rogné ✓ — téléchargement lancé.", "ok");
+        offerDownload(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-rogne.pdf", "PDF rogné ✓", "La nouvelle marge est appliquée à toutes les pages. Téléchargez le fichier ou fermez.");
       } catch (e) { toast("Échec du rognage : " + ((e && e.message) || e), "err"); }
     });
     document.body.appendChild(ov);
@@ -9193,7 +9196,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var bytes = await src.save();
       var openB = W("openPdfBytes");
       if (openB) { await openB(bytes, (t.name || "formulaire").replace(/\.pdf$/i, "") + "-formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Le formulaire remplissable est ouvert. Les positions sont estimées par l’IA : ajustez au besoin dans « Remplir & Signer »."); }
-      else { W("downloadBlob")(new Blob([bytes], { type: "application/pdf" }), "formulaire.pdf"); ov.doneInfo(total + " champ(s) créé(s) ✓", "Formulaire téléchargé."); }
+      else { ov.doneDownload(new Blob([bytes], { type: "application/pdf" }), (t.name || "formulaire").replace(/\.pdf$/i, "") + "-formulaire.pdf", total + " champ(s) créé(s) ✓", "Le formulaire remplissable est prêt. Téléchargez-le ou fermez."); }
     } catch (e) { ov.fail((e && e.message) || "Préparation du formulaire impossible."); }
   }
 
@@ -9252,8 +9255,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var data; try { data = JSON.parse((String(raw).match(/\{[\s\S]*\}/) || [raw])[0]); } catch (e) { data = null; }
       if (!data || !Array.isArray(data.columns) || !Array.isArray(data.rows) || !data.columns.length) { ov.fail("Aucun tableau exploitable détecté dans ce document."); return; }
       var blob = await W("buildXlsxBlob")({ title: data.title || "Données", columns: data.columns, rows: data.rows });
-      W("downloadBlob")(blob, (t.name || "document").replace(/\.pdf$/i, "") + ".xlsx");
-      ov.doneInfo(data.rows.length + " ligne(s) exportée(s) ✓", "Fichier Excel (.xlsx) téléchargé.");
+      ov.doneDownload(blob, (t.name || "document").replace(/\.pdf$/i, "") + ".xlsx", data.rows.length + " ligne(s) extraite(s) ✓", "Le fichier Excel est prêt. Téléchargez-le ou fermez.");
     } catch (e) { ov.fail((e && e.message) || "Extraction impossible."); }
   }
   async function runPdfToMarkdown() {
@@ -9269,8 +9271,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var md = await ai("Convertis ce document en Markdown :\n\n" + text.slice(0, 14000), sys, 4000);
       md = String(md || "").replace(/^```(?:markdown|md)?\s*/i, "").replace(/\s*```$/i, "");
       if (!md.trim()) { ov.fail("Conversion vide."); return; }
-      W("downloadBlob")(new Blob([md], { type: "text/markdown;charset=utf-8" }), (t.name || "document").replace(/\.pdf$/i, "") + ".md");
-      ov.doneInfo("Markdown prêt ✓", "Fichier .md téléchargé.");
+      ov.doneDownload(new Blob([md], { type: "text/markdown;charset=utf-8" }), (t.name || "document").replace(/\.pdf$/i, "") + ".md", "Markdown prêt ✓", "Le fichier .md est prêt. Téléchargez-le ou fermez.");
     } catch (e) { ov.fail((e && e.message) || "Conversion impossible."); }
   }
   function fontCssName(id) { return id === "sans" ? "Inter, Arial, sans-serif" : id === "mono" ? "'Courier New', monospace" : "Georgia, 'Times New Roman', serif"; }
@@ -9333,14 +9334,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         var font = await doc.embedFont(fontMapPdf(P, opt.font)), col = hexRgb(P, opt.color);
         pages.forEach(function (p) {
           var s = p.getSize();
-          if (opt.style === "tiled") { var tw = font.widthOfTextAtSize(opt.text, opt.size); var stepX = Math.max(tw + 40, opt.size * 4), stepY = opt.size * 3.2; for (var y = -stepY; y < s.height + stepY; y += stepY) for (var x = -stepX; x < s.width + stepX; x += stepX) p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(opt.rotation || 30) }); }
+          if (opt.style === "tiled") { var tw = font.widthOfTextAtSize(opt.text, opt.size); var stepX = Math.max(tw + 40, opt.size * 4), stepY = opt.size * 3.2; for (var y = -stepY; y < s.height + stepY; y += stepY) for (var x = -stepX; x < s.width + stepX; x += stepX) p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(opt.rotation || 0) }); }
           else if (opt.style === "bottom") { var tw2 = font.widthOfTextAtSize(opt.text, opt.size); p.drawText(opt.text, { x: (s.width - tw2) / 2, y: 24, size: opt.size, font: font, color: col, opacity: opt.opacity }); }
           else { var ang = opt.rotation || 0; var tw3 = font.widthOfTextAtSize(opt.text, opt.size); var rad = ang * Math.PI / 180; var x = s.width / 2 - (tw3 / 2) * Math.cos(rad); var y = s.height / 2 - (tw3 / 2) * Math.sin(rad); p.drawText(opt.text, { x: x, y: y, size: opt.size, font: font, color: col, opacity: opt.opacity, rotate: P.degrees(ang) }); }
         });
       }
       var bytes = await doc.save();
-      db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-filigrane.pdf");
-      toast("Filigrane appliqué ✓ — téléchargement lancé.", "ok");
+      offerDownload(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-filigrane.pdf", "Filigrane appliqué ✓", "Le filigrane est appliqué à toutes les pages. Téléchargez le fichier ou fermez.");
     } catch (e) { toast("Échec du filigrane : " + ((e && e.message) || e), "err"); }
   }
   async function runWatermarkPro() {
@@ -9352,6 +9352,21 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   // Retirer le filigrane : best-effort honnête (retrait des filigranes de type annotation/tampon).
+  /* Diagnostic en LECTURE SEULE du type de filigrane (aucune modification du PDF).
+     'raster' = page numérisée (image), 'vector' = contenu vectoriel incrusté. */
+  async function diagnoseWatermark(t) {
+    var pdfjs = window.pdfjsLib; if (!pdfjs || !t || !t.pdf) return "unknown";
+    var page = await t.pdf.getPage(1);
+    var tc = await page.getTextContent();
+    var textLen = tc.items.map(function (i) { return i.str; }).join("").trim().length;
+    var imgCount = 0;
+    try {
+      var ops = await page.getOperatorList(); var O = pdfjs.OPS || {};
+      ops.fnArray.forEach(function (fn) { if (fn === O.paintImageXObject || fn === O.paintJpegXObject || fn === O.paintInlineImageXObject || fn === O.paintImageMaskXObject) imgCount++; });
+    } catch (e) {}
+    if (textLen < 5 && imgCount >= 1) return "raster";
+    return "vector";
+  }
   async function runUnwatermark() {
     var t = activeTabSafe();
     if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF.", "warn"); return; }
@@ -9374,11 +9389,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       });
       if (removed > 0) {
         var bytes = await doc.save(); var openB = W("openPdfBytes");
-        if (openB) await openB(bytes, (t.name || "document").replace(/\.pdf$/i, "") + "-sans-filigrane.pdf");
-        else W("downloadBlob")(new Blob([bytes], { type: "application/pdf" }), "sans-filigrane.pdf");
-        ov.doneInfo(removed + " filigrane(s) retiré(s) ✓", "Filigranes de type annotation/tampon supprimés.");
+        if (openB) { await openB(bytes, (t.name || "document").replace(/\.pdf$/i, "") + "-sans-filigrane.pdf"); ov.doneInfo(removed + " filigrane(s) retiré(s) ✓", "Filigranes de type annotation/tampon supprimés. Le document nettoyé est ouvert."); }
+        else ov.doneDownload(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-sans-filigrane.pdf", removed + " filigrane(s) retiré(s) ✓", "Filigranes de type annotation/tampon supprimés.");
       } else {
-        ov.fail("Aucun filigrane de type annotation détecté. Un filigrane incrusté dans la page ou dans une image scannée ne peut pas être retiré proprement sans effacement par IA (non configuré) — aucune fausse suppression n’est effectuée.");
+        var kind = "unknown"; try { kind = await diagnoseWatermark(t); } catch (e) {}
+        if (kind === "raster") ov.fail("Ce document est numérisé (image). Le filigrane fait partie même de l’image scannée : il ne peut être retiré que par effacement IA (inpainting), qui n’est pas configuré. Aucune fausse suppression n’est effectuée — le document reste intact.");
+        else if (kind === "vector") ov.fail("Le filigrane est incrusté dans le contenu vectoriel de la page (ce n’est pas une annotation retirable). Le supprimer proprement exige de réécrire le flux de contenu de la page — une opération que je refuse de faire à l’aveugle côté navigateur pour ne pas risquer d’abîmer votre PDF. Elle demande un module de nettoyage dédié (côté serveur). Aucune fausse suppression n’est faite ici.");
+        else ov.fail("Aucun filigrane de type annotation détecté. Un filigrane incrusté dans la page ou dans une image scannée ne peut pas être retiré proprement sans module dédié — aucune fausse suppression n’est effectuée.");
       }
     } catch (e) { ov.fail((e && e.message) || "Opération impossible."); }
   }
@@ -9504,9 +9521,12 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (!t || t.tool !== "docstudio") { toast("Ouvrez d’abord un document dans Document Studio pour le convertir en PDF.", "warn"); return; }
     var ed = document.querySelector(".doceditor"); var html = (ed ? ed.innerHTML : t.doc) || t.doc || "";
     if (!html || !html.replace(/<[^>]*>/g, "").trim()) { toast("Le document est vide : rien à convertir.", "warn"); return; }
-    var dl = W("downloadCopilotFile"); if (!dl) { toast("Conversion indisponible.", "err"); return; }
     var name = (t.name || "Document").replace(/\.(docx?|pdf)$/i, "");
-    try { await dl({ kind: "pdf", html: true, name: name + ".pdf", content: html }); toast("PDF généré à partir du document Word ✓", "ok"); }
+    var toPdf = W("pdfFromHtml");
+    try {
+      if (toPdf) { var bytes = await toPdf(html); offerDownload(new Blob([bytes], { type: "application/pdf" }), name + ".pdf", "PDF généré ✓", "Le document Word a été converti en PDF. Téléchargez-le ou fermez."); }
+      else { var dl = W("downloadCopilotFile"); if (!dl) { toast("Conversion indisponible.", "err"); return; } await dl({ kind: "pdf", html: true, name: name + ".pdf", content: html }); toast("PDF généré à partir du document Word ✓", "ok"); }
+    }
     catch (e) { toast("Échec de la conversion : " + ((e && e.message) || e), "err"); }
   }
 
@@ -9539,8 +9559,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         var copied = await out.copyPages(src, pages.map(function (n) { return n - 1; }));
         copied.forEach(function (p) { out.addPage(p); });
         var bytes = await out.save();
-        db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-pages.pdf");
-        toast("Pages " + pages.join(", ") + " extraites ✓", "ok");
+        offerDownload(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-pages.pdf", pages.length + " page(s) extraite(s) ✓", "Pages " + pages.join(", ") + ". Téléchargez le nouveau PDF ou fermez.");
       } catch (e) { toast("Échec de l’extraction : " + ((e && e.message) || e), "err"); }
     };
     d.root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") d.close(); else run(); };
@@ -9579,10 +9598,25 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     finally { busy = false; }
   }
 
+  /* Fenêtre de téléchargement différé autonome (outils sans overlay de progression).
+     Affiche « Télécharger » (choix de l'utilisateur) + une croix × pour fermer. */
+  function offerDownload(blob, filename, title, sub) {
+    var ov = document.createElement("div"); ov.className = "rx-ocr-ov";
+    ov.innerHTML = '<div class="rx-ocr-card"><button class="rx-ocr-x" aria-label="Fermer">×</button><div class="rx-ocr-h"><span class="rx-ocr-spin ok"></span><b>' + escText(title || "Terminé ✓") + '</b></div><div class="rx-ocr-msg">' + escText(title || "Fichier prêt ✓") + '</div><div class="rx-ocr-sub">' + escText(sub || "Cliquez pour télécharger votre fichier.") + '</div><div class="rx-ocr-actions"></div></div>';
+    function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+    ov.querySelector(".rx-ocr-x").onclick = close;
+    var acts = ov.querySelector(".rx-ocr-actions");
+    var dl = document.createElement("button"); dl.className = "rx-ocr-btn rx-ocr-dl"; dl.textContent = "⤓  Télécharger";
+    dl.onclick = function () { try { W("downloadBlob")(blob, filename); toast("Téléchargement de « " + filename + " » lancé.", "ok"); } catch (e) { toast("Téléchargement impossible.", "err"); } };
+    var cl = document.createElement("button"); cl.className = "rx-ocr-btn ghost"; cl.textContent = "Fermer"; cl.onclick = close;
+    acts.appendChild(dl); acts.appendChild(cl);
+    document.body.appendChild(ov);
+  }
   function buildOverlay(title) {
     var root = document.createElement("div"); root.className = "rx-ocr-ov";
-    root.innerHTML = '<div class="rx-ocr-card"><div class="rx-ocr-h"><span class="rx-ocr-spin"></span><b>' + escText(title || "Reconnaissance de texte (OCR)") + '</b></div><div class="rx-ocr-msg">Préparation du moteur…</div><div class="rx-ocr-sub">Sur un document numérisé, cela peut prendre un moment.</div><div class="rx-ocr-actions"></div></div>';
+    root.innerHTML = '<div class="rx-ocr-card"><button class="rx-ocr-x" aria-label="Fermer">×</button><div class="rx-ocr-h"><span class="rx-ocr-spin"></span><b>' + escText(title || "Reconnaissance de texte (OCR)") + '</b></div><div class="rx-ocr-msg">Préparation du moteur…</div><div class="rx-ocr-sub">Sur un document numérisé, cela peut prendre un moment.</div><div class="rx-ocr-actions"></div></div>';
     function close() { if (root.parentNode) root.parentNode.removeChild(root); }
+    var xb = root.querySelector(".rx-ocr-x"); if (xb) xb.onclick = close;
     function mkBtn(label, fn, ghost) { var b = document.createElement("button"); b.className = "rx-ocr-btn" + (ghost ? " ghost" : ""); b.textContent = label; b.onclick = fn; return b; }
     return {
       root: root,
@@ -9603,6 +9637,18 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         root.querySelector(".rx-ocr-msg").textContent = title || "Terminé ✓";
         root.querySelector(".rx-ocr-sub").textContent = sub || "";
         root.querySelector(".rx-ocr-actions").appendChild(mkBtn("Fermer", close, true));
+      },
+      /* Fin de traitement avec téléchargement DIFFÉRÉ : l'utilisateur choisit de
+         télécharger (bouton) ou de fermer (× / Fermer). Aucun téléchargement automatique. */
+      doneDownload: function (blob, filename, title, sub) {
+        root.querySelector(".rx-ocr-spin").classList.add("ok");
+        root.querySelector(".rx-ocr-msg").textContent = title || "Terminé ✓";
+        root.querySelector(".rx-ocr-sub").textContent = sub || "Votre fichier est prêt.";
+        var a = root.querySelector(".rx-ocr-actions");
+        var dl = mkBtn("⤓  Télécharger", function () { try { W("downloadBlob")(blob, filename); toast("Téléchargement de « " + filename + " » lancé.", "ok"); } catch (e) { toast("Téléchargement impossible.", "err"); } });
+        dl.classList.add("rx-ocr-dl");
+        a.appendChild(dl);
+        a.appendChild(mkBtn("Fermer", close, true));
       },
       showResult: function (txt) {
         root.querySelector(".rx-ocr-spin").classList.add("ok");
