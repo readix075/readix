@@ -8972,6 +8972,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rx-ocr-btn { border: none; background: var(--brand, #4F46E5); color: #fff; font-size: 13px; font-weight: 600; padding: 8px 13px; border-radius: 9px; cursor: pointer; }
 .rx-ocr-btn:hover { filter: brightness(1.06); }
 .rx-ocr-btn.ghost { background: transparent; color: var(--ink-soft, #6b7180); border: 1px solid var(--line, #e6e8ef); }
+.rx-ocr-result { margin-top: 12px; max-height: 46vh; overflow: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.6; color: var(--ink, #1a1d29); background: var(--surface-2, #f6f7fb); border: 1px solid var(--line, #e6e8ef); border-radius: 10px; padding: 12px 14px; }
 
 </style>
 <script id="readix-ui-ext">
@@ -8993,14 +8994,35 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
 
   /* 1) Enregistrer l'outil OCR (défini + rattaché à son rôle) */
-  function ensureOcrTool() {
+    if (TOOLS.some(function (t) { return t.id === entry.id; })) return false;
+    var idx = -1; for (var i = 0; i < TOOLS.length; i++) { if (TOOLS[i].id === afterId) idx = i; }
+    if (idx >= 0) TOOLS.splice(idx + 1, 0, entry); else TOOLS.push(entry);
+    return true;
+  }
+  function ensureTools() {
     try {
       if (typeof TOOLS === "undefined" || !Array.isArray(TOOLS)) return false;
-      if (TOOLS.some(function (t) { return t.id === "ocr"; })) return true;
-      var entry = { id: "ocr", name: "OCR (texte scanné)", grp: "Conversion", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h5M8 13h8M8 17h6"/><path d="M14 4v4h4"/>' };
-      var idx = -1; for (var i = 0; i < TOOLS.length; i++) { if (TOOLS[i].id === "tolpdf") idx = i; }
-      if (idx >= 0) TOOLS.splice(idx + 1, 0, entry); else TOOLS.push(entry);
-      return true;
+      var ch = false;
+      ch = insertAfter("tolpdf", { id: "ocr", name: "OCR (texte scanné)", grp: "Conversion", ic: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M8 9h5M8 13h8M8 17h6"/><path d="M14 4v4h4"/>' }) || ch;
+      ch = insertAfter("ocr", { id: "scan2doc", name: "Scanné → éditable", grp: "Conversion", ic: '<rect x="3" y="3" width="12" height="18" rx="1.5"/><path d="M7 8h4M7 12h4M7 16h3"/><path d="M15 15l3 2.5-3 2.5"/><path d="M18 17.5h-5"/>' }) || ch;
+      ch = insertAfter("scan2doc", { id: "word2pdf", name: "Word → PDF", grp: "Conversion", ic: '<rect x="3" y="3" width="12" height="18" rx="1.5"/><path d="M5.5 8l1.3 5 1.4-5 1.4 5 1.3-5"/><path d="M15 15l3 2.5-3 2.5"/><path d="M18 17.5h-5"/>' }) || ch;
+      ch = insertAfter("split", { id: "extractpages", name: "Extraction de pages", grp: "Essentiels", ic: '<rect x="5" y="3" width="10" height="15" rx="1.5"/><path d="M8 3v15"/><path d="M16 9l3 3-3 3"/><path d="M19 12h-6"/>' }) || ch;
+      ch = insertAfter("aiadvanced", { id: "airesume", name: "Résumé par IA", grp: "Intelligence artificielle", ic: '<path d="M5 7h9M5 11h7M5 15h9M5 19h5"/><path d="M18.5 3l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/>' }) || ch;
+      return ch;
+    } catch (e) { return false; }
+  }
+
+  /* 1b) Renommage des outils : suffixe « PDF » sur les outils de manipulation
+     (convention iLovePDF). On NE touche PAS aux conversions « PDF → images » /
+     « Images → PDF » (conservées telles quelles, sur demande). Mutation runtime
+     des noms dans TOOLS ; aucun edit inline du socle. */
+  var RENAMES = { editpdf: "Modifier PDF", fillsign: "Remplir & Signer PDF", merge: "Fusionner PDF", split: "Diviser PDF", organize: "Organiser PDF", compress: "Compresser PDF" };
+  function renameTools() {
+    try {
+      if (typeof TOOLS === "undefined" || !Array.isArray(TOOLS)) return false;
+      var changed = false;
+      TOOLS.forEach(function (t) { if (RENAMES[t.id] && t.name !== RENAMES[t.id]) { t.name = RENAMES[t.id]; changed = true; } });
+      return changed;
     } catch (e) { return false; }
   }
 
@@ -9008,7 +9030,14 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function wrapOpenTool() {
     if (typeof window.openTool !== "function" || window.openTool._rxOcr) return;
     var orig = window.openTool;
-    window.openTool = function (id) { if (id === "ocr") { runOcrTool(); return; } return orig.apply(this, arguments); };
+    window.openTool = function (id) {
+      if (id === "ocr") { runOcrTool(); return; }
+      if (id === "scan2doc") { runScanToDoc(); return; }
+      if (id === "word2pdf") { runWord2Pdf(); return; }
+      if (id === "extractpages") { runExtractPages(); return; }
+      if (id === "airesume") { runResumeIA(); return; }
+      return orig.apply(this, arguments);
+    };
     window.openTool._rxOcr = true;
   }
 
@@ -9089,37 +9118,120 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     else { toast("Ouverture du document impossible.", "err"); }
   }
 
+  // Reconnaissance partagée : vision de Claude (document structuré) sinon Tesseract (texte).
+  async function recognize(t, ov) {
+    var html = null, text = null;
+    if (visionAvailable()) {
+      try { html = await readWithVision(t.pdf, function (i, n) { ov.set("Lecture du document — page " + i + " / " + n + "…"); }); }
+      catch (e) { html = null; } // bascule silencieuse en classique
+    }
+    if (html != null) { text = htmlToText(html); }
+    else {
+      if (typeof ocrPdfTab !== "function") throw new Error("Aucun moteur de reconnaissance disponible.");
+      text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
+    }
+    t.ocrText = text || ""; t.ocrHtml = html || "";
+    return { text: text || "", html: html || "" };
+  }
+
   var busy = false;
   async function runOcrTool() {
-    if (busy) { toast("Une reconnaissance OCR est déjà en cours…", "warn"); return; }
+    if (busy) { toast("Une reconnaissance est déjà en cours…", "warn"); return; }
     var t = activeTabSafe();
     if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF dans le Lecteur pour lancer l’OCR.", "warn"); return; }
     busy = true;
     var ov = buildOverlay(); document.body.appendChild(ov.root);
-    try {
-      var html = null, text = null;
-      // 1) L'œil de l'OCR : Claude lit directement l'image et reconstruit un document structuré
-      if (visionAvailable()) {
-        try { html = await readWithVision(t.pdf, function (i, n) { ov.set("Lecture du document — page " + i + " / " + n + "…"); }); }
-        catch (e) { html = null; } // bascule silencieuse en classique
-      }
-      // 2) Repli classique (Tesseract) si pas d'IA ou si la vision a échoué
-      if (html != null) {
-        text = htmlToText(html);
-      } else {
-        if (typeof ocrPdfTab !== "function") throw new Error("Aucun moteur de reconnaissance disponible.");
-        text = await ocrPdfTab(t, function (i, n) { ov.set("Reconnaissance — page " + i + " / " + n); });
-      }
-      t.ocrText = text || "";
-      t.ocrHtml = html || "";
-      ov.done(text, html);
-    } catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
+    try { var r = await recognize(t, ov); ov.done(r.text, r.html); }
+    catch (e) { ov.fail((e && e.message) || "Reconnaissance impossible."); }
     finally { busy = false; }
   }
 
-  function buildOverlay() {
+  /* ── Lot 1 : outils exposés depuis le rail ── */
+
+  // Word → PDF : convertit le document ouvert dans Document Studio.
+  async function runWord2Pdf() {
+    var t = activeTabSafe();
+    if (!t || t.tool !== "docstudio") { toast("Ouvrez d’abord un document dans Document Studio pour le convertir en PDF.", "warn"); return; }
+    var ed = document.querySelector(".doceditor"); var html = (ed ? ed.innerHTML : t.doc) || t.doc || "";
+    if (!html || !html.replace(/<[^>]*>/g, "").trim()) { toast("Le document est vide : rien à convertir.", "warn"); return; }
+    var dl = W("downloadCopilotFile"); if (!dl) { toast("Conversion indisponible.", "err"); return; }
+    var name = (t.name || "Document").replace(/\.(docx?|pdf)$/i, "");
+    try { await dl({ kind: "pdf", html: true, name: name + ".pdf", content: html }); toast("PDF généré à partir du document Word ✓", "ok"); }
+    catch (e) { toast("Échec de la conversion : " + ((e && e.message) || e), "err"); }
+  }
+
+  // Extraction de pages : sélecteur « 1, 3, 5-8 » → nouveau PDF.
+  function parsePageSpec(spec, total) {
+    var out = [];
+    String(spec || "").split(/[,;\s]+/).forEach(function (part) {
+      part = part.trim(); if (!part) return;
+      var m = part.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+      if (m) { var a = +m[1], b = +m[2]; if (a > b) { var z = a; a = b; b = z; } for (var i = a; i <= b; i++) if (i >= 1 && i <= total) out.push(i); }
+      else { var n = +part; if (n >= 1 && n <= total) out.push(n); }
+    });
+    return out.filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+  }
+  function runExtractPages() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf || !t.bytes) { toast("Ouvrez d’abord un PDF pour extraire des pages.", "warn"); return; }
+    var dlg = W("dialog"); if (!dlg) { toast("Interface indisponible.", "err"); return; }
+    var total = t.pdf.numPages;
+    var d = dlg('<h3>Extraction de pages</h3><p style="font-size:13px;color:var(--ink-soft)">Document de ' + total + ' page(s). Indiquez les pages à extraire (ex. « 1, 3, 5-8 »).</p><input id="rxExtr" class="rp-input" placeholder="ex. 1, 3, 5-8" style="width:100%;box-sizing:border-box"><div class="row" style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" data-a="x">Annuler</button><button class="btn sm" data-a="go">Extraire</button></div>');
+    var inp = d.root.querySelector("#rxExtr"); if (inp) inp.focus();
+    var run = async function () {
+      var pages = parsePageSpec(inp.value, total);
+      if (!pages.length) { toast("Aucune page valide. Utilisez par ex. « 1, 3, 5-8 ».", "warn"); return; }
+      d.close();
+      try {
+        var PDFLibRef = window.PDFLib, u8f = W("u8"), db = W("downloadBlob");
+        var src = await PDFLibRef.PDFDocument.load((u8f ? u8f(t.bytes) : new Uint8Array(t.bytes)).slice(0));
+        var out = await PDFLibRef.PDFDocument.create();
+        var copied = await out.copyPages(src, pages.map(function (n) { return n - 1; }));
+        copied.forEach(function (p) { out.addPage(p); });
+        var bytes = await out.save();
+        db(new Blob([bytes], { type: "application/pdf" }), (t.name || "document").replace(/\.pdf$/i, "") + "-pages.pdf");
+        toast("Pages " + pages.join(", ") + " extraites ✓", "ok");
+      } catch (e) { toast("Échec de l’extraction : " + ((e && e.message) || e), "err"); }
+    };
+    d.root.onclick = function (e) { var b = e.target.closest("[data-a]"); if (!b) return; if (b.dataset.a === "x") d.close(); else run(); };
+    if (inp) inp.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } };
+  }
+
+  // Résumé par IA : lit le document et affiche un résumé structuré.
+  async function runResumeIA() {
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF pour le résumer.", "warn"); return; }
+    var ai = W("aiGenerate"); if (!ai) { toast("Résumé indisponible : IA non configurée.", "warn"); return; }
+    var ov = buildOverlay("Résumé par IA"); document.body.appendChild(ov.root); ov.set("Lecture du document…");
+    try {
+      var text = t.ocrText || (W("extractPdfText") ? await W("extractPdfText")(t) : "");
+      if (!text || text.trim().length < 20) { ov.fail("Aucun texte exploitable. Pour un document scanné, lancez d’abord l’OCR."); return; }
+      ov.set("Rédaction du résumé…");
+      var sys = "Tu es un assistant de synthèse. Résume le document de façon claire et fidèle en français : d'abord un court paragraphe d'aperçu, puis les points clés sous forme de liste à puces. N'invente rien ; appuie-toi uniquement sur le contenu fourni.";
+      var res = await ai("Résume ce document :\n\n" + text.slice(0, 14000), sys, 1200);
+      ov.showResult(res || "Aucun résumé produit.");
+    } catch (e) { ov.fail((e && e.message) || "Résumé impossible."); }
+  }
+
+  // Outil « Scanné → éditable » : reconnaissance puis ouverture directe du document exploitable.
+  async function runScanToDoc() {
+    if (busy) { toast("Une reconnaissance est déjà en cours…", "warn"); return; }
+    var t = activeTabSafe();
+    if (!t || !t.pdf) { toast("Ouvrez d’abord un PDF scanné dans le Lecteur.", "warn"); return; }
+    busy = true;
+    var ov = buildOverlay("Scanné → document éditable"); document.body.appendChild(ov.root);
+    try {
+      var r = await recognize(t, ov);
+      ov.set("Préparation du document éditable…");
+      openAsEditableDoc(r.html, r.text);
+      ov.doneInfo("Document exploitable prêt ✓", "Il s’ouvre dans Document Studio, prêt à être corrigé et édité.");
+    } catch (e) { ov.fail((e && e.message) || "Conversion impossible."); }
+    finally { busy = false; }
+  }
+
+  function buildOverlay(title) {
     var root = document.createElement("div"); root.className = "rx-ocr-ov";
-    root.innerHTML = '<div class="rx-ocr-card"><div class="rx-ocr-h"><span class="rx-ocr-spin"></span><b>Reconnaissance de texte (OCR)</b></div><div class="rx-ocr-msg">Préparation du moteur…</div><div class="rx-ocr-sub">Sur un document numérisé, cela peut prendre un moment.</div><div class="rx-ocr-actions"></div></div>';
+    root.innerHTML = '<div class="rx-ocr-card"><div class="rx-ocr-h"><span class="rx-ocr-spin"></span><b>' + escText(title || "Reconnaissance de texte (OCR)") + '</b></div><div class="rx-ocr-msg">Préparation du moteur…</div><div class="rx-ocr-sub">Sur un document numérisé, cela peut prendre un moment.</div><div class="rx-ocr-actions"></div></div>';
     function close() { if (root.parentNode) root.parentNode.removeChild(root); }
     function mkBtn(label, fn, ghost) { var b = document.createElement("button"); b.className = "rx-ocr-btn" + (ghost ? " ghost" : ""); b.textContent = label; b.onclick = fn; return b; }
     return {
@@ -9136,9 +9248,25 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         a.appendChild(mkBtn("Extraire le texte", function () { close(); var f = W("openTool"); if (f) f("text"); }));
         a.appendChild(mkBtn("Fermer", close, true));
       },
+      doneInfo: function (title, sub) {
+        root.querySelector(".rx-ocr-spin").classList.add("ok");
+        root.querySelector(".rx-ocr-msg").textContent = title || "Terminé ✓";
+        root.querySelector(".rx-ocr-sub").textContent = sub || "";
+        root.querySelector(".rx-ocr-actions").appendChild(mkBtn("Fermer", close, true));
+      },
+      showResult: function (txt) {
+        root.querySelector(".rx-ocr-spin").classList.add("ok");
+        root.querySelector(".rx-ocr-msg").textContent = "Résumé prêt ✓";
+        var sub = root.querySelector(".rx-ocr-sub"); sub.textContent = "";
+        var box = document.createElement("div"); box.className = "rx-ocr-result"; box.textContent = String(txt || "");
+        var acts = root.querySelector(".rx-ocr-actions");
+        acts.parentNode.insertBefore(box, acts);
+        acts.appendChild(mkBtn("Copier", function () { try { navigator.clipboard.writeText(String(txt || "")); toast("Résumé copié.", "ok"); } catch (e) {} }));
+        acts.appendChild(mkBtn("Fermer", close, true));
+      },
       fail: function (m) {
         var sp = root.querySelector(".rx-ocr-spin"); if (sp) sp.classList.add("err");
-        root.querySelector(".rx-ocr-msg").textContent = "Échec de l’OCR";
+        root.querySelector(".rx-ocr-msg").textContent = "Échec de la reconnaissance";
         root.querySelector(".rx-ocr-sub").textContent = m;
         root.querySelector(".rx-ocr-actions").appendChild(mkBtn("Fermer", close, true));
       }
@@ -9147,16 +9275,18 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 
   /* 3) init : enregistrer l'outil, envelopper openTool, rafraîchir le rail */
   function init() {
-    var added = ensureOcrTool();
+    var added = ensureTools();
+    var renamed = renameTools();
     wrapOpenTool();
-    if (added && typeof renderTools === "function") { try { renderTools(); } catch (e) {} }
+    if ((added || renamed) && typeof renderTools === "function") { try { renderTools(); } catch (e) {} }
   }
   init();
   // Filet de sécurité si le socle finit de se charger juste après ce bloc.
   var tries = 0;
   var iv = setInterval(function () {
     tries++;
-    var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && TOOLS.some(function (t) { return t.id === "ocr"; }) && window.openTool && window.openTool._rxOcr);
+    var need = ["ocr", "scan2doc", "word2pdf", "extractpages", "airesume"];
+    var ready = (typeof TOOLS !== "undefined" && Array.isArray(TOOLS) && need.every(function (id) { return TOOLS.some(function (t) { return t.id === id; }); }) && window.openTool && window.openTool._rxOcr);
     if (!ready) init();
     if (ready || tries > 20) clearInterval(iv);
   }, 250);
