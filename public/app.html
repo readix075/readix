@@ -8994,6 +8994,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
 
   /* 1) Enregistrer l'outil OCR (défini + rattaché à son rôle) */
+  function insertAfter(afterId, entry) {
     if (TOOLS.some(function (t) { return t.id === entry.id; })) return false;
     var idx = -1; for (var i = 0; i < TOOLS.length; i++) { if (TOOLS[i].id === afterId) idx = i; }
     if (idx >= 0) TOOLS.splice(idx + 1, 0, entry); else TOOLS.push(entry);
