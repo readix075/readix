@@ -22,11 +22,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
-// xAI (Grok) — traitement d'image (génération + retouche). Clé côté serveur uniquement.
-const XAI_API_KEY = process.env.XAI_API_KEY;
-const XAI_BASE = process.env.XAI_API_BASE || "https://api.x.ai/v1";
-const XAI_IMAGE_MODEL = process.env.XAI_IMAGE_MODEL || "grok-2-image";
-const XAI_EDIT_MODEL = process.env.XAI_EDIT_MODEL || "grok-imagine-image-2.0";
+// OpenAI — traitement d'image (génération + retouche). Clé côté serveur uniquement.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_BASE = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
+const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
+const OPENAI_EDIT_MODEL = process.env.OPENAI_EDIT_MODEL || "gpt-image-1";
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Paliers d'abonnement ----
@@ -172,8 +172,8 @@ app.get("/api/health", (req, res) => res.json({
     database: !!DATABASE_URL,
     aiKey: !!ANTHROPIC_API_KEY,
     aiModel: ANTHROPIC_MODEL,
-    xaiKey: !!XAI_API_KEY,
-    xaiModel: XAI_IMAGE_MODEL,
+    openaiKey: !!OPENAI_API_KEY,
+    openaiModel: OPENAI_IMAGE_MODEL,
     stripe: !!process.env.STRIPE_SECRET_KEY,
     clientUrl: CLIENT_URL
   },
@@ -497,28 +497,80 @@ app.post("/api/ai/generate", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────────────────────────────────
-// Traitement d'image par Grok (xAI). Claude reste sur le texte/la lecture ;
-// Grok s'occupe des pixels : génération (couvertures, illustrations) et retouche
-// (suppression d'arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
-// ─────────────────────────────────────────────────────────────────────────
-async function xaiImageCall(path, body) {
-  if (!XAI_API_KEY) throw new Error("XAI_API_KEY manquante");
-  const r = await fetch(XAI_BASE + path, {
+// ──────────────────────────────────────────────────────────────────────────
+// Traitement d'image par OpenAI (gpt-image-1). Claude reste sur le texte/la
+// lecture ; OpenAI s'occupe des pixels : génération (couvertures, illustrations)
+// et retouche (arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
+// ──────────────────────────────────────────────────────────────────────────
+
+// Appel JSON (génération). gpt-image-1 renvoie toujours du base64 : pas de response_format.
+async function openaiImageJson(path, body) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
+  const r = await fetch(OPENAI_BASE + path, {
     method: "POST",
-    headers: { "content-type": "application/json", "authorization": "Bearer " + XAI_API_KEY },
+    headers: { "content-type": "application/json", "authorization": "Bearer " + OPENAI_API_KEY },
     body: JSON.stringify(body)
   });
   const txt = await r.text();
-  if (!r.ok) throw new Error("Erreur image xAI (" + r.status + ") : " + txt.slice(0, 400));
-  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse xAI illisible."); }
+  if (!r.ok) throw new Error("Erreur image OpenAI (" + r.status + ") : " + openaiErrText(txt));
+  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse OpenAI illisible."); }
   return data;
 }
-function xaiImagesToUrls(data) {
-  // OpenAI-compatible : { data:[{ b64_json | url }] } ; la retouche peut renvoyer { url } ou { image_url }
+
+// Appel multipart (retouche). OpenAI exige multipart/form-data avec le fichier image.
+async function openaiImageEdit(fields) {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
+  const form = new FormData();
+  form.append("model", fields.model);
+  form.append("prompt", fields.prompt);
+  if (fields.size) form.append("size", fields.size);
+  const img = await sourceToBlob(fields.image);
+  form.append("image", img.blob, img.name);
+  if (fields.mask) { const m = await sourceToBlob(fields.mask); form.append("mask", m.blob, "mask.png"); }
+  const r = await fetch(OPENAI_BASE + "/images/edits", {
+    method: "POST",
+    headers: { "authorization": "Bearer " + OPENAI_API_KEY }, // pas de content-type : fetch pose le boundary
+    body: form
+  });
+  const txt = await r.text();
+  if (!r.ok) throw new Error("Erreur retouche OpenAI (" + r.status + ") : " + openaiErrText(txt));
+  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse OpenAI illisible."); }
+  return data;
+}
+
+// Extrait un message d'erreur lisible du corps d'erreur OpenAI.
+function openaiErrText(txt) {
+  try { const j = JSON.parse(txt); if (j && j.error && j.error.message) return j.error.message; } catch (e) {}
+  return String(txt || "").slice(0, 400);
+}
+
+// Convertit une data URL (data:image/...;base64,...) ou une URL https en Blob fichier.
+async function sourceToBlob(src) {
+  src = String(src || "");
+  const m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(src);
+  if (m) {
+    const mime = m[1] || "image/png";
+    const buf = m[2] ? Buffer.from(m[3], "base64") : Buffer.from(decodeURIComponent(m[3]));
+    return { blob: new Blob([buf], { type: mime }), name: "image." + extFromMime(mime) };
+  }
+  const rr = await fetch(src); // URL distante : OpenAI n'accepte pas d'URL en retouche, on récupère les octets.
+  if (!rr.ok) throw new Error("Image source inaccessible (" + rr.status + ").");
+  const ab = await rr.arrayBuffer();
+  const mime = rr.headers.get("content-type") || "image/png";
+  return { blob: new Blob([Buffer.from(ab)], { type: mime }), name: "image." + extFromMime(mime) };
+}
+function extFromMime(m) {
+  m = String(m || "").toLowerCase();
+  if (m.includes("png")) return "png";
+  if (m.includes("webp")) return "webp";
+  if (m.includes("jpeg") || m.includes("jpg")) return "jpg";
+  return "png";
+}
+
+// Réponse OpenAI → data URLs affichables ({ data:[{ b64_json | url }] }).
+function imagesToUrls(data) {
   let arr = Array.isArray(data && data.data) ? data.data
     : (data && data.url) ? [{ url: data.url }]
-    : (data && data.image_url) ? [{ url: data.image_url }]
     : [];
   return arr.map(function (it) {
     if (it && it.b64_json) return "data:image/png;base64," + it.b64_json;
@@ -526,14 +578,24 @@ function xaiImagesToUrls(data) {
     return null;
   }).filter(Boolean);
 }
+
+// Ratio → taille gpt-image-1 (1024x1024 | 1536x1024 | 1024x1536 | auto).
+function sizeFromAspect(ar) {
+  const s = String(ar || "").toLowerCase();
+  if (/1\s*[:x]\s*1|square|carr/.test(s)) return "1024x1024";
+  if (/3\s*[:x]\s*2|16\s*[:x]\s*9|paysage|landscape|wide/.test(s)) return "1536x1024";
+  if (/2\s*[:x]\s*3|9\s*[:x]\s*16|portrait|couvertur|cover|book/.test(s)) return "1024x1536";
+  return "auto";
+}
+
 function imageGateError(req) {
-  if (!XAI_API_KEY) return { code: 503, error: "Traitement d'image non configuré sur le serveur (XAI_API_KEY)." };
+  if (!OPENAI_API_KEY) return { code: 503, error: "Traitement d'image non configuré sur le serveur (OPENAI_API_KEY)." };
   if (levelOf(req.user.plan) < 2) return { code: 402, error: "Le traitement d'image par IA nécessite le plan Pro ou supérieur." };
   return null;
 }
 
 app.get("/api/image/status", auth, (req, res) => {
-  res.json({ ok: !!XAI_API_KEY, configured: !!XAI_API_KEY, model: XAI_IMAGE_MODEL, editModel: XAI_EDIT_MODEL });
+  res.json({ ok: !!OPENAI_API_KEY, configured: !!OPENAI_API_KEY, model: OPENAI_IMAGE_MODEL, editModel: OPENAI_EDIT_MODEL });
 });
 
 // Génération d'image à partir d'un texte (couvertures, illustrations).
@@ -545,20 +607,23 @@ app.post("/api/image/generate", auth, async (req, res) => {
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
   const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
-  const body = { model: XAI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), n, response_format: "b64_json" };
-  const ar = req.body && req.body.aspect_ratio; if (ar) body.aspect_ratio = String(ar);
-  const rez = req.body && req.body.resolution; if (rez) body.resolution = String(rez);
+  const body = { model: OPENAI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), n };
+  // Taille : size explicite prioritaire, sinon dérivée d'un aspect_ratio, sinon auto (modèle).
+  const sz = req.body && req.body.size;
+  if (sz && /^\d+x\d+$/.test(String(sz))) body.size = String(sz);
+  else { const s = sizeFromAspect(req.body && req.body.aspect_ratio); if (s !== "auto") body.size = s; }
+  const q = req.body && req.body.quality; if (q) body.quality = String(q);
   try {
-    const data = await xaiImageCall("/images/generations", body);
-    const images = xaiImagesToUrls(data);
-    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par xAI." });
+    const data = await openaiImageJson("/images/generations", body);
+    const images = imagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par OpenAI." });
     await incUsage(req.user.email);
     res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Retouche d'une image existante (suppression d'arrière-plan/objet, style…).
-// image = data URL (data:image/...;base64,...) ou URL https publique.
+// Retouche d'une image existante (arrière-plan/objet, style…).
+// image = data URL (data:image/...;base64,...) ou URL https ; mask = PNG optionnel.
 app.post("/api/image/edit", auth, async (req, res) => {
   const gate = imageGateError(req); if (gate) return res.status(gate.code).json({ error: gate.error });
   const prompt = String((req.body && req.body.prompt) || "").trim();
@@ -568,11 +633,13 @@ app.post("/api/image/edit", auth, async (req, res) => {
   const quota = AI_QUOTA[req.user.plan] ?? 0;
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
-  const body = { model: XAI_EDIT_MODEL, prompt: prompt.slice(0, 2000), image: { url: image, type: "image_url" } };
+  const fields = { model: OPENAI_EDIT_MODEL, prompt: prompt.slice(0, 2000), image };
+  const sz = req.body && req.body.size; if (sz && /^\d+x\d+$/.test(String(sz))) fields.size = String(sz);
+  const mask = req.body && req.body.mask; if (mask) fields.mask = String(mask);
   try {
-    const data = await xaiImageCall("/images/edits", body);
-    const images = xaiImagesToUrls(data);
-    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par xAI." });
+    const data = await openaiImageEdit(fields);
+    const images = imagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image renvoyée par OpenAI." });
     await incUsage(req.user.email);
     res.json({ images });
   } catch (e) { res.status(500).json({ error: e.message }); }
