@@ -7053,6 +7053,10 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     if ((t._mode === "cover" || t._mode === "illustration") && window.ReadixCover && ReadixCover.render) {
       try { return ReadixCover.render(t, stage, backToContent, t._mode); } catch (e) { t._mode = "content"; }
     }
+    // Mode Assistant IA (Studio Livre IA)
+    if (t._mode === "ai" && window.ReadixBookAI && ReadixBookAI.render) {
+      try { return ReadixBookAI.render(t, stage, backToContent); } catch (e) { t._mode = "content"; }
+    }
     if (!t._sel) t._sel = { type: "book" };
     var wrap = E("div", "cv-builder rxbk-studio");
     wrap.innerHTML = '<div class="cv-form bk-left" id="bkLeft"></div><div class="cv-preview-wrap"><div class="cv-preview-bar"><span class="cv-pv-title">Aperçu du livre</span><span style="flex:1"></span>'
@@ -7095,6 +7099,10 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
         var mCov = E("button", "bk-mode", "Couverture"); mCov.onclick = function () { t._mode = "cover"; rerender(); };
         var mIll = E("button", "bk-mode", "Illustrations"); mIll.onclick = function () { t._mode = "illustration"; rerender(); };
         modes.appendChild(mCov); modes.appendChild(mIll);
+      }
+      if (window.ReadixBookAI) {
+        var mAI = E("button", "bk-mode", "✨ Assistant IA"); mAI.onclick = function () { t._mode = "ai"; rerender(); };
+        modes.appendChild(mAI);
       }
       box.appendChild(modes);
     }
@@ -8925,6 +8933,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     { k: "pdf", label: "Importer un PDF", sub: "Ouvrir un document existant", ic: IC.upload },
     { k: "word", label: "Document Word", sub: "Rédiger dans Document Studio", ic: IC.doc || IC.documents },
     { k: "book", label: "Livre", sub: "Écrire un livre (Book Studio)", ic: IC.book },
+    { k: "bookai", label: "Livre IA", sub: "Rédigé et illustré par l'IA", ic: IC.ai || IC.book },
     { k: "cv", label: "CV", sub: "Créer un CV (CV Studio)", ic: IC.cv },
     { k: "blank", label: "Vide", sub: "Je verrai plus tard", ic: IC.folder }
   ];
@@ -8933,6 +8942,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (kind === "pdf") clickId("hiddenFile");
       else if (kind === "word") runTool("docstudio");
       else if (kind === "book") runTool("book");
+      else if (kind === "bookai") { if (window.openBookAIStudio) window.openBookAIStudio(); else runTool("book"); }
       else if (kind === "cv") runTool("cv");
       // "blank" : on reste sur l'espace du projet
     } catch (e) {}
@@ -10065,6 +10075,424 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   try { console.info("[Readix] UI Ext — outil OCR ajouté, bouton Projet d'en-tête masqué."); } catch (e) {}
 })();
 
+</script>
+<style id="readix-book-ai-css">
+/* ===== Readix Book AI — Studio Livre IA ===== */
+.rxbai{--bai-brand:#4f46e5;--bai-brand-ink:#4338ca;--bai-weak:#eef0fe;--bai-cyan:#0ea5e9;
+  --bai-ink:#0f172a;--bai-soft:#64748b;--bai-faint:#94a3b8;--bai-line:#e5e9f1;--bai-surface:#fff;--bai-surface2:#f6f8fc;
+  --bai-paper:#fffdf7;--bai-paper-line:#efe7d6;--bai-ok:#15a34a;--bai-ok-weak:#e7f7ee;--bai-warn:#dc2626;
+  color:var(--bai-ink);padding:14px 16px 40px;max-width:1200px;margin:0 auto}
+.rxbai .serifish{font-family:Georgia,"Times New Roman",serif}
+
+.rxbai-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.rxbai-back{font:inherit;font-size:13px;font-weight:600;color:var(--bai-soft);background:var(--bai-surface);border:1px solid var(--bai-line);border-radius:9px;padding:7px 12px;cursor:pointer}
+.rxbai-back:hover{color:var(--bai-brand-ink);border-color:var(--bai-brand)}
+.rxbai-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.rxbai-badge-ia{font-size:.62em;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--bai-brand),#8b5cf6);padding:2px 6px;border-radius:6px;vertical-align:super;margin-left:2px}
+.rxbai-spacer{flex:1}
+
+.rxbai-grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+@media (max-width:900px){.rxbai-grid{grid-template-columns:1fr}}
+
+.rxbai-panel{background:var(--bai-surface);border:1px solid var(--bai-line);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px rgba(15,23,42,.06);overflow:hidden;position:sticky;top:12px}
+.rxbai-pad{padding:16px}
+.rxbai-divide{height:1px;background:var(--bai-line)}
+.rxbai-sec-title{font-size:13px;font-weight:600;margin:0 0 3px}
+.rxbai-note{font-size:12px;color:var(--bai-soft);line-height:1.45;margin:0 0 12px}
+.rxbai-ta{width:100%;box-sizing:border-box;font:inherit;font-size:13.5px;line-height:1.5;padding:11px 12px;border:1px solid var(--bai-line);border-radius:11px;resize:vertical;background:var(--bai-surface2);color:var(--bai-ink)}
+.rxbai-ta:focus{outline:2px solid var(--bai-brand);outline-offset:1px;background:var(--bai-surface)}
+
+.rxbai-lines{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rxbai-line{text-align:left;font:inherit;cursor:pointer;border:1px solid var(--bai-line);background:var(--bai-surface);border-radius:12px;padding:10px 11px;transition:.15s}
+.rxbai-line:hover{border-color:color-mix(in srgb,var(--bai-brand) 30%,transparent)}
+.rxbai-line.on{border-color:var(--bai-brand);background:var(--bai-weak);box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.rxbai-line b{display:block;font-size:13px;font-weight:600;color:var(--bai-ink)}
+.rxbai-line.on b{color:var(--bai-brand-ink)}
+.rxbai-line span{display:block;font-size:11px;color:var(--bai-soft);margin-top:4px;line-height:1.4}
+
+.rxbai-btn{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--bai-line);background:var(--bai-surface);color:var(--bai-ink);padding:10px 14px;cursor:pointer;transition:.15s}
+.rxbai-btn.block{display:block;width:100%;margin-top:10px}
+.rxbai-btn.primary{background:var(--bai-brand);border-color:var(--bai-brand);color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.28)}
+.rxbai-btn.primary:hover{background:var(--bai-brand-ink)}
+.rxbai-btn.primary:disabled{opacity:.7;cursor:default;box-shadow:none}
+.rxbai-btn.ghost:hover{border-color:var(--bai-warn);color:var(--bai-warn)}
+
+.rxbai-gen{background:linear-gradient(180deg,var(--bai-weak),transparent);border:1px solid color-mix(in srgb,var(--bai-brand) 22%,transparent);border-radius:11px;padding:12px}
+.rxbai-gen-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--bai-brand-ink)}
+.rxbai-track{height:8px;border-radius:99px;background:color-mix(in srgb,var(--bai-brand) 14%,transparent);overflow:hidden;margin-top:9px}
+.rxbai-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--bai-brand),var(--bai-cyan));transition:width .5s ease}
+.rxbai-fine{font-size:11px;color:var(--bai-soft);line-height:1.4;margin-top:10px}
+
+/* book / accordion */
+.rxbai-book{background:var(--bai-surface);border:1px solid var(--bai-line);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px rgba(15,23,42,.06);overflow:hidden;min-height:360px}
+.rxbai-blank{padding:64px 30px;text-align:center;max-width:420px;margin:0 auto}
+.rxbai-blank-ic{font-size:40px;margin-bottom:12px}
+.rxbai-blank-t{font-size:22px;font-weight:600}
+.rxbai-blank-d{font-size:13.5px;color:var(--bai-soft);line-height:1.55;margin-top:8px}
+.rxbai-book-head{padding:18px 20px;border-bottom:1px solid var(--bai-line);background:var(--bai-surface2)}
+.rxbai-book-t{font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.rxbai-book-s{font-size:15px;color:var(--bai-soft);font-style:italic;margin-top:3px}
+.rxbai-book-a{font-size:13px;color:var(--bai-soft);margin-top:6px}
+.rxbai-book-m{font-size:12px;color:var(--bai-faint);margin-top:8px}
+
+.rxbai-toc{padding:8px 10px}
+.rxbai-ch{border:1px solid var(--bai-line);border-radius:11px;margin:8px 6px;background:var(--bai-surface);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.rxbai-ch.open{box-shadow:0 8px 24px rgba(15,23,42,.07);border-color:color-mix(in srgb,var(--bai-brand) 24%,transparent)}
+.rxbai-ch-head{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;color:inherit;font:inherit;padding:13px 14px;cursor:pointer}
+.rxbai-num{width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;font-size:12.5px;font-weight:700;background:var(--bai-weak);color:var(--bai-brand-ink)}
+.rxbai-ch-t{flex:1;min-width:0}
+.rxbai-lbl{display:block;font-size:11px;color:var(--bai-faint)}
+.rxbai-h{font-size:16.5px;font-weight:500;margin:1px 0 0}
+.rxbai-st{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:4px 9px;border-radius:999px}
+.rxbai-st.done{color:var(--bai-ok);background:var(--bai-ok-weak)}
+.rxbai-st.run{color:var(--bai-brand-ink);background:var(--bai-weak)}
+.rxbai-st.todo{color:var(--bai-faint);background:var(--bai-surface2)}
+.rxbai-st.err{color:var(--bai-warn);background:#fde8e8}
+.rxbai-chev{flex:0 0 auto;color:var(--bai-faint);font-size:20px;line-height:1;transition:transform .2s}
+.rxbai-ch.open .rxbai-chev{transform:rotate(90deg)}
+.rxbai-ch-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.rxbai-ch.open .rxbai-ch-body{max-height:6000px}
+.rxbai-ch-inner{padding:4px 20px 20px;background:var(--bai-paper);border-top:1px solid var(--bai-paper-line)}
+
+.rxbai-ch-inner .rxbai-h{font-family:Georgia,serif;font-size:17px;font-weight:600;margin:18px 0 8px;color:#26211a}
+.rxbai-p{font-family:Georgia,serif;font-size:15px;line-height:1.72;margin:0 0 12px;color:#26211a;max-width:66ch}
+.rxbai-sum{font-size:13.5px;color:var(--bai-soft);font-style:italic;margin:14px 0 8px}
+.rxbai-secs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.rxbai-sec{font-size:12px;color:#26211a;background:rgba(38,33,26,.06);border:1px solid var(--bai-paper-line);border-radius:8px;padding:5px 10px;font-weight:500}
+.rxbai-todo-note{font-size:12.5px;color:var(--bai-soft);margin:4px 0 6px}
+.rxbai-empty,.rxbai-err-tx{font-size:13px;color:var(--bai-warn)}
+
+.rxbai-illus{display:flex;align-items:center;gap:12px;background:var(--bai-surface);border:1px dashed color-mix(in srgb,var(--bai-brand) 40%,var(--bai-line));border-radius:12px;padding:12px 14px;margin:14px 0}
+.rxbai-illus-ic{font-size:22px;flex:0 0 auto}
+.rxbai-illus-tx{flex:1;min-width:0}
+.rxbai-illus-cap{font-size:13px;font-weight:600;color:var(--bai-ink)}
+.rxbai-illus-pr{font-size:11.5px;color:var(--bai-soft);margin-top:2px;line-height:1.4}
+.rxbai-illus-lay{font-size:10.5px;font-weight:700;color:var(--bai-brand-ink);background:var(--bai-weak);border-radius:999px;padding:3px 9px;flex:0 0 auto}
+
+.rxbai-run{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--bai-brand-ink);font-weight:500;padding:12px 0 4px}
+.rxbai-pulse{width:8px;height:8px;border-radius:50%;background:var(--bai-cyan);box-shadow:0 0 0 0 color-mix(in srgb,var(--bai-cyan) 55%,transparent);animation:rxbaiPulse 1.5s infinite}
+@keyframes rxbaiPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bai-cyan) 50%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.rxbai-shim{position:relative;overflow:hidden;background:var(--bai-surface2);border-radius:8px;height:12px;margin:9px 0}
+.rxbai-shim.w1{width:92%}.rxbai-shim.w2{width:76%}.rxbai-shim.w3{width:84%}
+.rxbai-shim::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--bai-brand) 15%,transparent),transparent);animation:rxbaiSweep 1.4s infinite}
+@keyframes rxbaiSweep{100%{transform:translateX(100%)}}
+
+@media (prefers-reduced-motion:reduce){.rxbai *{animation:none!important}}
+
+</style>
+<script id="readix-book-ai">/* ============================================================
+   READIX BOOK AI ENGINE — Studio Livre IA
+   Additif : un studio où l'auteur décrit un livre, et Readix
+   orchestre la fabrication — plan (Claude) → rédaction chapitre
+   par chapitre en s'auto-relançant → affichage en accordéon.
+   Réutilise aiGenerate, parseJsonLoose, toast, dialog du socle.
+   S'accroche au Book Studio via t._mode === "ai".
+   Aucune fonction du socle n'est modifiée ; retirer ce bloc
+   restaure le comportement précédent.
+   ÉTAT V1 : plan + rédaction du texte + marqueurs d'illustration.
+   (Génération réelle des illustrations + assemblage/export :
+   étape suivante.)
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.ReadixBookAI) return;
+
+  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
+  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
+  function uid(p) { return (p || "id") + "_" + Math.random().toString(36).slice(2, 9); }
+  function parseJson(s) {
+    var f = W("parseJsonLoose"); if (f) { var r = f(s); if (r) return r; }
+    try { return JSON.parse(s); } catch (e) {}
+    var m = String(s || "").replace(/```json|```/g, "").match(/[\[{][\s\S]*[\]}]/);
+    if (m) { try { return JSON.parse(m[0]); } catch (e2) {} }
+    return null;
+  }
+
+  var LINES = {
+    classic: { label: "Classique", illus: "peu d'illustrations, insérées sous le passage concerné" },
+    album:   { label: "Album",     illus: "beaucoup d'illustrations, souvent en pleine page ou en vis-à-vis" },
+    manual:  { label: "Manuel",    illus: "des figures et schémas légendés, là où ils clarifient le propos" },
+    rythme:  { label: "Rythmé",    illus: "des illustrations variées pour rythmer la lecture, sans excès" }
+  };
+
+  function aiState(t) {
+    var b = t.book || (t.book = (W("bookDefault") ? window.bookDefault() : { title: "", parts: [] }));
+    if (!b.ai) b.ai = { intent: "", line: "rythme", illusStyle: "aquarelle", exact: true, status: "idle", plan: null, content: {}, current: 0, stop: false, _open: {} };
+    if (!b.ai._open) b.ai._open = {};
+    return b.ai;
+  }
+
+  /* ---------------- Prompts ---------------- */
+  function planPrompts(ai) {
+    return {
+      sys: "Tu es un architecte éditorial : tu conçois la structure d'un livre. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.",
+      ask: "Intention de l'auteur : « " + ai.intent + " ».\n"
+        + "Conçois un plan de livre cohérent et complet, en français, adapté au sujet et au public visé. "
+        + "Renvoie STRICTEMENT ce JSON : "
+        + '{"title":"titre du livre","subtitle":"sous-titre court ou une chaîne vide","author":"nom de plume plausible ou chaîne vide",'
+        + '"chapters":[{"title":"titre du chapitre","summary":"une phrase de résumé",'
+        + '"sections":[{"title":"titre de sous-section","points":["idée clé","idée clé"]}]}]}. '
+        + "Entre 6 et 10 chapitres, chacun avec 2 à 4 sous-sections. Ici, seulement la structure — aucun texte rédigé."
+    };
+  }
+  function chapterPrompts(ai, chap, idx) {
+    var line = LINES[ai.line] || LINES.rythme;
+    var prev = ai.plan.chapters.slice(0, idx).map(function (c, i) { return (i + 1) + ". " + c.title; }).join(" ; ");
+    var secs = (chap.sections || []).map(function (s) { return "« " + s.title + " » (" + (s.points || []).join(", ") + ")"; }).join(" ; ");
+    return {
+      sys: "Tu es l'auteur d'un livre que tu rédiges chapitre par chapitre, avec un style vivant adapté au sujet et au public. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.",
+      ask: "Livre : « " + ai.plan.title + " »" + (ai.plan.subtitle ? (" — " + ai.plan.subtitle) : "") + ".\n"
+        + "Intention : " + ai.intent + "\n"
+        + (prev ? ("Chapitres déjà écrits : " + prev + "\n") : "")
+        + "Rédige maintenant le chapitre " + (idx + 1) + " : « " + chap.title + " ».\n"
+        + (secs ? ("Sous-sections à couvrir : " + secs + ".\n") : "")
+        + "Ligne éditoriale : " + line.label + " — " + line.illus + ".\n"
+        + 'Renvoie STRICTEMENT ce JSON : {"blocks":[ ... ]} où chaque bloc est l\'un de :\n'
+        + '{"type":"h","text":"titre de sous-section"} ; {"type":"p","text":"paragraphe rédigé et développé"} ; '
+        + '{"type":"illus","prompt":"description visuelle précise, SANS aucun texte ni lettre dans l\'image","caption":"légende courte","layout":"inline|facing|full"}.\n'
+        + "Rédige un vrai contenu développé : plusieurs paragraphes par sous-section. "
+        + "Insère une illustration UNIQUEMENT là où elle aide vraiment à comprendre, en cohérence avec la ligne éditoriale. "
+        + "Pour une figure technique (schéma, repère, graphe), décris-la précisément dans « prompt »."
+    };
+  }
+
+  /* ---------------- Actions ---------------- */
+  async function genPlan(t, stage) {
+    var ai = aiState(t), aiGen = W("aiGenerate");
+    if (!ai.intent.trim()) { toast("Décrivez d'abord votre livre.", "warn"); return; }
+    if (!aiGen) { toast("Service IA indisponible.", "warn"); return; }
+    ai.status = "planning"; paint(t, stage);
+    try {
+      var pr = planPrompts(ai);
+      var raw = await aiGen(pr.ask, pr.sys, 2800);
+      var plan = parseJson(raw);
+      if (!plan || !Array.isArray(plan.chapters) || !plan.chapters.length) throw new Error("Plan illisible, réessayez.");
+      plan.chapters.forEach(function (c) { if (!c.id) c.id = uid("ch"); });
+      ai.plan = plan; ai.content = {}; ai.current = 0; ai.status = "planned"; ai._open = {};
+      if (plan.title) t.book.title = plan.title;
+      if (plan.subtitle != null) t.book.subtitle = plan.subtitle;
+      if (plan.author != null) t.book.author = plan.author;
+      paint(t, stage); toast("Plan généré ✓", "ok");
+    } catch (e) {
+      ai.status = "idle"; paint(t, stage);
+      var st = e && e.status;
+      toast("Échec : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : ((e && (e.serverMessage || e.message)) || "plan impossible.")), "err");
+    }
+  }
+
+  async function writeAll(t, stage) {
+    var ai = aiState(t), aiGen = W("aiGenerate");
+    if (!ai.plan) return;
+    if (!aiGen) { toast("Service IA indisponible.", "warn"); return; }
+    ai.stop = false; ai.status = "writing";
+    for (var i = ai.current; i < ai.plan.chapters.length; i++) {
+      if (ai.stop) { ai.status = "paused"; ai.current = i; paint(t, stage); toast("Rédaction en pause.", "warn"); return; }
+      ai.current = i;
+      var ch = ai.plan.chapters[i]; var cid = ch.id || (ch.id = uid("ch"));
+      ai._open[cid] = true;
+      ai.content[cid] = { status: "writing", blocks: [] }; paint(t, stage);
+      try {
+        var pr = chapterPrompts(ai, ch, i);
+        var raw = await aiGen(pr.ask, pr.sys, 4000);
+        var j = parseJson(raw) || {};
+        var blocks = Array.isArray(j.blocks) ? j.blocks : (Array.isArray(j) ? j : []);
+        ai.content[cid] = { status: "done", blocks: blocks };
+        paint(t, stage);
+      } catch (e) {
+        ai.content[cid] = { status: "error", blocks: [], error: (e && (e.serverMessage || e.message)) || "échec" };
+        ai.status = "paused"; ai.current = i; paint(t, stage);
+        var st = e && e.status;
+        toast("Rédaction interrompue : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : ((e && (e.serverMessage || e.message)) || "erreur")), "err");
+        return;
+      }
+    }
+    ai.status = "done"; ai.current = ai.plan.chapters.length; paint(t, stage);
+    toast("Rédaction du livre terminée ✓", "ok");
+  }
+
+  /* ---------------- Rendu ---------------- */
+  function blockNode(bl) {
+    var type = bl && bl.type;
+    if (type === "h") return E("h4", "rxbai-h", esc(bl.text || ""));
+    if (type === "illus") {
+      var lay = bl.layout === "full" ? "Pleine page" : bl.layout === "facing" ? "Vis-à-vis" : "Sous le texte";
+      var box = E("div", "rxbai-illus");
+      box.innerHTML = '<div class="rxbai-illus-ic">🖼</div>'
+        + '<div class="rxbai-illus-tx"><div class="rxbai-illus-cap">' + esc(bl.caption || "Illustration") + '</div>'
+        + '<div class="rxbai-illus-pr">' + esc(bl.prompt || "") + '</div></div>'
+        + '<div class="rxbai-illus-lay">' + lay + '</div>';
+      return box;
+    }
+    return E("p", "rxbai-p", esc((bl && bl.text) || ""));
+  }
+
+  function chapterNode(t, stage, ai, ch, idx) {
+    var cid = ch.id, cont = ai.content[cid], open = !!ai._open[cid];
+    var sec = E("section", "rxbai-ch" + (open ? " open" : ""));
+    var status = cont ? cont.status : "todo";
+    var badge = status === "done" ? '<span class="rxbai-st done">✓ Terminé</span>'
+      : status === "writing" ? '<span class="rxbai-st run"><span class="rxbai-pulse"></span> Rédaction…</span>'
+      : status === "error" ? '<span class="rxbai-st err">Erreur</span>'
+      : '<span class="rxbai-st todo">À rédiger</span>';
+    var head = E("button", "rxbai-ch-head",
+      '<span class="rxbai-num">' + (idx + 1) + '</span>'
+      + '<span class="rxbai-ch-t"><span class="rxbai-lbl">Chapitre ' + (idx + 1) + '</span><span class="rxbai-h serifish">' + esc(ch.title || "") + '</span></span>'
+      + badge
+      + '<span class="rxbai-chev">›</span>');
+    head.onclick = function () { ai._open[cid] = !ai._open[cid]; paint(t, stage); };
+    sec.appendChild(head);
+
+    var body = E("div", "rxbai-ch-body");
+    var inner = E("div", "rxbai-ch-inner");
+    if (cont && cont.status === "done") {
+      if (!cont.blocks.length) inner.appendChild(E("p", "rxbai-empty", "Chapitre vide — relancez la rédaction."));
+      cont.blocks.forEach(function (bl) { inner.appendChild(blockNode(bl)); });
+    } else if (cont && cont.status === "writing") {
+      inner.appendChild(E("div", "rxbai-run", '<span class="rxbai-pulse"></span> Readix rédige ce chapitre…'));
+      inner.appendChild(E("div", "rxbai-shim w1")); inner.appendChild(E("div", "rxbai-shim w2")); inner.appendChild(E("div", "rxbai-shim w3"));
+    } else if (cont && cont.status === "error") {
+      inner.appendChild(E("p", "rxbai-err-tx", "Échec : " + esc(cont.error || "erreur") + " — vous pouvez reprendre la rédaction."));
+    } else {
+      if (ch.summary) inner.appendChild(E("p", "rxbai-sum", esc(ch.summary)));
+      var ul = E("div", "rxbai-secs");
+      (ch.sections || []).forEach(function (s) { ul.appendChild(E("span", "rxbai-sec", esc(s.title || ""))); });
+      if ((ch.sections || []).length) inner.appendChild(ul);
+      inner.appendChild(E("p", "rxbai-todo-note", "Ce chapitre sera rédigé quand vous lancerez la rédaction."));
+    }
+    body.appendChild(inner); sec.appendChild(body);
+    return sec;
+  }
+
+  function paint(t, stage) {
+    var ai = aiState(t);
+    stage.innerHTML = "";
+    var wrap = E("div", "rxbai");
+
+    // barre haute
+    var top = E("div", "rxbai-top");
+    var back = E("button", "rxbai-back", "‹ Studio manuel");
+    back.onclick = function () { t._mode = "content"; var rv = W("renderView"); if (rv) rv(); else if (t._aiBack) t._aiBack(); };
+    top.appendChild(back);
+    top.appendChild(E("div", "rxbai-title", 'Studio Livre <span class="rxbai-badge-ia">IA</span>'));
+    top.appendChild(E("div", "rxbai-spacer"));
+    wrap.appendChild(top);
+
+    var grid = E("div", "rxbai-grid");
+
+    /* ----- Panneau création ----- */
+    var aside = E("aside", "rxbai-panel");
+    var pad1 = E("div", "rxbai-pad");
+    pad1.appendChild(E("div", "rxbai-sec-title", "Votre livre"));
+    pad1.appendChild(E("div", "rxbai-note", "Décrivez le livre à créer. Readix compose le plan, puis rédige les chapitres."));
+    var ta = E("textarea", "rxbai-ta"); ta.rows = 4; ta.placeholder = "Ex. un livre jeunesse sur le cycle de l'eau, raconté comme le voyage d'une goutte, ton poétique."; ta.value = ai.intent;
+    ta.oninput = function () { ai.intent = ta.value; };
+    pad1.appendChild(ta);
+    aside.appendChild(pad1);
+    aside.appendChild(E("div", "rxbai-divide"));
+
+    // ligne éditoriale
+    var pad2 = E("div", "rxbai-pad");
+    pad2.appendChild(E("div", "rxbai-sec-title", "Mise en page"));
+    pad2.appendChild(E("div", "rxbai-note", "La ligne éditoriale. Readix varie ensuite les dispositions à l'intérieur de ce cadre."));
+    var lines = E("div", "rxbai-lines");
+    ["classic", "album", "manual", "rythme"].forEach(function (key) {
+      var L = LINES[key], b = E("button", "rxbai-line" + (ai.line === key ? " on" : ""), '<b>' + esc(L.label) + '</b><span>' + esc(L.illus) + '</span>');
+      b.onclick = function () { ai.line = key; paint(t, stage); };
+      lines.appendChild(b);
+    });
+    pad2.appendChild(lines);
+    aside.appendChild(pad2);
+    aside.appendChild(E("div", "rxbai-divide"));
+
+    // action / progression
+    var pad3 = E("div", "rxbai-pad");
+    if (!ai.plan) {
+      pad3.appendChild(E("div", "rxbai-sec-title", "Étape 1 — le plan"));
+      pad3.appendChild(E("div", "rxbai-note", "Readix propose une structure complète que vous pourrez relire avant la rédaction."));
+      var gp = E("button", "rxbai-btn primary block", ai.status === "planning" ? "Readix conçoit le plan…" : "✨ Générer le plan");
+      gp.disabled = ai.status === "planning";
+      gp.onclick = function () { genPlan(t, stage); };
+      pad3.appendChild(gp);
+    } else {
+      var total = ai.plan.chapters.length;
+      var done = 0; ai.plan.chapters.forEach(function (c) { if (ai.content[c.id] && ai.content[c.id].status === "done") done++; });
+      pad3.appendChild(E("div", "rxbai-sec-title", ai.status === "done" ? "Livre rédigé" : "Étape 2 — la rédaction"));
+      var pct = total ? Math.round(done / total * 100) : 0;
+      var prog = E("div", "rxbai-gen");
+      prog.innerHTML = '<div class="rxbai-gen-h"><span>' + done + ' / ' + total + ' chapitres</span><span>' + pct + ' %</span></div>'
+        + '<div class="rxbai-track"><div class="rxbai-fill" style="width:' + pct + '%"></div></div>';
+      pad3.appendChild(prog);
+      if (ai.status === "writing") {
+        var stop = E("button", "rxbai-btn ghost block", "Arrêter");
+        stop.onclick = function () { ai.stop = true; };
+        pad3.appendChild(stop);
+        pad3.appendChild(E("div", "rxbai-fine", "Readix enchaîne les chapitres. Vous pouvez arrêter — le travail déjà fait est conservé."));
+      } else if (ai.status === "done") {
+        pad3.appendChild(E("div", "rxbai-fine", "Prochaine étape : génération des illustrations marquées, puis assemblage en PDF / Word / Document Studio."));
+        var again = E("button", "rxbai-btn ghost block", "Régénérer le plan");
+        again.onclick = function () { ai.plan = null; ai.status = "idle"; ai.content = {}; paint(t, stage); };
+        pad3.appendChild(again);
+      } else {
+        var go = E("button", "rxbai-btn primary block", ai.current > 0 ? "Reprendre la rédaction" : "✍️ Rédiger le livre");
+        go.onclick = function () { writeAll(t, stage); };
+        pad3.appendChild(go);
+        var rp = E("button", "rxbai-btn ghost block", "Régénérer le plan");
+        rp.onclick = function () { ai.plan = null; ai.status = "idle"; ai.content = {}; paint(t, stage); };
+        pad3.appendChild(rp);
+      }
+    }
+    aside.appendChild(pad3);
+    grid.appendChild(aside);
+
+    /* ----- Aperçu / accordéon ----- */
+    var main = E("main", "rxbai-book");
+    if (!ai.plan) {
+      var empty = E("div", "rxbai-blank");
+      empty.innerHTML = '<div class="rxbai-blank-ic">📖</div>'
+        + '<div class="rxbai-blank-t serifish">Votre livre commence ici</div>'
+        + '<div class="rxbai-blank-d">Décrivez-le à gauche, puis générez le plan. Les chapitres apparaîtront ici, en accordéon, et Readix les rédigera un à un.</div>';
+      main.appendChild(empty);
+    } else {
+      var head = E("div", "rxbai-book-head");
+      head.innerHTML = '<div class="rxbai-book-t serifish">' + esc(ai.plan.title || t.book.title || "Sans titre") + '</div>'
+        + (ai.plan.subtitle ? '<div class="rxbai-book-s serifish">' + esc(ai.plan.subtitle) + '</div>' : '')
+        + (ai.plan.author ? '<div class="rxbai-book-a">par ' + esc(ai.plan.author) + '</div>' : '')
+        + '<div class="rxbai-book-m">' + ai.plan.chapters.length + ' chapitres</div>';
+      main.appendChild(head);
+      var toc = E("div", "rxbai-toc");
+      ai.plan.chapters.forEach(function (ch, i) { toc.appendChild(chapterNode(t, stage, ai, ch, i)); });
+      main.appendChild(toc);
+    }
+    grid.appendChild(main);
+
+    wrap.appendChild(grid);
+    stage.appendChild(wrap);
+  }
+
+  /* ---------------- API publique ---------------- */
+  function render(t, stage, back) { t._aiBack = back || t._aiBack; paint(t, stage); return true; }
+
+  function openBookAIStudio() {
+    var ob = W("openBookStudio");
+    if (ob) { ob(); }
+    else {
+      var ct = W("createTab"); if (!ct) { toast("Impossible d'ouvrir le studio.", "warn"); return; }
+      var t0 = ct("Livre IA"); t0.tool = "bookstudio"; if (W("bookDefault")) t0.book = window.bookDefault();
+      try { window.APP.tool = "bookstudio"; } catch (e) {}
+    }
+    var at = W("activeTab"); var t = at ? at() : null;
+    if (!t) return;
+    if (W("bookDefault") && !t.book) t.book = window.bookDefault();
+    try { t.name = "Livre IA"; var rt = W("renderTabs"); if (rt) rt(); } catch (e) {}
+    aiState(t); t._mode = "ai";
+    var rv = W("renderView"); if (rv) rv();
+  }
+
+  window.ReadixBookAI = { version: "1.0", render: render, open: openBookAIStudio };
+  window.openBookAIStudio = openBookAIStudio;
+})();
 </script>
 </body>
 </html>
