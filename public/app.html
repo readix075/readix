@@ -10169,6 +10169,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rxbai-illus-cap{font-family:Georgia,serif;font-style:italic;font-size:12.5px;color:var(--bai-soft);margin-top:7px}
 .rxbai-illus-ph.gen{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--bai-brand-ink);font-size:12.5px;font-weight:500}
 .rxbai-illus-ph.err{color:var(--bai-warn);font-size:12.5px}
+.rxbai-sub{font-size:12px;font-weight:600;color:var(--bai-soft);margin:18px 0 6px}
 .rxbai-styles{display:flex;flex-wrap:wrap;gap:6px}
 .rxbai-style{font:inherit;font-size:12px;font-weight:500;color:var(--bai-soft);background:var(--bai-surface);border:1px solid var(--bai-line);border-radius:8px;padding:6px 10px;cursor:pointer;transition:.15s}
 .rxbai-style:hover{border-color:color-mix(in srgb,var(--bai-brand) 30%,transparent)}
@@ -10446,6 +10447,111 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     toast(cnt.done >= cnt.total ? "Illustrations générées ✓" : ("Illustrations : " + cnt.done + "/" + cnt.total + " générées"), cnt.done >= cnt.total ? "ok" : "warn");
   }
 
+  /* ---------------- Assemblage / export ---------------- */
+  function bookTitle(ai, t) {
+    return String((ai.plan && ai.plan.title) || (t && t.book && t.book.title) || "Livre").replace(/[^\wÀ-ÿ .()'-]/g, "_").trim() || "Livre";
+  }
+  // HTML complet du livre (page de titre + chapitres + illustrations) — pour Document Studio et Word.
+  function bookHtml(ai) {
+    var p = ai.plan || {};
+    var css = ".rxbk{font-family:Georgia,'Times New Roman',serif;color:#1a1a1a;line-height:1.6}"
+      + ".rxbk-tp{text-align:center;padding:120px 20px 90px}"
+      + ".rxbk-tp h1{font-size:30pt;margin:0 0 14px;line-height:1.2}.rxbk-tp .sub{font-size:15pt;font-style:italic;color:#555;margin:0 0 46px}.rxbk-tp .au{font-size:12pt;color:#333}"
+      + ".rxbk h2{font-size:20pt;margin:36px 0 14px;border-bottom:2px solid #e2e2e2;padding-bottom:8px}"
+      + ".rxbk h2 .n{display:block;font-size:10pt;letter-spacing:1px;text-transform:uppercase;color:#7c5cff;margin-bottom:3px}"
+      + ".rxbk h3{font-size:14pt;margin:22px 0 8px}.rxbk p{font-size:12pt;margin:0 0 12px;text-align:justify}"
+      + ".rxbk figure{margin:20px auto;text-align:center}.rxbk figure img{max-width:78%;border-radius:6px}"
+      + ".rxbk figure.full img,.rxbk figure.facing img{max-width:100%}"
+      + ".rxbk figcaption{font-size:10pt;font-style:italic;color:#666;margin-top:6px}";
+    var h = '<div class="rxbk"><style>' + css + '</style>';
+    h += '<div class="rxbk-tp"><h1>' + esc(p.title || "Livre") + '</h1>'
+      + (p.subtitle ? '<div class="sub">' + esc(p.subtitle) + '</div>' : '')
+      + (p.author ? '<div class="au">par ' + esc(p.author) + '</div>' : '') + '</div>';
+    (p.chapters || []).forEach(function (ch, i) {
+      var c = ai.content[ch.id];
+      h += '<h2><span class="n">Chapitre ' + (i + 1) + '</span>' + esc(ch.title || "") + '</h2>';
+      if (c && c.blocks) c.blocks.forEach(function (b) {
+        if (b.type === "h") h += '<h3>' + esc(b.text || "") + '</h3>';
+        else if (b.type === "illus") { if (b.src) h += '<figure class="' + (b.layout === "full" ? "full" : b.layout === "facing" ? "facing" : "") + '"><img src="' + b.src + '"/>' + (b.caption ? '<figcaption>' + esc(b.caption) + '</figcaption>' : '') + '</figure>'; }
+        else h += '<p>' + esc(b.text || "") + '</p>';
+      });
+    });
+    return h + '</div>';
+  }
+  function dataUrlBytes(u) {
+    var m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(u || ""); if (!m) return null;
+    var b64 = !!m[2], data = m[3], bin = b64 ? atob(data) : decodeURIComponent(data);
+    var arr = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return { bytes: arr, mime: m[1] || "image/png" };
+  }
+  // PDF illustré (texte + images) via pdf-lib.
+  async function bookPdfBytes(ai) {
+    var L = window.PDFLib; if (!L) throw new Error("Moteur PDF indisponible");
+    var doc = await L.PDFDocument.create();
+    var font = await doc.embedFont(L.StandardFonts.TimesRoman), bold = await doc.embedFont(L.StandardFonts.TimesRomanBold), ital = await doc.embedFont(L.StandardFonts.TimesRomanItalic);
+    var Wp = 595, Hp = 842, M = 56, page = doc.addPage([Wp, Hp]), y = Hp - M;
+    function clean(t) { return String(t || "").replace(/[\u2018\u2019\u2032]/g, "'").replace(/[\u201C\u201D\u2033]/g, '"').replace(/[\u2013\u2014]/g, "-").replace(/\u2026/g, "...").replace(/\u00A0/g, " ").replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF]/g, " "); }
+    function np() { page = doc.addPage([Wp, Hp]); y = Hp - M; }
+    function need(hgt) { if (y - hgt < M) np(); }
+    function para(text, f, size, gapAfter, color, center) {
+      var maxW = Wp - M * 2, words = clean(text).split(/\s+/).filter(Boolean), line = "", lines = [];
+      for (var i = 0; i < words.length; i++) { var test = line ? line + " " + words[i] : words[i]; if (f.widthOfTextAtSize(test, size) > maxW) { if (line) lines.push(line); line = words[i]; } else line = test; }
+      if (line) lines.push(line);
+      var lh = size * 1.5;
+      for (var j = 0; j < lines.length; j++) { need(lh); var x = M; if (center) { x = (Wp - f.widthOfTextAtSize(lines[j], size)) / 2; } page.drawText(lines[j], { x: x, y: y - size, size: size, font: f, color: color || L.rgb(0.1, 0.1, 0.1) }); y -= lh; }
+      y -= (gapAfter || 0);
+    }
+    // Page de titre
+    y = Hp * 0.60;
+    para(ai.plan.title || "Livre", bold, 26, 18, L.rgb(0.1, 0.1, 0.1), true);
+    if (ai.plan.subtitle) para(ai.plan.subtitle, ital, 14, 30, L.rgb(0.4, 0.4, 0.4), true);
+    if (ai.plan.author) para("par " + ai.plan.author, font, 12, 0, L.rgb(0.3, 0.3, 0.3), true);
+    // Chapitres
+    for (var ci = 0; ci < ai.plan.chapters.length; ci++) {
+      var ch = ai.plan.chapters[ci], c = ai.content[ch.id];
+      np();
+      para("CHAPITRE " + (ci + 1), bold, 10, 4, L.rgb(0.49, 0.36, 1));
+      para(ch.title || "", bold, 20, 16);
+      if (c && c.blocks) for (var bi = 0; bi < c.blocks.length; bi++) {
+        var b = c.blocks[bi];
+        if (b.type === "h") para(b.text || "", bold, 14, 8);
+        else if (b.type === "p") para(b.text || "", font, 12, 10);
+        else if (b.type === "illus" && b.src) {
+          try {
+            var info = dataUrlBytes(b.src); if (!info) continue;
+            var im = /png/i.test(info.mime) ? await doc.embedPng(info.bytes) : await doc.embedJpg(info.bytes);
+            var maxW = Wp - M * 2, sc = Math.min(1, maxW / im.width), iw = im.width * sc, ih = im.height * sc, maxH = (Hp - M * 2) * 0.62;
+            if (ih > maxH) { var s2 = maxH / ih; iw *= s2; ih *= s2; }
+            need(ih + (b.caption ? 18 : 6) + 8);
+            page.drawImage(im, { x: (Wp - iw) / 2, y: y - ih, width: iw, height: ih }); y -= ih + 6;
+            if (b.caption) { var cap = clean(b.caption), cw = ital.widthOfTextAtSize(cap, 9); need(15); page.drawText(cap, { x: (Wp - cw) / 2, y: y - 9, size: 9, font: ital, color: L.rgb(0.45, 0.45, 0.45) }); y -= 20; } else y -= 8;
+          } catch (e) {}
+        }
+      }
+    }
+    return await doc.save();
+  }
+  async function exportBook(t, stage, kind, btn) {
+    var ai = aiState(t); if (!ai.plan) return;
+    var title = bookTitle(ai, t), lab = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Préparation…"; }
+    function give(blob, fn, sub) { var od = W("offerDownload"); if (od) od(blob, fn, "Votre livre est prêt", sub || fn); else { var db = W("downloadBlob"); if (db) db(blob, fn); } }
+    try {
+      if (kind === "studio") {
+        var od = W("openDocInTab"); if (!od) throw new Error("Document Studio indisponible");
+        od(title + ".docx", bookHtml(ai)); toast("Livre ouvert dans Document Studio ✓", "ok");
+      } else if (kind === "pdf") {
+        var bytes = await bookPdfBytes(ai);
+        give(new Blob([bytes], { type: "application/pdf" }), title + ".pdf");
+      } else if (kind === "docx") {
+        var bd = W("buildDocxBlobBasic"); if (!bd) throw new Error("Export Word indisponible");
+        var blob = await bd(bookHtml(ai), title);
+        give(blob, title + ".docx");
+      }
+    } catch (e) { toast("Échec de l'assemblage : " + ((e && (e.serverMessage || e.message)) || "erreur"), "err"); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = lab; } }
+  }
+
   /* ---------------- Rendu ---------------- */
   function blockNode(bl) {
     var type = bl && bl.type;
@@ -10614,11 +10720,19 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           gi.onclick = function () { illustrateAll(t, stage); };
           pad3.appendChild(gi);
           pad3.appendChild(E("div", "rxbai-fine", "Chaque illustration consomme une opération IA (" + ci.total + " au total)."));
-        } else if (ci.total > 0) {
-          pad3.appendChild(E("div", "rxbai-fine", "Livre rédigé et illustré. Prochaine étape : assemblage en PDF / Word / Document Studio."));
-        } else {
-          pad3.appendChild(E("div", "rxbai-fine", "Livre rédigé. Prochaine étape : assemblage en PDF / Word / Document Studio."));
         }
+        // Assemblage
+        pad3.appendChild(E("div", "rxbai-sub", "Assembler le livre"));
+        var bStu = E("button", "rxbai-btn primary block", "✍️ Ouvrir dans Document Studio");
+        bStu.onclick = function () { exportBook(t, stage, "studio", bStu); };
+        pad3.appendChild(bStu);
+        var bPdf = E("button", "rxbai-btn block", "📄 Télécharger en PDF");
+        bPdf.onclick = function () { exportBook(t, stage, "pdf", bPdf); };
+        pad3.appendChild(bPdf);
+        var bDoc = E("button", "rxbai-btn block", "📝 Télécharger en Word");
+        bDoc.onclick = function () { exportBook(t, stage, "docx", bDoc); };
+        pad3.appendChild(bDoc);
+        pad3.appendChild(E("div", "rxbai-fine", "Document Studio conserve les illustrations et permet de tout retoucher."));
         var again = E("button", "rxbai-btn ghost block", "Régénérer le plan");
         again.onclick = function () { ai.plan = null; ai.status = "idle"; ai.content = {}; paint(t, stage); };
         pad3.appendChild(again);
