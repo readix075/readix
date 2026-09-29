@@ -613,12 +613,19 @@ app.post("/api/image/generate", auth, async (req, res) => {
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
   const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
-  const body = { model: OPENAI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), n };
-  // Taille : size explicite prioritaire, sinon dérivée d'un aspect_ratio, sinon auto (modèle).
-  const sz = req.body && req.body.size;
-  if (sz && /^\d+x\d+$/.test(String(sz))) body.size = String(sz);
-  else { const s = sizeFromAspect(req.body && req.body.aspect_ratio); if (s !== "auto") body.size = s; }
-  const q = req.body && req.body.quality; if (q) body.quality = String(q);
+  // Compatible gpt-image-1 (défaut) ET dall-e-3 (alternative si l'organisation OpenAI n'est pas
+  // vérifiée pour gpt-image-1 : il suffit de poser OPENAI_IMAGE_MODEL=dall-e-3 sur le serveur).
+  const isDalle = /dall-e/i.test(OPENAI_IMAGE_MODEL);
+  const body = { model: OPENAI_IMAGE_MODEL, prompt: prompt.slice(0, 4000), n: isDalle ? 1 : n };
+  if (isDalle) body.response_format = "b64_json"; // DALL·E renvoie une URL par défaut ; on force le base64 exploitable.
+  const ar = String((req.body && req.body.aspect_ratio) || "").toLowerCase();
+  const szReq = req.body && req.body.size;
+  let size;
+  if (szReq && /^\d+x\d+$/.test(String(szReq))) size = String(szReq);
+  else if (isDalle) size = /portrait|2\s*[:x]\s*3|9\s*[:x]\s*16/.test(ar) ? "1024x1792" : /paysage|landscape|wide|3\s*[:x]\s*2|16\s*[:x]\s*9/.test(ar) ? "1792x1024" : "1024x1024";
+  else { const s = sizeFromAspect(ar); if (s !== "auto") size = s; }
+  if (size) body.size = size;
+  const q = req.body && req.body.quality; if (q && !isDalle) body.quality = String(q);
   try {
     const data = await openaiImageJson("/images/generations", body);
     const images = imagesToUrls(data);
