@@ -169,7 +169,7 @@ app.use(express.json({ limit: "12mb" }));
 app.get("/api/health", (req, res) => res.json({
   ok: true,
   service: "readix",
-  version: "19.1",
+  version: "19.2",
   actionEngine: true,
   copilotAction: true,
   config: {
@@ -179,7 +179,8 @@ app.get("/api/health", (req, res) => res.json({
     imageReady: !!OPENAI_API_KEY,
     imageModel: OPENAI_IMAGE_MODEL,
     stripe: !!process.env.STRIPE_SECRET_KEY,
-    clientUrl: CLIENT_URL
+    clientUrl: CLIENT_URL,
+    ownerEmails: UNLIMITED_EMAILS.length
   },
   timestamp: new Date().toISOString()
 }));
