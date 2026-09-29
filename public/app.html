@@ -10557,16 +10557,29 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   /* ---------------- Mise en page professionnelle (IA) ---------------- */
+  var CHAP_STYLES = ["classic", "banner", "minimal", "framed", "centered"];
+  var CHAP_LABEL = { classic: "chapitres à filet", banner: "bandeaux colorés", minimal: "titres épurés", framed: "titres encadrés", centered: "titres centrés" };
+  function chapterLabel(s) { return CHAP_LABEL[s] || "chapitres"; }
+  // Presets variés — servent de repli si l'IA est indisponible, pour garantir de la diversité.
+  var PRESETS = [
+    { name: "Classique élégant", description: "Serif chaleureuse, filet fin sous les titres, lettrine d'ouverture.", accent: "#8a5a2b", ink: "#241c14", titleFont: "serif", bodyFont: "serif", chapterStyle: "classic", dropcap: true, justify: true },
+    { name: "Moderne épuré", description: "Sans-serif nette, beaucoup d'air, titres sobres.", accent: "#2563eb", ink: "#111827", titleFont: "sans", bodyFont: "sans", chapterStyle: "minimal", dropcap: false, justify: false },
+    { name: "Éditorial contrasté", description: "Bandeaux de couleur en tête de chapitre, fort caractère.", accent: "#b91c1c", ink: "#181818", titleFont: "sans", bodyFont: "serif", chapterStyle: "banner", dropcap: false, justify: true },
+    { name: "Livre d'art", description: "Titres encadrés et centrés, raffinement discret.", accent: "#0f766e", ink: "#1a1a1a", titleFont: "serif", bodyFont: "serif", chapterStyle: "framed", dropcap: true, justify: true },
+    { name: "Contemporain doux", description: "Titres centrés, palette douce, lecture confortable.", accent: "#7c3aed", ink: "#1f2937", titleFont: "sans", bodyFont: "serif", chapterStyle: "centered", dropcap: false, justify: true }
+  ];
   function designPrompts(ai) {
     return {
-      sys: "Tu es directeur artistique de livres imprimés. Tu choisis une direction de mise en page élégante et lisible. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.",
+      sys: "Tu es directeur artistique de livres. Tu proposes PLUSIEURS directions de mise en page DISTINCTES, variées et adaptées au livre. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.",
       ask: "Livre : « " + (ai.plan.title || "") + " »" + (ai.plan.subtitle ? (" — " + ai.plan.subtitle) : "") + ".\n"
         + "Sujet et ton : " + ai.intent + "\n"
-        + "Propose une direction de mise en page professionnelle, cohérente avec ce livre. "
-        + 'Renvoie STRICTEMENT ce JSON : {"accent":"#RRGGBB (couleur d\'accent élégante et lisible pour titres et filets)",'
-        + '"ink":"#RRGGBB (couleur du texte principal, très lisible sur blanc)",'
+        + "Propose 3 directions de mise en page professionnelles, VRAIMENT DIFFÉRENTES les unes des autres (identités distinctes : élégante, moderne, contrastée, épurée, chaleureuse…), et cohérentes avec CE livre en particulier. "
+        + 'Renvoie STRICTEMENT ce JSON : {"options":[{'
+        + '"name":"nom court de la direction","description":"une phrase décrivant l\'ambiance visuelle",'
+        + '"accent":"#RRGGBB (couleur d\'accent lisible, adaptée au thème)","ink":"#RRGGBB (couleur du texte, très lisible)",'
         + '"titleFont":"serif|sans","bodyFont":"serif|sans",'
-        + '"chapterStyle":"classic|banner|minimal","dropcap":true|false}'
+        + '"chapterStyle":"classic|banner|minimal|framed|centered","dropcap":true|false,"justify":true|false'
+        + '}]} avec EXACTEMENT 3 objets nettement différents (couleurs, polices et style de chapitre variés).'
     };
   }
   function normTheme(th) {
@@ -10575,14 +10588,27 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (!/^#[0-9a-f]{6}$/i.test(th.ink || "")) th.ink = "#1a1a1a";
     if (th.titleFont !== "sans") th.titleFont = "serif";
     if (th.bodyFont !== "sans") th.bodyFont = "serif";
-    if (["classic", "banner", "minimal"].indexOf(th.chapterStyle) < 0) th.chapterStyle = "classic";
+    if (CHAP_STYLES.indexOf(th.chapterStyle) < 0) th.chapterStyle = "classic";
     th.dropcap = !!th.dropcap;
+    th.justify = (th.justify !== false);
     return th;
+  }
+  // Garantit une liste de 3+ propositions valides et variées (complète avec des presets si besoin).
+  function normOptions(list) {
+    var out = (Array.isArray(list) ? list : []).filter(function (o) { return o && typeof o === "object"; }).map(function (o) {
+      var t = normTheme(o); t.name = String(o.name || "Mise en page"); t.description = String(o.description || ""); return t;
+    });
+    var pi = 0;
+    while (out.length < 3 && pi < PRESETS.length) {
+      var pr = PRESETS[pi++];
+      if (!out.some(function (o) { return o.chapterStyle === pr.chapterStyle && o.titleFont === pr.titleFont; })) out.push(normTheme(Object.assign({}, pr)));
+    }
+    return out.slice(0, 4);
   }
   function fontStack(k) { return k === "sans" ? "system-ui,'Segoe UI',Roboto,Arial,sans-serif" : "Georgia,'Times New Roman',serif"; }
   // HTML de livre richement mis en page (styles inline → fidèle et éditable dans Document Studio).
   function styledBookHtml(ai, th) {
-    var p = ai.plan || {}, tf = fontStack(th.titleFont), bf = fontStack(th.bodyFont), acc = th.accent, ink = th.ink;
+    var p = ai.plan || {}, tf = fontStack(th.titleFont), bf = fontStack(th.bodyFont), acc = th.accent, ink = th.ink, al = th.justify ? 'justify' : 'left';
     var h = '<div style="font-family:' + bf + ';color:' + ink + ';line-height:1.75">';
     h += '<div style="text-align:center;padding:120px 24px 96px">'
       + '<div style="width:56px;height:3px;background:' + acc + ';margin:0 auto 28px"></div>'
@@ -10598,6 +10624,15 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           + '<div style="font-family:' + tf + ';font-size:21pt;font-weight:700">' + esc(ch.title || "") + '</div></div>';
       } else if (th.chapterStyle === "minimal") {
         h += '<h2 style="font-family:' + tf + ';font-size:20pt;font-weight:700;color:' + ink + ';margin:0 0 20px;page-break-before:always"><span style="color:' + acc + '">' + (i + 1) + '.</span> ' + esc(ch.title || "") + '</h2>';
+      } else if (th.chapterStyle === "framed") {
+        h += '<div style="border:2px solid ' + acc + ';border-radius:10px;padding:22px 24px;margin:0 0 24px;text-align:center;page-break-before:always">'
+          + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;color:' + acc + ';font-weight:600;margin-bottom:8px">Chapitre ' + (i + 1) + '</div>'
+          + '<div style="font-family:' + tf + ';font-size:21pt;font-weight:700;color:' + ink + '">' + esc(ch.title || "") + '</div></div>';
+      } else if (th.chapterStyle === "centered") {
+        h += '<div style="text-align:center;margin:0 0 26px;page-break-before:always">'
+          + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;color:' + acc + ';font-weight:600;margin-bottom:8px">Chapitre ' + (i + 1) + '</div>'
+          + '<h2 style="font-family:' + tf + ';font-size:23pt;font-weight:700;color:' + ink + ';margin:0">' + esc(ch.title || "") + '</h2>'
+          + '<div style="width:44px;height:3px;background:' + acc + ';margin:14px auto 0"></div></div>';
       } else {
         h += '<div style="margin:0 0 22px;page-break-before:always">'
           + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;color:' + acc + ';font-weight:600;margin-bottom:6px">Chapitre ' + (i + 1) + '</div>'
@@ -10615,9 +10650,9 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         } else {
           var text = esc(b.text || "");
           if (th.dropcap && firstPara && text.length > 1) {
-            h += '<p style="font-size:12pt;margin:0 0 14px;text-align:justify"><span style="float:left;font-family:' + tf + ';font-size:46pt;line-height:0.8;font-weight:700;color:' + acc + ';margin:4px 8px 0 0">' + text.charAt(0) + '</span>' + text.slice(1) + '</p>';
+            h += '<p style="font-size:12pt;margin:0 0 14px;text-align:' + al + '"><span style="float:left;font-family:' + tf + ';font-size:46pt;line-height:0.8;font-weight:700;color:' + acc + ';margin:4px 8px 0 0">' + text.charAt(0) + '</span>' + text.slice(1) + '</p>';
             firstPara = false;
-          } else h += '<p style="font-size:12pt;margin:0 0 14px;text-align:justify">' + text + '</p>';
+          } else h += '<p style="font-size:12pt;margin:0 0 14px;text-align:' + al + '">' + text + '</p>';
         }
       });
     });
@@ -10627,17 +10662,45 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var ai = aiState(t), aiGen = W("aiGenerate"), od = W("openDocInTab");
     if (!ai.plan) return;
     if (!od) { toast("Document Studio indisponible.", "warn"); return; }
-    var lab = btn ? btn.textContent : ""; if (btn) { btn.disabled = true; btn.textContent = "L'IA met en page…"; }
+    var lab = btn ? btn.textContent : ""; if (btn) { btn.disabled = true; btn.textContent = "L'IA propose des mises en page…"; }
+    var options = null;
     try {
-      var theme = null;
-      if (aiGen) { try { var pr = designPrompts(ai); theme = parseJson(await aiGen(pr.ask, pr.sys, 400)); } catch (e) { theme = null; } }
-      theme = normTheme(theme);
-      od(bookTitle(ai, t) + ".docx", styledBookHtml(ai, theme));
-      toast("Mise en page appliquée ✓ — ajustez-la dans Document Studio.", "ok");
-    } catch (e) {
-      var st = e && e.status;
-      toast("Échec : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : ((e && (e.serverMessage || e.message)) || "mise en page impossible.")), "err");
+      if (aiGen) {
+        try {
+          var pr = designPrompts(ai);
+          var parsed = parseJson(await aiGen(pr.ask, pr.sys, 900));
+          options = parsed && (parsed.options || (Array.isArray(parsed) ? parsed : null));
+        } catch (e) { options = null; }
+      }
     } finally { if (btn) { btn.disabled = false; btn.textContent = lab; } }
+    chooseLayout(t, stage, normOptions(options));
+  }
+  // Dialogue de sélection : plusieurs directions proposées, l'utilisateur choisit.
+  function chooseLayout(t, stage, options) {
+    var dlg = W("dialog");
+    if (typeof dlg !== "function") { applyLayout(t, stage, options[0]); return; }
+    var html = '<h3 style="margin:0 0 4px">Choisissez une mise en page</h3>'
+      + '<p style="margin:0 0 14px;font-size:12.5px;color:#64748b">L\'IA propose plusieurs directions adaptées à votre livre. Choisissez celle qui vous plaît — vous pourrez l\'ajuster ensuite dans Document Studio.</p>'
+      + '<div class="rxbai-lay">';
+    options.forEach(function (o, i) {
+      html += '<button class="rxbai-lay-opt" data-i="' + i + '">'
+        + '<span class="rxbai-lay-sw" style="background:' + o.accent + '"></span>'
+        + '<span class="rxbai-lay-tx"><b>' + esc(o.name) + '</b><span class="rxbai-lay-d">' + esc(o.description || "") + '</span>'
+        + '<span class="rxbai-lay-m">' + (o.titleFont === "sans" ? "Sans-serif" : "Serif") + ' · ' + chapterLabel(o.chapterStyle) + (o.dropcap ? ' · lettrine' : '') + '</span></span></button>';
+    });
+    html += '</div><div class="row" style="margin-top:12px;justify-content:flex-end"><button class="rxbai-btn ghost sm" data-a="close">Annuler</button></div>';
+    var dl = dlg(html);
+    dl.root.onclick = function (e) {
+      var opt = e.target.closest(".rxbai-lay-opt");
+      if (opt) { var i = +opt.getAttribute("data-i"); dl.close(); applyLayout(t, stage, options[i]); return; }
+      if (e.target.closest('[data-a=close]')) dl.close();
+    };
+  }
+  function applyLayout(t, stage, theme) {
+    var ai = aiState(t), od = W("openDocInTab"); if (!od) { toast("Document Studio indisponible.", "warn"); return; }
+    theme = normTheme(theme);
+    od(bookTitle(ai, t) + ".docx", styledBookHtml(ai, theme));
+    toast("Mise en page « " + (theme.name || "appliquée") + " » ✓ — ajustez-la dans Document Studio.", "ok");
   }
 
   /* ---------------- Rendu ---------------- */
