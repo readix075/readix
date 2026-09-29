@@ -10552,6 +10552,90 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     finally { if (btn) { btn.disabled = false; btn.textContent = lab; } }
   }
 
+  /* ---------------- Mise en page professionnelle (IA) ---------------- */
+  function designPrompts(ai) {
+    return {
+      sys: "Tu es directeur artistique de livres imprimés. Tu choisis une direction de mise en page élégante et lisible. Réponds UNIQUEMENT par un JSON valide, sans texte ni markdown autour.",
+      ask: "Livre : « " + (ai.plan.title || "") + " »" + (ai.plan.subtitle ? (" — " + ai.plan.subtitle) : "") + ".\n"
+        + "Sujet et ton : " + ai.intent + "\n"
+        + "Propose une direction de mise en page professionnelle, cohérente avec ce livre. "
+        + 'Renvoie STRICTEMENT ce JSON : {"accent":"#RRGGBB (couleur d\'accent élégante et lisible pour titres et filets)",'
+        + '"ink":"#RRGGBB (couleur du texte principal, très lisible sur blanc)",'
+        + '"titleFont":"serif|sans","bodyFont":"serif|sans",'
+        + '"chapterStyle":"classic|banner|minimal","dropcap":true|false}'
+    };
+  }
+  function normTheme(th) {
+    th = (th && typeof th === "object") ? th : {};
+    if (!/^#[0-9a-f]{6}$/i.test(th.accent || "")) th.accent = "#6D4AFF";
+    if (!/^#[0-9a-f]{6}$/i.test(th.ink || "")) th.ink = "#1a1a1a";
+    if (th.titleFont !== "sans") th.titleFont = "serif";
+    if (th.bodyFont !== "sans") th.bodyFont = "serif";
+    if (["classic", "banner", "minimal"].indexOf(th.chapterStyle) < 0) th.chapterStyle = "classic";
+    th.dropcap = !!th.dropcap;
+    return th;
+  }
+  function fontStack(k) { return k === "sans" ? "system-ui,'Segoe UI',Roboto,Arial,sans-serif" : "Georgia,'Times New Roman',serif"; }
+  // HTML de livre richement mis en page (styles inline → fidèle et éditable dans Document Studio).
+  function styledBookHtml(ai, th) {
+    var p = ai.plan || {}, tf = fontStack(th.titleFont), bf = fontStack(th.bodyFont), acc = th.accent, ink = th.ink;
+    var h = '<div style="font-family:' + bf + ';color:' + ink + ';line-height:1.72;max-width:720px;margin:0 auto">';
+    h += '<div style="text-align:center;padding:120px 24px 96px">'
+      + '<div style="width:56px;height:3px;background:' + acc + ';margin:0 auto 28px"></div>'
+      + '<h1 style="font-family:' + tf + ';font-size:32pt;font-weight:700;color:' + ink + ';margin:0 0 16px;line-height:1.15">' + esc(p.title || "Livre") + '</h1>'
+      + (p.subtitle ? '<p style="font-family:' + tf + ';font-size:15pt;font-style:italic;color:' + acc + ';margin:0 0 48px">' + esc(p.subtitle) + '</p>' : '')
+      + (p.author ? '<p style="font-size:11pt;color:' + ink + ';opacity:.65;margin-top:44px;text-transform:uppercase;letter-spacing:2px">' + esc(p.author) + '</p>' : '')
+      + '</div>';
+    (p.chapters || []).forEach(function (ch, i) {
+      var c = ai.content[ch.id];
+      if (th.chapterStyle === "banner") {
+        h += '<div style="background:' + acc + ';color:#fff;padding:26px 24px;margin:52px 0 24px;border-radius:8px">'
+          + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;opacity:.85;margin-bottom:6px">Chapitre ' + (i + 1) + '</div>'
+          + '<div style="font-family:' + tf + ';font-size:21pt;font-weight:700">' + esc(ch.title || "") + '</div></div>';
+      } else if (th.chapterStyle === "minimal") {
+        h += '<h2 style="font-family:' + tf + ';font-size:20pt;font-weight:700;color:' + ink + ';margin:56px 0 20px"><span style="color:' + acc + '">' + (i + 1) + '.</span> ' + esc(ch.title || "") + '</h2>';
+      } else {
+        h += '<div style="margin:56px 0 22px">'
+          + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;color:' + acc + ';font-weight:600;margin-bottom:6px">Chapitre ' + (i + 1) + '</div>'
+          + '<h2 style="font-family:' + tf + ';font-size:22pt;font-weight:700;color:' + ink + ';margin:0;padding-bottom:12px;border-bottom:2px solid ' + acc + '">' + esc(ch.title || "") + '</h2></div>';
+      }
+      var firstPara = true;
+      if (c && c.blocks) c.blocks.forEach(function (b) {
+        if (b.type === "h") h += '<h3 style="font-family:' + tf + ';font-size:14pt;font-weight:700;color:' + ink + ';margin:26px 0 10px">' + esc(b.text || "") + '</h3>';
+        else if (b.type === "illus") {
+          if (b.src) {
+            var mw = (b.layout === "full" || b.layout === "facing") ? "100%" : "76%";
+            h += '<figure style="text-align:center;margin:26px auto"><img src="' + b.src + '" style="max-width:' + mw + ';border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.12)"/>'
+              + (b.caption ? '<figcaption style="font-family:' + bf + ';font-size:10pt;font-style:italic;color:' + ink + ';opacity:.6;margin-top:8px">' + esc(b.caption) + '</figcaption>' : '') + '</figure>';
+          }
+        } else {
+          var text = esc(b.text || "");
+          if (th.dropcap && firstPara && text.length > 1) {
+            h += '<p style="font-size:12pt;margin:0 0 14px;text-align:justify"><span style="float:left;font-family:' + tf + ';font-size:46pt;line-height:0.8;font-weight:700;color:' + acc + ';margin:4px 8px 0 0">' + text.charAt(0) + '</span>' + text.slice(1) + '</p>';
+            firstPara = false;
+          } else h += '<p style="font-size:12pt;margin:0 0 14px;text-align:justify">' + text + '</p>';
+        }
+      });
+    });
+    return h + '</div>';
+  }
+  async function designBook(t, stage, btn) {
+    var ai = aiState(t), aiGen = W("aiGenerate"), od = W("openDocInTab");
+    if (!ai.plan) return;
+    if (!od) { toast("Document Studio indisponible.", "warn"); return; }
+    var lab = btn ? btn.textContent : ""; if (btn) { btn.disabled = true; btn.textContent = "L'IA met en page…"; }
+    try {
+      var theme = null;
+      if (aiGen) { try { var pr = designPrompts(ai); theme = parseJson(await aiGen(pr.ask, pr.sys, 400)); } catch (e) { theme = null; } }
+      theme = normTheme(theme);
+      od(bookTitle(ai, t) + ".docx", styledBookHtml(ai, theme));
+      toast("Mise en page appliquée ✓ — ajustez-la dans Document Studio.", "ok");
+    } catch (e) {
+      var st = e && e.status;
+      toast("Échec : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : ((e && (e.serverMessage || e.message)) || "mise en page impossible.")), "err");
+    } finally { if (btn) { btn.disabled = false; btn.textContent = lab; } }
+  }
+
   /* ---------------- Rendu ---------------- */
   function blockNode(bl) {
     var type = bl && bl.type;
@@ -10722,8 +10806,11 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           pad3.appendChild(E("div", "rxbai-fine", "Chaque illustration consomme une opération IA (" + ci.total + " au total)."));
         }
         // Assemblage
-        pad3.appendChild(E("div", "rxbai-sub", "Assembler le livre"));
-        var bStu = E("button", "rxbai-btn primary block", "✍️ Ouvrir dans Document Studio");
+        pad3.appendChild(E("div", "rxbai-sub", "Mettre en forme et exporter"));
+        var bDesign = E("button", "rxbai-btn primary block", "✨ Mise en page pro (IA) → Document Studio");
+        bDesign.onclick = function () { designBook(t, stage, bDesign); };
+        pad3.appendChild(bDesign);
+        var bStu = E("button", "rxbai-btn block", "✍️ Ouvrir tel quel dans Document Studio");
         bStu.onclick = function () { exportBook(t, stage, "studio", bStu); };
         pad3.appendChild(bStu);
         var bPdf = E("button", "rxbai-btn block", "📄 Télécharger en PDF");
