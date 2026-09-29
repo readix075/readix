@@ -30,8 +30,12 @@ const OPENAI_EDIT_MODEL = process.env.OPENAI_EDIT_MODEL || "gpt-image-1";
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Paliers d'abonnement ----
-const PLAN_LEVEL = { free: 0, standard: 1, pro: 2, studio: 3 };
-const AI_QUOTA = { free: 0, standard: 0, pro: 50, studio: 200 }; // opérations IA / mois
+const PLAN_LEVEL = { free: 0, standard: 1, pro: 2, studio: 3, owner: 9 };
+const AI_QUOTA = { free: 0, standard: 0, pro: 50, studio: 200, owner: 1000000 }; // opérations IA / mois
+// Comptes propriétaire/testeurs : accès IA sans limite. Renseigner UNLIMITED_EMAILS sur le serveur
+// (liste d'adresses séparées par des virgules). N'affecte QUE ces comptes ; les clients gardent leur quota.
+const UNLIMITED_EMAILS = String(process.env.UNLIMITED_EMAILS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+const isUnlimited = (email) => UNLIMITED_EMAILS.includes(String(email || "").toLowerCase());
 const FREE_OP_LIMIT = 15; // opérations incluses sur un compte gratuit avant l'invitation à passer à un plan payant (compteur caché, géré en arrière-plan)
 const levelOf = (plan) => PLAN_LEVEL[plan] ?? 0;
 const ym = () => new Date().toISOString().slice(0, 7); // "2026-09"
@@ -192,7 +196,7 @@ async function auth(req, res, next) {
     const { email } = jwt.verify(token, JWT_SECRET);
     const u = await getUser(email);
     if (!u) return res.status(401).json({ error: "Compte introuvable" });
-    req.user = { email: u.email, name: u.name, plan: u.plan };
+    req.user = { email: u.email, name: u.name, plan: isUnlimited(u.email) ? "owner" : u.plan };
     next();
   } catch { return res.status(401).json({ error: "Session expirée" }); }
 }
