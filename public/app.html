@@ -10167,6 +10167,12 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 .rxbai-illus.full .rxbai-illus-ph{min-height:200px}
 .rxbai-illus-img{display:block;max-width:100%;border-radius:12px;border:1px solid var(--bai-paper-line);margin:0 auto}
 .rxbai-illus-cap{font-family:Georgia,serif;font-style:italic;font-size:12.5px;color:var(--bai-soft);margin-top:7px}
+.rxbai-illus-ph.gen{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--bai-brand-ink);font-size:12.5px;font-weight:500}
+.rxbai-illus-ph.err{color:var(--bai-warn);font-size:12.5px}
+.rxbai-styles{display:flex;flex-wrap:wrap;gap:6px}
+.rxbai-style{font:inherit;font-size:12px;font-weight:500;color:var(--bai-soft);background:var(--bai-surface);border:1px solid var(--bai-line);border-radius:8px;padding:6px 10px;cursor:pointer;transition:.15s}
+.rxbai-style:hover{border-color:color-mix(in srgb,var(--bai-brand) 30%,transparent)}
+.rxbai-style.on{color:var(--bai-brand-ink);background:var(--bai-weak);border-color:color-mix(in srgb,var(--bai-brand) 30%,transparent)}
 
 .rxbai-run{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--bai-brand-ink);font-weight:500;padding:12px 0 4px}
 .rxbai-pulse{width:8px;height:8px;border-radius:50%;background:var(--bai-cyan);box-shadow:0 0 0 0 color-mix(in srgb,var(--bai-cyan) 55%,transparent);animation:rxbaiPulse 1.5s infinite}
@@ -10238,6 +10244,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     album:   { label: "Album",     illus: "beaucoup d'illustrations, souvent en pleine page ou en vis-à-vis" },
     manual:  { label: "Manuel",    illus: "des figures et schémas légendés, là où ils clarifient le propos" },
     rythme:  { label: "Rythmé",    illus: "des illustrations variées pour rythmer la lecture, sans excès" }
+  };
+  var STYLES = [["aquarelle", "Aquarelle"], ["ligne", "Ligne claire"], ["realiste", "Réaliste"], ["minimal", "Minimal"]];
+  var STYLE_HINT = {
+    aquarelle: "style aquarelle, couleurs douces et lumineuses",
+    ligne: "style ligne claire, illustration au trait épuré",
+    realiste: "style réaliste, rendu détaillé et soigné",
+    minimal: "style minimaliste, formes simples et palette réduite"
   };
 
   function aiState(t) {
@@ -10367,6 +10380,72 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (ok && allDone) toast("Rédaction du livre terminée ✓", "ok");
   }
 
+  /* ---------------- Illustrations (génération réelle) ---------------- */
+  function countIllus(ai) {
+    var total = 0, done = 0;
+    if (ai.plan) ai.plan.chapters.forEach(function (ch) {
+      var c = ai.content[ch.id]; if (!c || !c.blocks) return;
+      c.blocks.forEach(function (b) { if (b.type === "illus") { total++; if (b.src) done++; } });
+    });
+    return { total: total, done: done };
+  }
+  function layoutAspect(layout) { return (layout === "full" || layout === "facing") ? "portrait" : "paysage"; }
+  function illusPrompt(ai, b) {
+    var hint = STYLE_HINT[ai.illusStyle] || STYLE_HINT.aquarelle;
+    return (b.prompt || b.caption || "illustration de livre") + ". " + hint + ". Illustration seule, SANS aucun texte, lettre, mot, chiffre ni logo.";
+  }
+  // Réduit une image (data URL) pour l'affichage et le stockage (JPEG, largeur max).
+  function shrinkDataUrl(url, maxW) {
+    return new Promise(function (resolve) {
+      try {
+        var img = new Image();
+        img.onload = function () {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || w <= maxW) { resolve(url); return; }
+          var s = maxW / w, cw = Math.round(w * s), ch = Math.round(h * s);
+          var cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+          cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+          try { resolve(cv.toDataURL("image/jpeg", 0.85)); } catch (e) { resolve(url); }
+        };
+        img.onerror = function () { resolve(url); };
+        img.src = url;
+      } catch (e) { resolve(url); }
+    });
+  }
+  async function illustrateAll(t, stage) {
+    var ai = aiState(t), api = W("api");
+    if (!api) { toast("Service indisponible.", "warn"); return; }
+    ai.stop = false; ai.status = "illustrating"; paint(t, stage);
+    var chs = ai.plan.chapters;
+    for (var ci = 0; ci < chs.length; ci++) {
+      var c = ai.content[chs[ci].id]; if (!c || !c.blocks) continue;
+      for (var bi = 0; bi < c.blocks.length; bi++) {
+        var b = c.blocks[bi];
+        if (b.type !== "illus" || b.src) continue;
+        if (ai.stop) { ai.status = "done"; paint(t, stage); toast("Génération d'illustrations en pause.", "warn"); return; }
+        ai._open[chs[ci].id] = true;
+        b._imgStatus = "generating"; paint(t, stage);
+        try {
+          var r = await api("/api/image/generate", { prompt: illusPrompt(ai, b), aspect_ratio: layoutAspect(b.layout) });
+          var img = r && r.images && r.images[0];
+          if (!img) throw new Error("aucune image renvoyée");
+          b.src = await shrinkDataUrl(img, 1280); b._imgStatus = "done"; paint(t, stage);
+        } catch (e) {
+          b._imgStatus = "error"; b._imgError = (e && (e.serverMessage || e.message)) || "échec"; paint(t, stage);
+          var st = e && e.status;
+          if (st === 401 || st === 402 || st === 429) {
+            ai.status = "done"; paint(t, stage);
+            toast("Génération arrêtée : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : st === 402 ? "plan insuffisant." : "quota IA atteint."), "err");
+            return;
+          }
+        }
+      }
+    }
+    ai.status = "done"; paint(t, stage);
+    var cnt = countIllus(ai);
+    toast(cnt.done >= cnt.total ? "Illustrations générées ✓" : ("Illustrations : " + cnt.done + "/" + cnt.total + " générées"), cnt.done >= cnt.total ? "ok" : "warn");
+  }
+
   /* ---------------- Rendu ---------------- */
   function blockNode(bl) {
     var type = bl && bl.type;
@@ -10375,12 +10454,15 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       // Disposition (bl.layout) et description (bl.prompt) restent en données pour l'assemblage,
       // mais ne sont pas affichées : rendu sobre, l'illustration se suffit à elle-même.
       var fig = E("figure", "rxbai-illus" + (bl.layout === "full" ? " full" : ""));
+      var cap = bl.caption ? '<figcaption class="rxbai-illus-cap">' + esc(bl.caption) + '</figcaption>' : '';
       if (bl.src) {
-        fig.innerHTML = '<img class="rxbai-illus-img" src="' + esc(bl.src) + '" alt="' + esc(bl.caption || "") + '"/>'
-          + (bl.caption ? '<figcaption class="rxbai-illus-cap">' + esc(bl.caption) + '</figcaption>' : '');
+        fig.innerHTML = '<img class="rxbai-illus-img" src="' + esc(bl.src) + '" alt="' + esc(bl.caption || "") + '"/>' + cap;
+      } else if (bl._imgStatus === "generating") {
+        fig.innerHTML = '<div class="rxbai-illus-ph gen"><span class="rxbai-pulse"></span> Illustration en cours…</div>' + cap;
+      } else if (bl._imgStatus === "error") {
+        fig.innerHTML = '<div class="rxbai-illus-ph err">Illustration non disponible</div>' + cap;
       } else {
-        fig.innerHTML = '<div class="rxbai-illus-ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5L5 20"/></svg></div>'
-          + (bl.caption ? '<figcaption class="rxbai-illus-cap">' + esc(bl.caption) + '</figcaption>' : '');
+        fig.innerHTML = '<div class="rxbai-illus-ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5L5 20"/></svg></div>' + cap;
       }
       return fig;
     }
@@ -10475,6 +10557,19 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     aside.appendChild(pad2);
     aside.appendChild(E("div", "rxbai-divide"));
 
+    // style d'illustration
+    var padS = E("div", "rxbai-pad");
+    padS.appendChild(E("div", "rxbai-sec-title", "Style d'illustration"));
+    var styleBox = E("div", "rxbai-styles");
+    STYLES.forEach(function (p) {
+      var sb = E("button", "rxbai-style" + (ai.illusStyle === p[0] ? " on" : ""), esc(p[1]));
+      sb.onclick = function () { ai.illusStyle = p[0]; paint(t, stage); };
+      styleBox.appendChild(sb);
+    });
+    padS.appendChild(styleBox);
+    aside.appendChild(padS);
+    aside.appendChild(E("div", "rxbai-divide"));
+
     // action / progression
     var pad3 = E("div", "rxbai-pad");
     if (!ai.plan) {
@@ -10487,7 +10582,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     } else {
       var total = ai.plan.chapters.length;
       var done = 0; ai.plan.chapters.forEach(function (c) { if (ai.content[c.id] && ai.content[c.id].status === "done") done++; });
-      pad3.appendChild(E("div", "rxbai-sec-title", ai.status === "done" ? "Livre rédigé" : "Étape 2 — la rédaction"));
+      pad3.appendChild(E("div", "rxbai-sec-title", ai.status === "illustrating" ? "Étape 3 — les illustrations" : ai.status === "done" ? "Livre rédigé" : "Étape 2 — la rédaction"));
       var pct = total ? Math.round(done / total * 100) : 0;
       var prog = E("div", "rxbai-gen");
       prog.innerHTML = '<div class="rxbai-gen-h"><span>' + done + ' / ' + total + ' chapitres</span><span>' + pct + ' %</span></div>'
@@ -10498,8 +10593,32 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         stop.onclick = function () { ai.stop = true; };
         pad3.appendChild(stop);
         pad3.appendChild(E("div", "rxbai-fine", "Readix enchaîne les chapitres. Vous pouvez arrêter — le travail déjà fait est conservé."));
+      } else if (ai.status === "illustrating") {
+        var ciG = countIllus(ai), ipG = ciG.total ? Math.round(ciG.done / ciG.total * 100) : 0;
+        var ipr = E("div", "rxbai-gen");
+        ipr.innerHTML = '<div class="rxbai-gen-h"><span>Illustrations ' + ciG.done + ' / ' + ciG.total + '</span><span>' + ipG + ' %</span></div>'
+          + '<div class="rxbai-track"><div class="rxbai-fill" style="width:' + ipG + '%"></div></div>';
+        pad3.appendChild(ipr);
+        var iStop = E("button", "rxbai-btn ghost block", "Arrêter");
+        iStop.onclick = function () { ai.stop = true; };
+        pad3.appendChild(iStop);
+        pad3.appendChild(E("div", "rxbai-fine", "Readix illustre le livre. Les images déjà générées sont conservées."));
       } else if (ai.status === "done") {
-        pad3.appendChild(E("div", "rxbai-fine", "Prochaine étape : génération des illustrations marquées, puis assemblage en PDF / Word / Document Studio."));
+        var ci = countIllus(ai);
+        if (ci.total > 0 && ci.done < ci.total) {
+          var ipr2 = E("div", "rxbai-gen"), ip2 = Math.round(ci.done / ci.total * 100);
+          ipr2.innerHTML = '<div class="rxbai-gen-h"><span>Illustrations ' + ci.done + ' / ' + ci.total + '</span><span>' + ip2 + ' %</span></div>'
+            + '<div class="rxbai-track"><div class="rxbai-fill" style="width:' + ip2 + '%"></div></div>';
+          pad3.appendChild(ipr2);
+          var gi = E("button", "rxbai-btn primary block", ci.done > 0 ? ("🎨 Générer les illustrations restantes (" + (ci.total - ci.done) + ")") : ("🎨 Générer les illustrations (" + ci.total + ")"));
+          gi.onclick = function () { illustrateAll(t, stage); };
+          pad3.appendChild(gi);
+          pad3.appendChild(E("div", "rxbai-fine", "Chaque illustration consomme une opération IA (" + ci.total + " au total)."));
+        } else if (ci.total > 0) {
+          pad3.appendChild(E("div", "rxbai-fine", "Livre rédigé et illustré. Prochaine étape : assemblage en PDF / Word / Document Studio."));
+        } else {
+          pad3.appendChild(E("div", "rxbai-fine", "Livre rédigé. Prochaine étape : assemblage en PDF / Word / Document Studio."));
+        }
         var again = E("button", "rxbai-btn ghost block", "Régénérer le plan");
         again.onclick = function () { ai.plan = null; ai.status = "idle"; ai.content = {}; paint(t, stage); };
         pad3.appendChild(again);
