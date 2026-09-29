@@ -10433,12 +10433,16 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           b.src = await shrinkDataUrl(img, 1280); b._imgStatus = "done"; paint(t, stage);
         } catch (e) {
           b._imgStatus = "error"; b._imgError = (e && (e.serverMessage || e.message)) || "échec"; paint(t, stage);
+          // Une erreur de génération d'image est presque toujours systémique (clé, plan, organisation,
+          // crédit OpenAI…) : inutile d'enchaîner 19 échecs. On s'arrête et on affiche la vraie cause.
+          ai.status = "done"; paint(t, stage);
           var st = e && e.status;
-          if (st === 401 || st === 402 || st === 429) {
-            ai.status = "done"; paint(t, stage);
-            toast("Génération arrêtée : " + (st === 401 ? "connectez-vous (plan Pro ou Studio)." : st === 402 ? "plan insuffisant." : "quota IA atteint."), "err");
-            return;
-          }
+          var why = st === 401 ? "connectez-vous (plan Pro ou Studio)."
+            : st === 402 ? "un plan Pro ou supérieur est requis."
+            : st === 429 ? "quota IA atteint."
+            : ((e && (e.serverMessage || e.message)) || "erreur inconnue.");
+          toast("Illustrations arrêtées — " + why, "err");
+          return;
         }
       }
     }
