@@ -27,6 +27,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_BASE = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
 const OPENAI_EDIT_MODEL = process.env.OPENAI_EDIT_MODEL || "gpt-image-1";
+// Qualité gpt-image-1 : "low" (défaut, ~15x moins cher) | "medium" | "high". Réglable via OPENAI_IMAGE_QUALITY.
+const OPENAI_IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || "low";
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Paliers d'abonnement ----
@@ -625,7 +627,8 @@ app.post("/api/image/generate", auth, async (req, res) => {
   else if (isDalle) size = /portrait|2\s*[:x]\s*3|9\s*[:x]\s*16/.test(ar) ? "1024x1792" : /paysage|landscape|wide|3\s*[:x]\s*2|16\s*[:x]\s*9/.test(ar) ? "1792x1024" : "1024x1024";
   else { const s = sizeFromAspect(ar); if (s !== "auto") size = s; }
   if (size) body.size = size;
-  const q = req.body && req.body.quality; if (q && !isDalle) body.quality = String(q);
+  // gpt-image-1 : qualité économique par défaut (grosse différence de coût). DALL·E garde sa qualité standard.
+  if (!isDalle) body.quality = String((req.body && req.body.quality) || OPENAI_IMAGE_QUALITY);
   try {
     const data = await openaiImageJson("/images/generations", body);
     const images = imagesToUrls(data);
