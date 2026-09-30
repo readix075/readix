@@ -1141,6 +1141,7 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxw-pageborder{position:absolute;pointer-events:none;z-index:0}
 
 </style>
+  <link rel="stylesheet" href="../indesign-engine/readix-indesign.css">
 </head>
 <body>
 <header class="topbar">
@@ -1452,7 +1453,8 @@ function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileRea
 /* ---------- Nettoyage HTML ---------- */
 const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
 function sanitizeHTML(html,internal){
-  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'</body>','text/html');
+  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'  <script src="../indesign-engine/readix-indesign.js"></script>
+</body>','text/html');
   const kill='script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template,xml,o\\:p';
   try{doc.body.querySelectorAll(kill).forEach(n=>n.remove());}catch(e){doc.body.querySelectorAll('script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template').forEach(n=>n.remove());}
   const walk=el=>{for(const n of [...el.children]){
@@ -3737,6 +3739,8 @@ async function renderView(){
   if(t&&t.tool==="cvbuilder"){ return renderCvBuilder(t,stage); }
   if(t&&t.tool==="bookstudio"){ return renderBookStudio(t,stage); }
   if(t&&t.tool==="engstudio"){ return renderEngStudio(t,stage); }
+  if(t&&t.tool==="documentstudiohome"&&window.ReadixInDesign){ return ReadixInDesign.renderHome(stage); }
+  if(t&&t.tool==="indesign"&&window.ReadixInDesign){ return ReadixInDesign.render(t,stage); }
   if(t&&t.tool==="docstudio"){ return renderDocStudio(t,stage); }
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
@@ -5217,10 +5221,15 @@ function renderTools(){
     b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${t.ic}</svg></span><span class="lb">${t.name}</span>`;
     b.onclick=()=>openTool(t.id);box.appendChild(b);
   });
-  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
+  window.openReadixWordTab=function(){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();};
+window.openReadixInDesign=function(){const t=createTab("Document InDesign.rxd");t.tool="indesign";t.idTool="select";t.idPages=1;APP.tool="indesign";pushHist({tool:"indesign",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();};
+
+$$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
 }
 function openTool(id){
   if(id==="aiadvanced"){openAIFloating("__home");return;}
+  if(id==="documentstudiohome"){let t=activeTab();if(!t||t.pdf||t.tool!=="documentstudiohome")t=createTab("Document Studio");t.tool="documentstudiohome";APP.tool="documentstudiohome";pushHist({tool:"documentstudiohome",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
+  if(id==="indesign"){window.openReadixInDesign&&window.openReadixInDesign();return;}
   if(id==="docstudio"){let t=activeTab();if(!t||t.pdf){t=createTab("Nouveau document.docx");} t.tool="docstudio";APP.tool="docstudio";if(!t.doc) t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   let t=activeTab();if(!t){t=createTab();}
   t.tool=id;APP.tool=id;pushHist({tool:id,page:t.page||1});
@@ -7056,10 +7065,6 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     // Mode Assistant IA (Studio Livre IA)
     if (t._mode === "ai" && window.ReadixBookAI && ReadixBookAI.render) {
       try { return ReadixBookAI.render(t, stage, backToContent); } catch (e) { t._mode = "content"; }
-    }
-    // Mode Composition (PAO / Document Studio)
-    if (t._mode === "compose" && window.ReadixCompose && ReadixCompose.render) {
-      try { return ReadixCompose.render(t, stage, backToContent); } catch (e) { t._mode = "content"; }
     }
     if (!t._sel) t._sel = { type: "book" };
     var wrap = E("div", "cv-builder rxbk-studio");
@@ -8938,7 +8943,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     { k: "word", label: "Document Word", sub: "Rédiger dans Document Studio", ic: IC.doc || IC.documents },
     { k: "book", label: "Livre", sub: "Écrire un livre (Book Studio)", ic: IC.book },
     { k: "bookai", label: "Livre IA", sub: "Rédigé et illustré par l'IA", ic: IC.ai || IC.book },
-    { k: "compose", label: "Composition PAO", sub: "Mise en page pro (Document Studio)", ic: IC.docs || IC.book },
     { k: "cv", label: "CV", sub: "Créer un CV (CV Studio)", ic: IC.cv },
     { k: "blank", label: "Vide", sub: "Je verrai plus tard", ic: IC.folder }
   ];
@@ -8948,7 +8952,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       else if (kind === "word") runTool("docstudio");
       else if (kind === "book") runTool("book");
       else if (kind === "bookai") { if (window.openBookAIStudio) window.openBookAIStudio(); else runTool("book"); }
-      else if (kind === "compose") { if (window.openComposeStudio) window.openComposeStudio(); else runTool("book"); }
       else if (kind === "cv") runTool("cv");
       // "blank" : on reste sur l'espace du projet
     } catch (e) {}
@@ -10965,502 +10968,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   window.openBookAIStudio = openBookAIStudio;
   try { console.info("[Readix] Book AI Engine v1 — Studio Livre IA : plan + rédaction orchestrée (V1)."); } catch (e) {}
 })();
-</script>
-<style id="readix-compose-css">
-/* ===== Readix Compose Engine — Studio Composition (PAO) ===== */
-.rxc{--c-bg:#0f1830;--c-panel:#141d33;--c-line:#243252;--c-ink:#e8eefb;--c-soft:#9fb0cf;--c-brand:#4f46e5;--c-brand2:#6366f1;--c-accent:#38bdf8;--c-canvas:#0b1222;
-  display:flex;flex-direction:column;height:calc(100vh - 60px);min-height:560px;background:var(--c-bg);color:var(--c-ink);font-size:13px;border-radius:14px;overflow:hidden;border:1px solid var(--c-line)}
-.rxc *{box-sizing:border-box}
-.rxc-spacer{flex:1}
-
-.rxc-top{display:flex;align-items:center;gap:12px;padding:8px 12px;background:#0c1428;border-bottom:1px solid var(--c-line)}
-.rxc-back{font:inherit;font-size:12.5px;font-weight:600;color:var(--c-soft);background:transparent;border:1px solid var(--c-line);border-radius:8px;padding:6px 10px;cursor:pointer}
-.rxc-back:hover{color:#fff;border-color:var(--c-brand)}
-.rxc-title{font-weight:700;letter-spacing:-.01em}
-.rxc-ver{font-size:.62em;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--c-brand),var(--c-accent));padding:2px 6px;border-radius:6px;vertical-align:super;margin-left:2px}
-.rxc-menus{display:flex;gap:14px;margin-left:8px}
-.rxc-menus span{font-size:12.5px;color:var(--c-soft);cursor:default}
-.rxc-menus span:hover{color:#fff}
-.rxc-zoom{display:flex;align-items:center;gap:6px;background:#0a1122;border:1px solid var(--c-line);border-radius:8px;padding:2px}
-.rxc-zb{width:26px;height:24px;border:0;background:transparent;color:var(--c-ink);font-size:15px;cursor:pointer;border-radius:6px}
-.rxc-zb:hover{background:var(--c-line)}
-.rxc-zval{font-size:12px;color:var(--c-soft);min-width:44px;text-align:center}
-
-.rxc-ctx{display:flex;align-items:center;gap:10px;padding:6px 12px;background:#0d1730;border-bottom:1px solid var(--c-line);flex-wrap:wrap}
-.rxc-num,.rxc-col{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--c-soft)}
-.rxc-num b,.rxc-col b{font-weight:600}
-.rxc-num input{width:56px;background:#0a1122;border:1px solid var(--c-line);border-radius:6px;color:var(--c-ink);font:inherit;font-size:12px;padding:5px 7px}
-.rxc-num input:disabled{opacity:.4}
-.rxc-col input[type=color]{width:26px;height:24px;border:1px solid var(--c-line);border-radius:6px;background:none;cursor:pointer;padding:0}
-.rxc-col input:disabled{opacity:.4}
-.rxc-ctx-del{font:inherit;font-size:12px;font-weight:600;color:#fca5a5;background:transparent;border:1px solid var(--c-line);border-radius:7px;padding:6px 11px;cursor:pointer}
-.rxc-ctx-del:hover:not(:disabled){border-color:#ef4444;color:#fff;background:#ef4444}
-.rxc-ctx-del:disabled{opacity:.35}
-
-.rxc-body{flex:1;display:flex;min-height:0}
-.rxc-rail{width:46px;background:#0c1428;border-right:1px solid var(--c-line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;flex:0 0 auto}
-.rxc-tool{width:34px;height:34px;border:1px solid transparent;background:transparent;color:var(--c-soft);border-radius:8px;cursor:pointer;display:grid;place-items:center}
-.rxc-tool svg{width:19px;height:19px}
-.rxc-tool:hover{background:var(--c-line);color:#fff}
-.rxc-tool.on{background:var(--c-brand);color:#fff}
-
-.rxc-canvas{flex:1;overflow:auto;background:var(--c-canvas);display:flex;align-items:flex-start;justify-content:center;padding:34px}
-.rxc-spread{display:flex;gap:1px}
-.rxc-page{position:relative;flex:0 0 auto}
-.rxc-pbleed{position:absolute;border:1px dashed rgba(244,63,94,.55);pointer-events:none;z-index:3}
-.rxc-pinner{box-shadow:0 10px 40px rgba(0,0,0,.5)}
-.rxc-margins{position:absolute;border:1px dashed rgba(167,139,250,.6);pointer-events:none;z-index:1}
-.rxc-col-line{position:absolute;width:1px;background:rgba(167,139,250,.5);pointer-events:none;z-index:1}
-.rxc-col-gut{position:absolute;background:rgba(167,139,250,.10);pointer-events:none;z-index:0}
-.rxc-folio{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:9px;color:#94a3b8;font-family:Georgia,serif}
-
-.rxc-block{position:absolute;z-index:2;cursor:default}
-.rxc-block.sel{outline:1.5px solid var(--c-brand);outline-offset:1px}
-.rxc-block .rxc-text{width:100%;height:100%;overflow:hidden;line-height:1.3;padding:1px}
-.rxc-text-edit{width:100%;height:100%;border:0;resize:none;font-family:inherit;line-height:1.3;padding:1px;outline:2px solid var(--c-brand)}
-.rxc-imgph{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;color:#6366f1}
-.rxc-handle{position:absolute;right:-5px;bottom:-5px;width:10px;height:10px;background:#fff;border:1.5px solid var(--c-brand);border-radius:2px;cursor:se-resize;z-index:4}
-
-.rxc-right{width:236px;background:#0c1428;border-left:1px solid var(--c-line);flex:0 0 auto;overflow:auto}
-.rxc-r-tab{padding:10px 14px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--c-line);color:#fff}
-.rxc-r-pad{padding:12px 14px;border-bottom:1px solid var(--c-line)}
-.rxc-r-sec{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--c-soft);margin-bottom:8px}
-.rxc-r-line{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--c-soft)}
-.rxc-r-line b{color:var(--c-ink);font-weight:600}
-.rxc-r-tool b{font-size:12.5px;color:#fff;display:block}
-.rxc-r-tool span{font-size:11px;color:var(--c-soft);line-height:1.4;display:block;margin-top:3px}
-.rxc-pnav{display:flex;align-items:center;gap:6px}
-.rxc-pind{font-size:12px;color:var(--c-soft);flex:1;text-align:center}
-.rxc-btn{font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--c-line);background:#0a1122;color:var(--c-ink);padding:8px 11px;cursor:pointer}
-.rxc-btn.sm{padding:5px 9px;font-size:12px}
-.rxc-btn.ghost:hover{border-color:var(--c-brand);color:#fff}
-.rxc-btn.primary{background:var(--c-brand);border-color:var(--c-brand);color:#fff}
-.rxc-btn.primary:hover{background:var(--c-brand2)}
-.rxc-btn.block{width:100%}
-.rxc-fine{font-size:10.5px;color:var(--c-soft);margin-top:8px;line-height:1.4}
-
-.rxc-status{display:flex;align-items:center;gap:10px;padding:5px 12px;background:#0c1428;border-top:1px solid var(--c-line);font-size:11px;color:var(--c-soft)}
-.rxc-ok{color:#4ade80}
-
-/* Dialogue Nouveau document */
-.rxc-nd{width:min(560px,86vw);color:#0f172a}
-.rxc-nd-h{font-size:16px;font-weight:700;margin-bottom:12px}
-.rxc-nd label{display:block;font-size:11.5px;color:#64748b;margin-bottom:4px}
-.rxc-nd select,.rxc-nd input{font:inherit;font-size:13px;padding:7px 9px;border:1px solid #d7dbe4;border-radius:8px;background:#fff;color:#0f172a}
-.rxc-nd select{width:100%}
-.rxc-nd input[type=number],.rxc-nd-3 input,.rxc-nd-4 input,.rxc-nd-2 input{width:100%}
-.rxc-nd-row{margin-bottom:12px}
-.rxc-nd-row select{width:100%}
-.rxc-nd-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;align-items:end}
-.rxc-nd-3{display:grid;grid-template-columns:1.2fr 1fr 1fr .8fr;gap:10px;margin-bottom:12px;align-items:end}
-.rxc-nd-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
-.rxc-nd-checks{display:flex;gap:18px;margin-bottom:8px}
-.rxc-nd-checks label{display:flex;align-items:center;gap:6px;color:#0f172a;font-size:12.5px;margin:0}
-.rxc-nd-sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#94a3b8;margin:14px 0 8px;border-top:1px solid #eef1f6;padding-top:12px}
-.rxc-orient{display:flex;gap:6px}
-.rxc-orient button{width:34px;height:32px;border:1px solid #d7dbe4;background:#fff;border-radius:8px;cursor:pointer;font-size:16px;color:#94a3b8}
-.rxc-orient button.on{border-color:var(--c-brand);color:var(--c-brand);background:#eef0fe}
-.rxc-nd-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-.rxc-nd-foot .rxc-btn{color:#0f172a;background:#fff;border-color:#d7dbe4}
-.rxc-nd-foot .rxc-btn.primary{background:var(--c-brand);color:#fff;border-color:var(--c-brand)}
-
-@media (max-width:900px){.rxc-right{display:none}.rxc-menus{display:none}}
-
-</style>
-<script id="readix-compose">
-/* ============================================================
-   READIX COMPOSE ENGINE — Studio Composition (PAO / InDesign-like)
-   Additif. S'accroche au Book Studio via t._mode === "compose".
-   PRINCIPE : chaque outil est DÉFINI dans un registre (id, label, rôle,
-   raccourci, action). Le rail n'expose que des outils réellement
-   fonctionnels — aucun bouton inerte.
-   V1 (fondation) : Nouveau document (format, vis-à-vis, colonnes,
-   marges, fond perdu) + plan de travail (règles, marges, colonnes,
-   fond perdu, folio, zoom) + outils Sélection/Texte/Rectangle/Ellipse/
-   Ligne/Image/Main/Zoom + panneau Propriétés (X/Y/L/H, couleurs) +
-   navigation pages + export PDF réel.
-   ============================================================ */
-(function () {
-  "use strict";
-  if (window.ReadixCompose) return;
-  var PXMM = 96 / 25.4; // px par mm à 96 dpi
-
-  function W(n) { return typeof window[n] === "function" ? window[n] : null; }
-  function E(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function toast(m, k) { var f = W("toast"); if (f) f(m, k || "ok"); }
-  function uid(p) { return (p || "b") + "_" + Math.random().toString(36).slice(2, 9); }
-  function round(n) { return Math.round(n * 10) / 10; }
-
-  var FORMATS = { "A4": { w: 210, h: 297 }, "A5": { w: 148, h: 210 }, "Letter": { w: 216, h: 279 }, "Carré": { w: 210, h: 210 } };
-
-  // ---- Icônes (SVG) ----
-  var IC = {
-    select: '<path d="M4 3l7 17 2-7 7-2z"/>',
-    text: '<path d="M5 5h14M12 5v14M9 19h6"/>',
-    rect: '<rect x="4" y="6" width="16" height="12" rx="1"/>',
-    ellipse: '<ellipse cx="12" cy="12" rx="8" ry="6"/>',
-    line: '<path d="M5 19L19 5"/>',
-    image: '<rect x="3" y="5" width="18" height="14" rx="1.5"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 17l-5-5L5 19"/>',
-    hand: '<path d="M8 13V6a1.5 1.5 0 013 0v5m0-1V5a1.5 1.5 0 013 0v6m0-1V6.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-1a6 6 0 01-5-3l-2-3a1.5 1.5 0 012.5-1.6L8 13"/>',
-    zoom: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6M11 8v6"/>'
-  };
-  // ---- Registre d'outils : chaque outil DÉFINI ----
-  var TOOLS = [
-    { id: "select", label: "Sélection", key: "V", role: "Sélectionner, déplacer et redimensionner un bloc.", icon: IC.select },
-    { id: "text", label: "Texte", key: "T", role: "Créer un bloc de texte éditable (double-clic pour écrire).", icon: IC.text },
-    { id: "rect", label: "Rectangle", key: "M", role: "Dessiner un rectangle.", icon: IC.rect },
-    { id: "ellipse", label: "Ellipse", key: "L", role: "Dessiner une ellipse.", icon: IC.ellipse },
-    { id: "line", label: "Ligne", key: "\\", role: "Tracer une ligne droite.", icon: IC.line },
-    { id: "image", label: "Bloc image", key: "F", role: "Placer une image importée depuis votre appareil.", icon: IC.image },
-    { id: "hand", label: "Main", key: "H", role: "Faire défiler le plan de travail.", icon: IC.hand },
-    { id: "zoom", label: "Zoom", key: "Z", role: "Agrandir ou réduire l'aperçu.", icon: IC.zoom }
-  ];
-  function toolDef(id) { for (var i = 0; i < TOOLS.length; i++) if (TOOLS[i].id === id) return TOOLS[i]; return null; }
-
-  function docState(t) {
-    if (!t.composeDoc) return null;
-    return t.composeDoc;
-  }
-  function newDoc(cfg) {
-    var f = FORMATS[cfg.format] || FORMATS.A4, w = f.w, h = f.h;
-    if (cfg.orientation === "paysage") { var tmp = w; w = h; h = tmp; }
-    return {
-      format: cfg.format || "A4", w: w, h: h, orientation: cfg.orientation || "portrait",
-      pages: Math.max(1, +cfg.pages || 1), facing: !!cfg.facing, primaryFrame: !!cfg.primaryFrame,
-      columns: Math.max(1, +cfg.columns || 1), gutter: +cfg.gutter || 4.233,
-      margins: cfg.margins || { top: 12.7, bottom: 12.7, inside: 12.7, outside: 12.7 },
-      bleed: +cfg.bleed || 0, slug: +cfg.slug || 0,
-      blocks: [], zoom: 0.85, page: 0, tool: "select", sel: null
-    };
-  }
-
-  /* ---------------- Dialogue Nouveau document (fidèle au prototype) ---------------- */
-  function newDocDialog(t, stage, back, onDone) {
-    var dlg = W("dialog");
-    var body =
-      '<div class="rxc-nd"><div class="rxc-nd-h"><b>Nouveau document</b></div>'
-      + '<div class="rxc-nd-row"><label>Préréglage du document</label>'
-      + '<select id="ndPreset"><option value="custom">Personnalisé</option><option value="A4">A4 · impression</option><option value="A5">A5 · roman</option><option value="Carré">Carré · beau livre</option><option value="Letter">Letter</option></select></div>'
-      + '<div class="rxc-nd-2"><div><label>Intentions</label><select id="ndIntent"><option>Impression</option><option>Web</option></select></div>'
-      + '<div><label>Nombre de pages</label><input id="ndPages" type="number" min="1" value="1"></div></div>'
-      + '<div class="rxc-nd-checks"><label><input type="checkbox" id="ndFacing" checked> Pages en vis-à-vis</label>'
-      + '<label><input type="checkbox" id="ndPrimary"> Cadre de texte principal</label></div>'
-      + '<div class="rxc-nd-sec">Taille de page</div>'
-      + '<div class="rxc-nd-3"><div><label>Format</label><select id="ndFormat"><option>A4</option><option>A5</option><option>Letter</option><option>Carré</option></select></div>'
-      + '<div><label>Largeur</label><input id="ndW" value="210"> mm</div>'
-      + '<div><label>Hauteur</label><input id="ndH" value="297"> mm</div>'
-      + '<div><label>Orientation</label><div class="rxc-orient"><button type="button" id="ndPortrait" class="on" title="Portrait">▯</button><button type="button" id="ndLand" title="Paysage">▭</button></div></div></div>'
-      + '<div class="rxc-nd-sec">Colonnes</div>'
-      + '<div class="rxc-nd-2"><div><label>Nombre</label><input id="ndCols" type="number" min="1" value="1"></div>'
-      + '<div><label>Gouttière</label><input id="ndGut" value="4.233"> mm</div></div>'
-      + '<div class="rxc-nd-sec">Marges</div>'
-      + '<div class="rxc-nd-4"><div><label>Haut</label><input id="ndMT" value="12.7"></div><div><label>Bas</label><input id="ndMB" value="12.7"></div>'
-      + '<div><label>Intérieur</label><input id="ndMI" value="12.7"></div><div><label>Extérieur</label><input id="ndMO" value="12.7"></div></div>'
-      + '<div class="rxc-nd-sec">Fond perdu et slug</div>'
-      + '<div class="rxc-nd-2"><div><label>Fond perdu</label><input id="ndBleed" value="0"> mm</div><div><label>Slug</label><input id="ndSlug" value="0"> mm</div></div>'
-      + '<div class="rxc-nd-foot"><button class="rxc-btn ghost" data-a="close">Annuler</button><button class="rxc-btn primary" id="ndOk">OK</button></div></div>';
-    if (typeof dlg !== "function") { onDone(newDoc({ format: "A4" })); return; }
-    var dl = dlg(body);
-    var $ = function (id) { return dl.root.querySelector("#" + id); };
-    function syncFmt(name) { var f = FORMATS[name]; if (f) { $("ndW").value = f.w; $("ndH").value = f.h; } }
-    $("ndPreset").onchange = function () { var v = this.value; if (FORMATS[v]) { $("ndFormat").value = v; syncFmt(v); } };
-    $("ndFormat").onchange = function () { syncFmt(this.value); };
-    var orient = "portrait";
-    $("ndPortrait").onclick = function () { orient = "portrait"; this.classList.add("on"); $("ndLand").classList.remove("on"); };
-    $("ndLand").onclick = function () { orient = "paysage"; this.classList.add("on"); $("ndPortrait").classList.remove("on"); };
-    dl.root.onclick = function (e) { if (e.target.closest('[data-a=close]')) dl.close(); };
-    $("ndOk").onclick = function () {
-      var cfg = {
-        format: $("ndFormat").value, orientation: orient, pages: $("ndPages").value,
-        facing: $("ndFacing").checked, primaryFrame: $("ndPrimary").checked,
-        columns: $("ndCols").value, gutter: $("ndGut").value,
-        margins: { top: +$("ndMT").value, bottom: +$("ndMB").value, inside: +$("ndMI").value, outside: +$("ndMO").value },
-        bleed: $("ndBleed").value, slug: $("ndSlug").value
-      };
-      dl.close(); onDone(newDoc(cfg));
-    };
-  }
-
-  /* ---------------- Blocs ---------------- */
-  function addBlock(d, kind, x, y) {
-    var b = { id: uid(), kind: kind, page: d.page, x: round(x), y: round(y), rot: 0, fill: kind === "text" || kind === "line" ? "" : "#e5e7eb", stroke: "#1f2937", strokeW: kind === "line" ? 1 : 0, text: kind === "text" ? "Votre texte" : "", src: "", font: "Montserrat", size: 12, align: "left" };
-    if (kind === "line") { b.w = 40; b.h = 0; }
-    else if (kind === "text") { b.w = 60; b.h = 16; }
-    else { b.w = 40; b.h = 30; }
-    d.blocks.push(b); d.sel = b.id; return b;
-  }
-  function selBlock(d) { for (var i = 0; i < d.blocks.length; i++) if (d.blocks[i].id === d.sel) return d.blocks[i]; return null; }
-
-  /* ---------------- Rendu ---------------- */
-  function paint(t, stage) {
-    var d = docState(t); if (!d) return;
-    var back = t._cmpBack;
-    stage.innerHTML = "";
-    var root = E("div", "rxc");
-
-    // ----- Barre de menus / titre -----
-    var top = E("div", "rxc-top");
-    var bk = E("button", "rxc-back", "‹ Studio manuel"); bk.onclick = function () { t._mode = "content"; var rv = W("renderView"); if (rv) rv(); else if (back) back(); };
-    top.appendChild(bk);
-    top.appendChild(E("div", "rxc-title", 'Document Studio <span class="rxc-ver">PAO</span>'));
-    var menus = E("div", "rxc-menus", ["Fichier", "Édition", "Mise en page", "Texte", "Objet", "Affichage"].map(function (m) { return '<span>' + m + '</span>'; }).join(""));
-    top.appendChild(menus);
-    top.appendChild(E("div", "rxc-spacer"));
-    // zoom
-    var zc = E("div", "rxc-zoom");
-    var zmo = E("button", "rxc-zb", "−"), zval = E("span", "rxc-zval", Math.round(d.zoom * 100) + " %"), zpl = E("button", "rxc-zb", "+");
-    zmo.onclick = function () { d.zoom = Math.max(0.25, round(d.zoom - 0.1)); paint(t, stage); };
-    zpl.onclick = function () { d.zoom = Math.min(3, round(d.zoom + 0.1)); paint(t, stage); };
-    zc.appendChild(zmo); zc.appendChild(zval); zc.appendChild(zpl);
-    top.appendChild(zc);
-    root.appendChild(top);
-
-    // ----- Barre contextuelle (propriétés du bloc) -----
-    var ctx = E("div", "rxc-ctx");
-    var b = selBlock(d);
-    function numField(lbl, val, on) {
-      var wrap = E("label", "rxc-num", '<b>' + lbl + '</b>'); var inp = E("input"); inp.type = "number"; inp.value = (val == null ? "" : val); inp.disabled = !b;
-      inp.onchange = function () { if (b) { on(parseFloat(inp.value) || 0); paint(t, stage); } };
-      wrap.appendChild(inp); return wrap;
-    }
-    ctx.appendChild(numField("X", b ? b.x : "", function (v) { b.x = round(v); }));
-    ctx.appendChild(numField("Y", b ? b.y : "", function (v) { b.y = round(v); }));
-    ctx.appendChild(numField("L", b ? b.w : "", function (v) { b.w = round(v); }));
-    ctx.appendChild(numField("H", b ? b.h : "", function (v) { b.h = round(v); }));
-    // couleurs fond / contour
-    var fillL = E("label", "rxc-col", '<b>Fond</b>'); var fillI = E("input"); fillI.type = "color"; fillI.value = (b && /^#/.test(b.fill)) ? b.fill : "#e5e7eb"; fillI.disabled = !b || b.kind === "line";
-    fillI.oninput = function () { if (b) { b.fill = fillI.value; paint(t, stage); } }; fillL.appendChild(fillI); ctx.appendChild(fillL);
-    var strL = E("label", "rxc-col", '<b>Contour</b>'); var strI = E("input"); strI.type = "color"; strI.value = (b && /^#/.test(b.stroke)) ? b.stroke : "#1f2937"; strI.disabled = !b;
-    strI.oninput = function () { if (b) { b.stroke = strI.value; if (!b.strokeW) b.strokeW = 1; paint(t, stage); } }; strL.appendChild(strI); ctx.appendChild(strL);
-    var delB = E("button", "rxc-ctx-del", "Supprimer"); delB.disabled = !b;
-    delB.onclick = function () { if (b) { d.blocks = d.blocks.filter(function (x) { return x.id !== b.id; }); d.sel = null; paint(t, stage); } };
-    ctx.appendChild(E("div", "rxc-spacer"));
-    ctx.appendChild(delB);
-    root.appendChild(ctx);
-
-    // ----- Corps : rail + canvas + panneau droit -----
-    var body = E("div", "rxc-body");
-
-    // rail d'outils (chaque outil défini, tooltip = rôle)
-    var rail = E("div", "rxc-rail");
-    TOOLS.forEach(function (tl) {
-      var bt = E("button", "rxc-tool" + (d.tool === tl.id ? " on" : ""), '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + tl.icon + '</svg>');
-      bt.title = tl.label + " (" + tl.key + ") — " + tl.role;
-      bt.onclick = function () { d.tool = tl.id; paint(t, stage); };
-      rail.appendChild(bt);
-    });
-    body.appendChild(rail);
-
-    // canvas
-    var cwrap = E("div", "rxc-canvas");
-    var scale = PXMM * d.zoom;
-    var bleedPx = d.bleed * scale;
-    function pageEl(pageIndex, side) {
-      var pg = E("div", "rxc-page");
-      pg.style.width = (d.w * scale) + "px"; pg.style.height = (d.h * scale) + "px";
-      pg.style.padding = bleedPx + "px"; // le fond perdu déborde
-      if (d.bleed) { var bl = E("div", "rxc-pbleed"); bl.style.inset = "0"; pg.appendChild(bl); }
-      var inner = E("div", "rxc-pinner"); inner.style.position = "absolute"; inner.style.left = bleedPx + "px"; inner.style.top = bleedPx + "px";
-      inner.style.width = (d.w * scale) + "px"; inner.style.height = (d.h * scale) + "px"; inner.style.background = "#fff";
-      // marges
-      var mIn = (side === "left" && d.facing) ? d.margins.outside : d.margins.inside;
-      var mOut = (side === "left" && d.facing) ? d.margins.inside : d.margins.outside;
-      var mg = E("div", "rxc-margins");
-      mg.style.left = (mIn * scale) + "px"; mg.style.right = (mOut * scale) + "px"; mg.style.top = (d.margins.top * scale) + "px"; mg.style.bottom = (d.margins.bottom * scale) + "px";
-      inner.appendChild(mg);
-      // colonnes
-      if (d.columns > 1) {
-        var availW = d.w - mIn - mOut, colW = (availW - (d.columns - 1) * d.gutter) / d.columns;
-        for (var ci = 1; ci < d.columns; ci++) {
-          var xline = mIn + ci * colW + (ci - 1) * d.gutter;
-          var cl = E("div", "rxc-col-line"); cl.style.left = (xline * scale) + "px"; cl.style.top = (d.margins.top * scale) + "px"; cl.style.bottom = (d.margins.bottom * scale) + "px";
-          var cg = E("div", "rxc-col-gut"); cg.style.left = (xline * scale) + "px"; cg.style.width = (d.gutter * scale) + "px"; cg.style.top = (d.margins.top * scale) + "px"; cg.style.bottom = (d.margins.bottom * scale) + "px";
-          inner.appendChild(cg); inner.appendChild(cl);
-        }
-      }
-      // folio
-      inner.appendChild(E("div", "rxc-folio", String(pageIndex + 1)));
-      // blocs de cette page
-      d.blocks.filter(function (x) { return x.page === pageIndex; }).forEach(function (bl) { inner.appendChild(blockEl(t, stage, d, bl, scale)); });
-      // création de bloc au clic (si outil de création)
-      inner.addEventListener("mousedown", function (e) {
-        if (e.target !== inner && e.target !== mg && !e.target.classList.contains("rxc-col-line") && !e.target.classList.contains("rxc-col-gut")) return;
-        if (["text", "rect", "ellipse", "line", "image"].indexOf(d.tool) < 0) { d.sel = null; paint(t, stage); return; }
-        var r = inner.getBoundingClientRect();
-        var x = (e.clientX - r.left) / scale, y = (e.clientY - r.top) / scale;
-        var nb = addBlock(d, d.tool, x, y); nb.page = pageIndex;
-        if (d.tool === "image") { pickImage(nb, t, stage); }
-        d.tool = "select"; paint(t, stage);
-      });
-      pg.appendChild(inner);
-      return pg;
-    }
-    var spread = E("div", "rxc-spread");
-    if (d.facing && d.pages > 1) {
-      // afficher la double-page contenant d.page
-      var leftIdx = d.page % 2 === 0 ? d.page - 1 : d.page; // simple appairage
-      if (leftIdx < 0) { spread.appendChild(spacerEl(d, scale)); spread.appendChild(pageEl(0, "right")); }
-      else { spread.appendChild(pageEl(leftIdx, "left")); if (leftIdx + 1 < d.pages) spread.appendChild(pageEl(leftIdx + 1, "right")); }
-    } else {
-      spread.appendChild(pageEl(d.page, "right"));
-    }
-    cwrap.appendChild(spread);
-    body.appendChild(cwrap);
-
-    // panneau droit : Propriétés / Pages
-    var right = E("div", "rxc-right");
-    right.appendChild(E("div", "rxc-r-tab", "Propriétés"));
-    var rp = E("div", "rxc-r-pad");
-    rp.innerHTML = '<div class="rxc-r-sec">Document</div>'
-      + '<div class="rxc-r-line"><span>Format</span><b>' + esc(d.format) + '</b></div>'
-      + '<div class="rxc-r-line"><span>Dimensions</span><b>' + round(d.w) + ' × ' + round(d.h) + ' mm</b></div>'
-      + '<div class="rxc-r-line"><span>Pages</span><b>' + d.pages + (d.facing ? ' · vis-à-vis' : '') + '</b></div>'
-      + '<div class="rxc-r-line"><span>Colonnes</span><b>' + d.columns + '</b></div>'
-      + '<div class="rxc-r-line"><span>Fond perdu</span><b>' + round(d.bleed) + ' mm</b></div>';
-    right.appendChild(rp);
-    // outil courant (définition affichée)
-    var td = toolDef(d.tool);
-    if (td) { var ti = E("div", "rxc-r-pad"); ti.innerHTML = '<div class="rxc-r-sec">Outil actif</div><div class="rxc-r-tool"><b>' + esc(td.label) + '</b><span>' + esc(td.role) + '</span></div>'; right.appendChild(ti); }
-    // pages nav
-    var pn = E("div", "rxc-r-pad");
-    pn.innerHTML = '<div class="rxc-r-sec">Page</div>';
-    var pnav = E("div", "rxc-pnav");
-    var prev = E("button", "rxc-btn ghost sm", "‹"); prev.onclick = function () { d.page = Math.max(0, d.page - 1); d.sel = null; paint(t, stage); };
-    var pind = E("span", "rxc-pind", (d.page + 1) + " / " + d.pages);
-    var next = E("button", "rxc-btn ghost sm", "›"); next.onclick = function () { d.page = Math.min(d.pages - 1, d.page + 1); d.sel = null; paint(t, stage); };
-    var addp = E("button", "rxc-btn ghost sm", "+ page"); addp.onclick = function () { d.pages++; d.page = d.pages - 1; d.sel = null; paint(t, stage); };
-    pnav.appendChild(prev); pnav.appendChild(pind); pnav.appendChild(next); pnav.appendChild(addp);
-    pn.appendChild(pnav);
-    right.appendChild(pn);
-    // export
-    var ep = E("div", "rxc-r-pad");
-    var exb = E("button", "rxc-btn primary block", "📄 Exporter en PDF"); exb.onclick = function () { exportPdf(t, exb); };
-    ep.appendChild(exb);
-    ep.appendChild(E("div", "rxc-fine", "PDF aux dimensions réelles" + (d.bleed ? ", fond perdu inclus." : ".")));
-    right.appendChild(ep);
-    body.appendChild(right);
-
-    root.appendChild(body);
-
-    // barre de statut
-    var st = E("div", "rxc-status");
-    st.innerHTML = '<span class="rxc-ok">● Aucune erreur</span><span class="rxc-spacer"></span><span>' + esc(d.format) + ' (' + round(d.w) + ' × ' + round(d.h) + ' mm)</span>';
-    root.appendChild(st);
-
-    stage.appendChild(root);
-  }
-  function spacerEl(d, scale) { var s = E("div"); s.style.width = (d.w * scale) + "px"; return s; }
-
-  function blockEl(t, stage, d, b, scale) {
-    var el = E("div", "rxc-block" + (d.sel === b.id ? " sel" : "") + (b.kind === "line" ? " line" : ""));
-    el.style.left = (b.x * scale) + "px"; el.style.top = (b.y * scale) + "px";
-    el.style.width = (b.w * scale) + "px"; el.style.height = ((b.kind === "line" ? Math.max(b.strokeW, 2) : b.h) * scale) + "px";
-    if (b.rot) el.style.transform = "rotate(" + b.rot + "deg)";
-    if (b.kind === "rect") { el.style.background = b.fill || "transparent"; if (b.strokeW) el.style.border = (b.strokeW * scale) + "px solid " + b.stroke; }
-    else if (b.kind === "ellipse") { el.style.background = b.fill || "transparent"; el.style.borderRadius = "50%"; if (b.strokeW) el.style.border = (b.strokeW * scale) + "px solid " + b.stroke; }
-    else if (b.kind === "line") { el.style.background = b.stroke || "#1f2937"; }
-    else if (b.kind === "image") { el.style.background = b.src ? ("center/cover no-repeat url(" + b.src + ")") : "#eef0fe"; el.style.border = "1px dashed #a5b4fc"; if (!b.src) el.innerHTML = '<span class="rxc-imgph">Image</span>'; }
-    else if (b.kind === "text") {
-      var tx = E("div", "rxc-text"); tx.style.fontFamily = b.font || "Montserrat"; tx.style.fontSize = ((b.size || 12) * scale / PXMM * 0.3528) + "px"; // pt→px approx via mm
-      tx.style.fontSize = ((b.size || 12) * 1.333 * d.zoom) + "px"; tx.style.textAlign = b.align || "left"; tx.style.color = /^#/.test(b.stroke) ? b.stroke : "#111";
-      tx.textContent = b.text || ""; el.appendChild(tx);
-      el.ondblclick = function (e) {
-        e.stopPropagation(); var ta = E("textarea", "rxc-text-edit"); ta.value = b.text || "";
-        ta.style.fontSize = tx.style.fontSize; el.innerHTML = ""; el.appendChild(ta); ta.focus();
-        ta.onblur = function () { b.text = ta.value; paint(t, stage); };
-      };
-    }
-    // sélection + déplacement (outil sélection)
-    el.addEventListener("mousedown", function (e) {
-      if (d.tool !== "select") return;
-      if (e.target.classList.contains("rxc-handle")) return; // géré par la poignée
-      e.stopPropagation();
-      d.sel = b.id;
-      var sx = e.clientX, sy = e.clientY, ox = b.x, oy = b.y, moved = false;
-      function mv(ev) { moved = true; b.x = round(ox + (ev.clientX - sx) / scale); b.y = round(oy + (ev.clientY - sy) / scale); render(); }
-      function up() { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); paint(t, stage); }
-      // repaint léger pendant le drag
-      function render() { el.style.left = (b.x * scale) + "px"; el.style.top = (b.y * scale) + "px"; }
-      document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-      if (!moved) paint(t, stage);
-    });
-    // poignée de redimensionnement (coin bas-droit), sauf ligne
-    if (d.sel === b.id && b.kind !== "line") {
-      var hd = E("div", "rxc-handle");
-      hd.addEventListener("mousedown", function (e) {
-        e.stopPropagation(); var sx = e.clientX, sy = e.clientY, ow = b.w, oh = b.h;
-        function mv(ev) { b.w = Math.max(4, round(ow + (ev.clientX - sx) / scale)); b.h = Math.max(4, round(oh + (ev.clientY - sy) / scale)); el.style.width = (b.w * scale) + "px"; el.style.height = (b.h * scale) + "px"; }
-        function up() { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); paint(t, stage); }
-        document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
-      });
-      el.appendChild(hd);
-    }
-    return el;
-  }
-
-  function pickImage(b, t, stage) {
-    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
-    inp.onchange = function () { var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { b.src = rd.result; paint(t, stage); }; rd.readAsDataURL(f); };
-    inp.click();
-  }
-
-  /* ---------------- Export PDF ---------------- */
-  async function exportPdf(t, btn) {
-    var d = docState(t), L = window.PDFLib; if (!d || !L) { toast("Export PDF indisponible.", "warn"); return; }
-    var lab = btn ? btn.textContent : ""; if (btn) { btn.disabled = true; btn.textContent = "Préparation…"; }
-    try {
-      var doc = await L.PDFDocument.create();
-      var font = await doc.embedFont(L.StandardFonts.Helvetica);
-      var PT = 72 / 25.4; // pt par mm
-      for (var pi = 0; pi < d.pages; pi++) {
-        var page = doc.addPage([d.w * PT, d.h * PT]), H = d.h * PT;
-        var blks = d.blocks.filter(function (x) { return x.page === pi; });
-        for (var i = 0; i < blks.length; i++) {
-          var b = blks[i], x = b.x * PT, y = H - (b.y + b.h) * PT, w = b.w * PT, h = b.h * PT;
-          if (b.kind === "rect" || b.kind === "image") {
-            if (b.kind === "image" && b.src) {
-              try { var info = dataUrlBytes(b.src); var im = /png/i.test(info.mime) ? await doc.embedPng(info.bytes) : await doc.embedJpg(info.bytes); page.drawImage(im, { x: x, y: y, width: w, height: h }); } catch (e) { }
-            } else { page.drawRectangle({ x: x, y: y, width: w, height: h, color: hex(L, b.fill), borderColor: b.strokeW ? hex(L, b.stroke) : undefined, borderWidth: b.strokeW ? b.strokeW * PT : 0 }); }
-          } else if (b.kind === "ellipse") {
-            page.drawEllipse({ x: x + w / 2, y: y + h / 2, xScale: w / 2, yScale: h / 2, color: hex(L, b.fill), borderColor: b.strokeW ? hex(L, b.stroke) : undefined, borderWidth: b.strokeW ? b.strokeW * PT : 0 });
-          } else if (b.kind === "line") {
-            page.drawLine({ start: { x: x, y: H - b.y * PT }, end: { x: x + w, y: H - b.y * PT }, thickness: Math.max(1, b.strokeW) * PT, color: hex(L, b.stroke) });
-          } else if (b.kind === "text") {
-            var size = (b.size || 12), tcol = hex(L, /^#/.test(b.stroke) ? b.stroke : "#111111");
-            page.drawText(cleanTxt(b.text || ""), { x: x, y: H - (b.y * PT) - size, size: size, font: font, color: tcol, maxWidth: w, lineHeight: size * 1.3 });
-          }
-        }
-      }
-      var bytes = await doc.save();
-      var od = W("offerDownload"); var name = "composition.pdf";
-      if (od) od(new Blob([bytes], { type: "application/pdf" }), name, "Votre composition est prête", name);
-      else { var db = W("downloadBlob"); if (db) db(new Blob([bytes], { type: "application/pdf" }), name); }
-    } catch (e) { toast("Échec de l'export : " + ((e && e.message) || "erreur"), "err"); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = lab; } }
-  }
-  function hex(L, c) { c = String(c || "#000000"); var m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return L.rgb(0.9, 0.9, 0.9); var n = parseInt(m[1], 16); return L.rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); }
-  function dataUrlBytes(u) { var m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(u || ""); var b64 = !!m[2], data = m[3], bin = b64 ? atob(data) : decodeURIComponent(data); var a = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return { bytes: a, mime: m[1] || "image/png" }; }
-  function cleanTxt(s) { return String(s || "").replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF]/g, " "); }
-
-  /* ---------------- API publique ---------------- */
-  function render(t, stage, back) {
-    t._cmpBack = back || t._cmpBack;
-    if (!t.composeDoc) { newDocDialog(t, stage, back, function (d) { t.composeDoc = d; paint(t, stage); }); return true; }
-    paint(t, stage); return true;
-  }
-  function openComposeStudio() {
-    var ob = W("openBookStudio");
-    if (ob) ob(); else { var ct = W("createTab"); if (ct) { var t0 = ct("Composition"); t0.tool = "bookstudio"; try { window.APP.tool = "bookstudio"; } catch (e) {} } }
-    var at = W("activeTab"); var t = at ? at() : null; if (!t) return;
-    try { t.name = "Composition"; var rt = W("renderTabs"); if (rt) rt(); } catch (e) {}
-    t._mode = "compose"; var rv = W("renderView"); if (rv) rv();
-  }
-  window.ReadixCompose = { version: "1.0", render: render, open: openComposeStudio, tools: TOOLS };
-  window.openComposeStudio = openComposeStudio;
-  try { console.info("[Readix] Compose Engine v1 — Studio Composition (PAO) : format, grille, outils définis, export PDF."); } catch (e) {}
-})();
-
 </script>
 </body>
 </html>
