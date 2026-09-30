@@ -10557,11 +10557,14 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   /* ---------------- Mise en page professionnelle (IA) ---------------- */
-  var CHAP_STYLES = ["classic", "banner", "minimal", "framed", "centered"];
-  var CHAP_LABEL = { classic: "chapitres à filet", banner: "bandeaux colorés", minimal: "titres épurés", framed: "titres encadrés", centered: "titres centrés" };
+  var CHAP_STYLES = ["roman", "classic", "banner", "minimal", "framed", "centered"];
+  var CHAP_LABEL = { roman: "grands titres littéraires", classic: "chapitres à filet", banner: "bandeaux colorés", minimal: "titres épurés", framed: "titres encadrés", centered: "titres centrés" };
   function chapterLabel(s) { return CHAP_LABEL[s] || "chapitres"; }
+  var NUM_WORDS = ["", "Un", "Deux", "Trois", "Quatre", "Cinq", "Six", "Sept", "Huit", "Neuf", "Dix", "Onze", "Douze", "Treize", "Quatorze", "Quinze", "Seize", "Dix-sept", "Dix-huit", "Dix-neuf", "Vingt"];
+  function numWord(n) { return NUM_WORDS[n] || String(n); }
   // Presets variés — servent de repli si l'IA est indisponible, pour garantir de la diversité.
   var PRESETS = [
+    { name: "Roman littéraire", description: "Grand titre centré, épigraphe en italique, marges généreuses — le raffinement d'un beau roman.", accent: "#3a3a3a", ink: "#1a1a1a", titleFont: "serif", bodyFont: "serif", chapterStyle: "roman", dropcap: true, justify: true },
     { name: "Classique élégant", description: "Serif chaleureuse, filet fin sous les titres, lettrine d'ouverture.", accent: "#8a5a2b", ink: "#241c14", titleFont: "serif", bodyFont: "serif", chapterStyle: "classic", dropcap: true, justify: true },
     { name: "Moderne épuré", description: "Sans-serif nette, beaucoup d'air, titres sobres.", accent: "#2563eb", ink: "#111827", titleFont: "sans", bodyFont: "sans", chapterStyle: "minimal", dropcap: false, justify: false },
     { name: "Éditorial contrasté", description: "Bandeaux de couleur en tête de chapitre, fort caractère.", accent: "#b91c1c", ink: "#181818", titleFont: "sans", bodyFont: "serif", chapterStyle: "banner", dropcap: false, justify: true },
@@ -10578,7 +10581,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         + '"name":"nom court de la direction","description":"une phrase décrivant l\'ambiance visuelle",'
         + '"accent":"#RRGGBB (couleur d\'accent lisible, adaptée au thème)","ink":"#RRGGBB (couleur du texte, très lisible)",'
         + '"titleFont":"serif|sans","bodyFont":"serif|sans",'
-        + '"chapterStyle":"classic|banner|minimal|framed|centered","dropcap":true|false,"justify":true|false'
+        + '"chapterStyle":"roman|classic|banner|minimal|framed|centered (choisis « roman » — grand titre centré + épigraphe — pour un livre littéraire élégant)","dropcap":true|false,"justify":true|false'
         + '}]} avec EXACTEMENT 3 objets nettement différents (couleurs, polices et style de chapitre variés).'
     };
   }
@@ -10618,7 +10621,13 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       + '</div>';
     (p.chapters || []).forEach(function (ch, i) {
       var c = ai.content[ch.id];
-      if (th.chapterStyle === "banner") {
+      if (th.chapterStyle === "roman") {
+        h += '<div style="text-align:center;padding:110px 8% 6px;page-break-before:always">'
+          + '<div style="font-size:11pt;letter-spacing:6px;text-transform:uppercase;color:' + ink + ';opacity:.5;margin-bottom:44px">Chapitre ' + numWord(i + 1) + '</div>'
+          + '<h2 style="font-family:' + tf + ';font-size:30pt;font-weight:700;color:' + ink + ';margin:0;line-height:1.12">' + esc(ch.title || "") + '</h2>'
+          + (ch.summary ? '<p style="font-family:' + tf + ';font-style:italic;font-size:12.5pt;color:' + ink + ';opacity:.55;margin:34px auto 0;max-width:62%;line-height:1.5">' + esc(ch.summary) + '</p>' : '')
+          + '<div style="width:40px;height:2px;background:' + acc + ';margin:40px auto 44px"></div></div>';
+      } else if (th.chapterStyle === "banner") {
         h += '<div style="background:' + acc + ';color:#fff;padding:26px 24px;margin:0 0 24px;border-radius:8px;page-break-before:always">'
           + '<div style="font-size:9.5pt;letter-spacing:3px;text-transform:uppercase;opacity:.85;margin-bottom:6px">Chapitre ' + (i + 1) + '</div>'
           + '<div style="font-family:' + tf + ';font-size:21pt;font-weight:700">' + esc(ch.title || "") + '</div></div>';
