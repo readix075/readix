@@ -1141,7 +1141,7 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxw-pageborder{position:absolute;pointer-events:none;z-index:0}
 
 </style>
-  <link rel="stylesheet" href="../indesign-engine/readix-indesign.css">
+  <link rel="stylesheet" href="./indesign-engine/readix-indesign.css">
 </head>
 <body>
 <header class="topbar">
@@ -3456,7 +3456,6 @@ async function autosave(){
   if(t.tool==="bookstudio"){if(t.book){await idbSave(t.id,{name:t.name,tool:"bookstudio",book:t.book});t.dirty=false;}return;}
   if(t.tool==="engstudio"){if(t.eng){await idbSave(t.id,{name:t.name,tool:"engstudio",eng:t.eng});t.dirty=false;}return;}
   if(t.tool==="docstudio"){if(t.doc){await idbSave(t.id,{name:t.name,tool:"docstudio",doc:t.doc,docMeta:t.docMeta||{margin:78,paper:"A4"},dirty:false});t.dirty=false;updateDocStudioStatus(t,false);}return;}
-  if(t.tool==="indesign"){if(t.idState){await idbSave(t.id,{name:t.name,tool:"indesign",idState:t.idState,idTool:t.idTool||"select",dirty:false});t.dirty=false;}return;}
   if(!t.bytes)return;
   const fieldVals=t.fields?t.fields.map(f=>({name:f.name,type:f.type,val:f.el?(f.el.type==="checkbox"||f.el.type==="radio"?f.el.checked:f.el.value):null,ex:f.ex})):[];
   await idbSave(t.id,{name:t.name,tool:t.tool,page:t.page,zoom:t.zoom,bytes:Array.from(u8(t.bytes)),fieldVals});
@@ -3468,7 +3467,7 @@ async function offerResume(){
   dl.root.onclick=async e=>{const a=e.target.closest("[data-a]");if(!a)return;dl.close();
     if(a.dataset.a==="no"){for(const s of all)await idbDel(s.id);return;}
     for(const s of all){ try{
-      const t=newTabObj(s.name);t.id=s.id;t.bytes=s.bytes?new Uint8Array(s.bytes):null;t.tool=s.tool||"home";t.doc=s.doc||null;t.docMeta=s.docMeta||null;t.cv=s.cv||null;t.book=s.book||null;t.eng=s.eng||null;t.idState=s.idState||null;t.idTool=s.idTool||"select";
+      const t=newTabObj(s.name);t.id=s.id;t.bytes=s.bytes?new Uint8Array(s.bytes):null;t.tool=s.tool||"home";t.doc=s.doc||null;t.docMeta=s.docMeta||null;t.cv=s.cv||null;t.book=s.book||null;t.eng=s.eng||null;
       t._resumeFields=s.fieldVals||[];
       APP.tabs.push(t);
     }catch(e){} }
@@ -3739,8 +3738,8 @@ async function renderView(){
   if(t&&t.tool==="cvbuilder"){ return renderCvBuilder(t,stage); }
   if(t&&t.tool==="bookstudio"){ return renderBookStudio(t,stage); }
   if(t&&t.tool==="engstudio"){ return renderEngStudio(t,stage); }
-  if(t&&t.tool==="documentstudiohome"&&window.ReadixInDesign){ return ReadixInDesign.renderHome(stage); }
-  if(t&&t.tool==="indesign"&&window.ReadixInDesign){ return ReadixInDesign.render(t,stage); }
+  if(t&&t.tool==="documentstudiohome"){ return renderDocumentStudioHome(stage); }
+  if(t&&t.tool==="indesign"){ if(window.ReadixInDesign) return ReadixInDesign.render(t,stage); stage.classList.add("empty"); stage.innerHTML="<div class=\"opener\"><h3>Readix InDesign n’a pas pu être chargé.</h3><p>Le portail reste disponible. Rechargez la page après le déploiement complet du dossier public/indesign-engine.</p></div>"; return; }
   if(t&&t.tool==="docstudio"){ return renderDocStudio(t,stage); }
   if(t&&t.tool==="merge"){ return renderMerge(t,stage); }
   if(t&&t.tool==="tolpdf"){ return renderToLpdf(t,stage); }
@@ -5221,15 +5220,22 @@ function renderTools(){
     b.innerHTML=`<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${t.ic}</svg></span><span class="lb">${t.name}</span>`;
     b.onclick=()=>openTool(t.id==="docstudio"?"documentstudiohome":t.id);box.appendChild(b);
   });
-  window.openReadixWordTab=function(){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();};
-window.openReadixInDesign=function(){const t=createTab("Document InDesign.rxd");t.tool="indesign";t.idTool="select";t.idPages=1;if(window.ReadixInDesign&&ReadixInDesign.ensure)ReadixInDesign.ensure(t);APP.tool="indesign";pushHist({tool:"indesign",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();};
-
-$$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
+  $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
 }
+function renderDocumentStudioHome(stage){
+  stage.classList.remove("empty");
+  stage.innerHTML='<div class="rxds-home"><div class="rxds-kicker">READIX · DOCUMENT STUDIO</div><h1>Choisissez votre studio</h1><p>Document Studio regroupe les trois environnements de création. Chaque environnement s’ouvre dans un onglet Readix.</p><div class="rxds-grid"><button class="rxds-card" data-ds="word"><div class="ico word">W</div><h2>Readix<sup>Word</sup></h2><p>Traitement de texte, styles, tableaux, révision, import et export Word.</p><span>Ouvrir Readix Word →</span></button><button class="rxds-card featured" data-ds="indesign"><div class="ico indesign">R</div><h2>Readix<sup>InDesign</sup></h2><p>Mise en page éditoriale professionnelle, pages, objets, images, typographie et composition.</p><span>Ouvrir Readix InDesign →</span></button><button class="rxds-card" data-ds="book"><div class="ico book">✦</div><h2>Livre<sup>IA</sup></h2><p>Plan, rédaction et mise en forme de livres assistés par l’IA Readix.</p><span>Ouvrir Livre IA →</span></button></div></div>';
+  stage.querySelector('[data-ds="word"]').onclick=openReadixWordTab;
+  stage.querySelector('[data-ds="indesign"]').onclick=openReadixInDesign;
+  stage.querySelector('[data-ds="book"]').onclick=function(){ if(window.openBookAIStudio) openBookAIStudio(); else if(window.openBookStudio) openBookStudio(); };
+}
+function openReadixWordTab(){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();}
+function openReadixInDesign(){const t=createTab("Document InDesign.rxd");t.tool="indesign";t.idTool="select";APP.tool="indesign";if(window.ReadixInDesign&&ReadixInDesign.ensure)ReadixInDesign.ensure(t);pushHist({tool:"indesign",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
+window.openReadixWordTab=openReadixWordTab;window.openReadixInDesign=openReadixInDesign;
 function openTool(id){
   if(id==="aiadvanced"){openAIFloating("__home");return;}
   if(id==="documentstudiohome"){let t=activeTab();if(!t||t.pdf||t.tool!=="documentstudiohome")t=createTab("Document Studio");t.tool="documentstudiohome";APP.tool="documentstudiohome";pushHist({tool:"documentstudiohome",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
-  if(id==="indesign"){window.openReadixInDesign&&window.openReadixInDesign();return;}
+  if(id==="indesign"){openReadixInDesign();return;}
   if(id==="docstudio"){let t=activeTab();if(!t||t.pdf){t=createTab("Nouveau document.docx");} t.tool="docstudio";APP.tool="docstudio";if(!t.doc) t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   let t=activeTab();if(!t){t=createTab();}
   t.tool=id;APP.tool=id;pushHist({tool:id,page:t.page||1});
@@ -8708,7 +8714,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     copilot:   { label: "IA / Copilot",        sub: "Votre assistant intelligent",     ic: IC.copilot, color: "purple", run: function () { call("toggleCopilotFloating"); } },
     book:      { label: "Book Studio",         sub: "Créer et publier vos livres",      ic: IC.book, color: "green",  match: ["bookstudio"], run: function () { call("openBookStudio"); } },
     cv:        { label: "CV Studio",           sub: "Créer un CV professionnel",        ic: IC.cv, color: "orange",   match: ["cvbuilder"],  run: function () { call("openCvBuilder"); } },
-    docstudio: { label: "Document Studio",     sub: "Word · InDesign · Livre IA",    ic: IC.doc, color: "blue",   match: ["documentstudiohome","docstudio","indesign"],  run: function () { window.openTool && openTool("documentstudiohome"); } },
+    docstudio: { label: "Document Studio",     sub: "Word · InDesign · Livre IA",          ic: IC.doc, color: "blue",   match: ["documentstudiohome","docstudio","indesign"],  run: function () { window.openTool && openTool("documentstudiohome"); } },
     eng:       { label: "Ingénierie",          ic: IC.eng,      match: ["engstudio"], run: function () { call("openEngStudio"); } },
     merge:     { label: "Fusionner",           ic: IC.merge,    match: ["merge"],     run: function () { window.openTool && openTool("merge"); } },
     organize:  { label: "Organiser",           ic: IC.organize, match: ["organize"],  run: function () { window.openTool && openTool("organize"); } },
@@ -10969,6 +10975,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   try { console.info("[Readix] Book AI Engine v1 — Studio Livre IA : plan + rédaction orchestrée (V1)."); } catch (e) {}
 })();
 </script>
-  <script src="../indesign-engine/readix-indesign.js"></script>
+  <script src="./indesign-engine/readix-indesign.js"></script>
 </body>
 </html>
