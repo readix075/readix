@@ -6083,7 +6083,7 @@ $("#rAi").onclick=()=>openAIFloating("__home");
 
     def("open_tool", "Ouverture d’un outil", function (a) { if (has("openTool")) return G("openTool")(a && a.tool); });
     def("open_pdf_editor", "Ouverture de l’éditeur PDF", function () { if (has("openTool")) return G("openTool")("editpdf"); });
-    def("open_document_studio", "Ouverture de Document Studio", function () { if (has("openTool")) return G("openTool")("docstudio"); });
+    def("open_document_studio", "Ouverture de Document Studio", function () { if (has("openTool")) return G("openTool")("documentstudiohome"); });
     def("open_book_studio", "Ouverture de Book Studio", function () { if (has("openTool")) return G("openTool")("bookstudio"); });
     def("open_cv_studio", "Ouverture de CV Studio", function () { if (has("openTool")) return G("openTool")("cvbuilder"); });
     def("create_project", "Création d’un projet", function (a) { return projects.create(a || {}); });
@@ -8708,7 +8708,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     copilot:   { label: "IA / Copilot",        sub: "Votre assistant intelligent",     ic: IC.copilot, color: "purple", run: function () { call("toggleCopilotFloating"); } },
     book:      { label: "Book Studio",         sub: "Créer et publier vos livres",      ic: IC.book, color: "green",  match: ["bookstudio"], run: function () { call("openBookStudio"); } },
     cv:        { label: "CV Studio",           sub: "Créer un CV professionnel",        ic: IC.cv, color: "orange",   match: ["cvbuilder"],  run: function () { call("openCvBuilder"); } },
-    docstudio: { label: "Document Studio",     sub: "Créer et éditer vos documents",    ic: IC.doc, color: "blue",   match: ["docstudio"],  run: function () { window.openTool && openTool("docstudio"); } },
+    docstudio: { label: "Document Studio",     sub: "Word · InDesign · Livre IA",    ic: IC.doc, color: "blue",   match: ["documentstudiohome","docstudio","indesign"],  run: function () { window.openTool && openTool("documentstudiohome"); } },
     eng:       { label: "Ingénierie",          ic: IC.eng,      match: ["engstudio"], run: function () { call("openEngStudio"); } },
     merge:     { label: "Fusionner",           ic: IC.merge,    match: ["merge"],     run: function () { window.openTool && openTool("merge"); } },
     organize:  { label: "Organiser",           ic: IC.organize, match: ["organize"],  run: function () { window.openTool && openTool("organize"); } },
