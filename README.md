@@ -191,7 +191,7 @@ Cette version corrige le flux d'exécution du Copilot et ajoute des diagnostics 
 - si une ancienne valeur `ANTHROPIC_MODEL` provoque un 404, le serveur retente avec `claude-sonnet-5` ;
 - le moteur d'action reste compatible avec le plan Pro/Studio et le quota existant.
 
-Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "20.0"` et `actionEngine: true`.
+Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "25.0"` et `actionEngine: true`.
 
 
 ## Phase A — Readix Document Studio / Word Engine
@@ -363,8 +363,8 @@ Cette phase fait **évoluer l'interface** vers le prototype cible (barre latéra
 
 
 
-## Phase 20 — cohérence de déploiement
-- `/api/health` annonce `20.0`.
-- Le moteur Copilot Action Engine annonce `20.0`.
+## Phase 25 — cohérence de déploiement
+- `/api/health` annonce `25.0`.
+- Le moteur Copilot Action Engine annonce `25.0`.
 - Readix InDesign utilise une source de vérité unique dans `public/app.html`.
 - Cypress cible par défaut le serveur Readix local sur le port `8787`.
