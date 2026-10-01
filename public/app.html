@@ -1462,11 +1462,7 @@ function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileRea
 /* ---------- Nettoyage HTML ---------- */
 const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
 function sanitizeHTML(html,internal){
-  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body>','text/html');
+  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'</body>','text/html');
   const kill='script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template,xml,o\\:p';
   try{doc.body.querySelectorAll(kill).forEach(n=>n.remove());}catch(e){doc.body.querySelectorAll('script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template').forEach(n=>n.remove());}
   const walk=el=>{for(const n of [...el.children]){
@@ -3049,22 +3045,14 @@ async function textPdf(){const L=window.PDFLib;const doc=await L.PDFDocument.cre
   for(const b of ed.querySelectorAll('p,h1,h2,h3,li,blockquote,pre,td,th')){if(b.querySelector('p,li'))continue;const hd=/^H/.test(b.tagName);const size=hd?({H1:20,H2:16,H3:13}[b.tagName]):11.5;const f=hd?FB:F;const words=safe(b.textContent.replace(/\u200B/g,'')).split(/\s+/);let line='';const lines=[];for(const w of words){const t=line?line+' '+w:w;if(f.widthOfTextAtSize(t,size)>cw&&line){lines.push(line);line=w;}else line=t;}lines.push(line);
     for(const ln of lines){if(y-size<mb){page=doc.addPage([W,HH]);y=HH-mt;}y-=size*1.2;page.drawText(ln,{x:ml+(b.tagName==='LI'?14:0),y,size,font:f});}y-=size*.5;}
   return new Blob([await doc.save()],{type:'application/pdf'});}
-function htmlDoc(){const t=esc(meta.props.title||baseName(host.getName()));return `<!doctype html><html lang="${S.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t}</title><style>${CONTENT_CSS}body{margin:0;background:#E8EEF5}.rxw-page{background:#fff;max-width:${Math.round(pageW())}px;margin:24px auto;padding:${meta.mt}cm ${meta.mr}cm ${meta.mb}cm ${meta.ml}cm;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.15)}.rxw-editor{min-height:0;cursor:auto}@media print{body{background:#fff}.rxw-page{box-shadow:none;margin:0}}</style></head><body><div class="rxw-page">${meta.header?`<header style="font:10pt 'Times New Roman';color:#444;margin-bottom:12pt">${fillFields(meta.header,1,1)}</header>`:''}<div class="rxw-editor">${cleanHTML()}</div>${meta.footer?`<footer style="font:10pt 'Times New Roman';color:#444;margin-top:18pt">${fillFields(meta.footer,1,1)}</footer>`:''}</div>
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>`;}
+function htmlDoc(){const t=esc(meta.props.title||baseName(host.getName()));return `<!doctype html><html lang="${S.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t}</title><style>${CONTENT_CSS}body{margin:0;background:#E8EEF5}.rxw-page{background:#fff;max-width:${Math.round(pageW())}px;margin:24px auto;padding:${meta.mt}cm ${meta.mr}cm ${meta.mb}cm ${meta.ml}cm;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.15)}.rxw-editor{min-height:0;cursor:auto}@media print{body{background:#fff}.rxw-page{box-shadow:none;margin:0}}</style></head><body><div class="rxw-page">${meta.header?`<header style="font:10pt 'Times New Roman';color:#444;margin-bottom:12pt">${fillFields(meta.header,1,1)}</header>`:''}<div class="rxw-editor">${cleanHTML()}</div>${meta.footer?`<footer style="font:10pt 'Times New Roman';color:#444;margin-top:18pt">${fillFields(meta.footer,1,1)}</footer>`:''}</div></body></html>`;}
 function plainText(){const out=[];for(const b of ed.querySelectorAll('p,h1,h2,h3,li,blockquote,pre,tr,.rxw-pagebreak')){if(b.closest('.rxw-obj'))continue;if(b.tagName==='TR'){out.push([...b.cells].map(c=>c.textContent.trim()).join('\t'));continue;}if(b.closest('td,th'))continue;if(b.classList.contains('rxw-pagebreak')){out.push('\f');continue;}if(b.querySelector('p,li'))continue;out.push((b.tagName==='LI'?'• ':'')+b.textContent.replace(/\u200B/g,''));}return out.join('\r\n');}
 async function cmdPrint(){closePops();endTextEdit();toast('Préparation de l’impression…');let imgs=[];
   try{await withPageView(async()=>{for(let i=0;i<S.pages;i++){const c=await renderPageCanvas(i,2.5);imgs.push(c.toDataURL('image/png'));}});}catch(e){console.warn(e);imgs=null;}
   const P=PAPERS[meta.paper];const wmm=(meta.orient==='landscape'?P.h:P.w)*10,hmm=(meta.orient==='landscape'?P.w:P.h)*10;
   const fr=h('iframe','',{title:'Impression',style:'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0'});document.body.append(fr);const d=fr.contentDocument;
   const body=imgs?imgs.map(s=>`<img src="${s}" alt="">`).join(''):`<div class="rxw-editor" style="padding:${meta.mt}cm ${meta.mr}cm ${meta.mb}cm ${meta.ml}cm">${cleanHTML()}</div>`;
-  d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(baseName(host.getName()))}</title><style>@page{size:${wmm}mm ${hmm}mm;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:${wmm}mm;height:${hmm}mm;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}${imgs?'':CONTENT_CSS}</style></head><body>${body}
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>`);d.close();
+  d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(baseName(host.getName()))}</title><style>@page{size:${wmm}mm ${hmm}mm;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:${wmm}mm;height:${hmm}mm;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}${imgs?'':CONTENT_CSS}</style></head><body>${body}</body></html>`);d.close();
   await Promise.all([...d.images].map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r;})));
   setTimeout(()=>{try{fr.contentWindow.focus();fr.contentWindow.print();}catch(e){toast('Impression bloquée par le navigateur : exportez en PDF puis imprimez le fichier.','err');}setTimeout(()=>fr.remove(),60000);},120);}
 function cmdClose(){closePops();if(host.close){syncHost();host.close();return;}confirmDlg('Fermer le document','Le document sera fermé et un document vierge sera ouvert. Enregistrez-le d’abord si vous souhaitez le conserver.','Fermer',()=>loadDoc('',{},'Document1.docx'));}
@@ -3677,22 +3665,14 @@ function printDocStudio(t){
       ${footer?`<div class="print-footer">${footer}</div>`:''}
     </section>
     <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),180));window.addEventListener('afterprint',()=>setTimeout(()=>window.close(),250));<\/script>
-  
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>`);
+  </body></html>`);
   w.document.close();
   return true;
 }
 async function printPdfDocument(t){
   const w=window.open('','_blank','noopener,noreferrer,width=1100,height=850');
   if(!w){toast('Le navigateur a bloqué la fenêtre d’impression. Autorisez les fenêtres contextuelles pour Readix.','err');return false;}
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Document PDF</title><style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}.pdf-print-page{width:100%;break-after:page;page-break-after:always;display:flex;justify-content:center;align-items:flex-start}.pdf-print-page:last-child{break-after:auto;page-break-after:auto}.pdf-print-page canvas{display:block;width:100%;height:auto}</style></head><body><div id="pages"></div>
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Document PDF</title><style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}.pdf-print-page{width:100%;break-after:page;page-break-after:always;display:flex;justify-content:center;align-items:flex-start}.pdf-print-page:last-child{break-after:auto;page-break-after:auto}.pdf-print-page canvas{display:block;width:100%;height:auto}</style></head><body><div id="pages"></div></body></html>');
   w.document.close();
   try{
     if(!window.pdfjsLib)throw new Error('Moteur PDF indisponible.');
@@ -6612,11 +6592,7 @@ $("#rAi").onclick=()=>openAIFloating("__home");
     var ifr = document.createElement("iframe"); ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
     document.body.appendChild(ifr);
     var d = ifr.contentDocument || ifr.contentWindow.document;
-    d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(name || "CV") + '</title><style>@page{margin:16mm;}body{margin:0;}</style></head><body>' + html + '
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>'); d.close();
+    d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(name || "CV") + '</title><style>@page{margin:16mm;}body{margin:0;}</style></head><body>' + html + '</body></html>'); d.close();
     setTimeout(function () { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(function () { ifr.remove(); }, 800); }, 350);
   }
 
@@ -8410,11 +8386,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     oebps.file("style.css", "body{font-family:serif;line-height:1.5;margin:1em}h1,h2{font-family:sans-serif}blockquote{border-left:3px solid #ccc;padding-left:1em;color:#555}");
     var uid = "urn:uuid:readix-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
     var items = [], spine = [], nav = [];
-    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>'); }
+    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '</body></html>'); }
     var idx = 0; var fm = book.frontMatter || {};
     function addDoc(title, html, inNav) { idx++; var name = "s" + idx + ".xhtml"; xhtml(name, title, html); items.push('<item id="s' + idx + '" href="' + name + '" media-type="application/xhtml+xml"/>'); spine.push('<itemref idref="s' + idx + '"/>'); if (inNav) nav.push('<li><a href="' + name + '">' + esc(title) + '</a></li>'); return name; }
     if (fm.titlePage) addDoc(book.title || "Titre", '<h1>' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p>' + esc(book.author) + '</p>' : ''), false);
@@ -8429,11 +8401,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     });
     (book.backMatter || []).forEach(function (b) { addDoc(b.title || b.type, '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""), true); });
     // nav.xhtml (EPUB3)
-    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav>
-<style id="readix-indesign-phase5-css">
-.rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
-</style>
-</body></html>');
+    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav></body></html>');
     items.push('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
     var opf = '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">' + uid + '</dc:identifier><dc:title>' + esc(book.title || "Livre") + '</dc:title><dc:language>' + (book.language || "fr") + '</dc:language>' + (book.author ? '<dc:creator>' + esc(book.author) + '</dc:creator>' : '') + (book.description ? '<dc:description>' + esc(clampText(book.description, 400)) + '</dc:description>' : '') + '<meta property="dcterms:modified">' + new Date().toISOString().replace(/\.\d+Z$/, "Z") + '</meta></metadata><manifest><item id="css" href="style.css" media-type="text/css"/>' + items.join("") + '</manifest><spine>' + spine.join("") + '</spine></package>';
     oebps.file("content.opf", opf);
@@ -11075,7 +11043,6 @@ window.ReadixInDesign={version:'5.0',render,renderHome,ensure};
 })();
 
   </script>
-
 <style id="readix-indesign-phase5-css">
 .rxid-menu-pop{position:absolute;z-index:9999;min-width:210px;background:#102a42;border:1px solid #31506b;border-radius:7px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.35)}.rxid-menu-pop button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#eef7ff;padding:9px 11px;border-radius:5px;font-size:12px}.rxid-menu-pop button:hover{background:#1c4668}.rxid-frame-img{display:block;pointer-events:none}.rxid-item{overflow:hidden}.rxid-section input[type=color]{padding:2px;height:34px}
 </style>
