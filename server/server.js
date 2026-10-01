@@ -171,7 +171,7 @@ app.use(express.json({ limit: "12mb" }));
 app.get("/api/health", (req, res) => res.json({
   ok: true,
   service: "readix",
-  version: "21.0",
+  version: "25.0",
   actionEngine: true,
   copilotAction: true,
   config: {
@@ -864,7 +864,7 @@ ${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — pag
     const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("\n").trim();
     const parsed=parseCopilotJSON(raw);
     await incUsage(req.user.email);
-    res.json({answer:String(parsed.answer||""),actions:parsed.actions.slice(0,5),used:used+1,quota,engine:"20.0"});
+    res.json({answer:String(parsed.answer||""),actions:parsed.actions.slice(0,5),used:used+1,quota,engine:"24.0"});
   } catch(e) { console.error("[COPILOT ACTION]", e); res.status(500).json({error:e.message}); }
 }
 
