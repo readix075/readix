@@ -171,7 +171,7 @@ app.use(express.json({ limit: "12mb" }));
 app.get("/api/health", (req, res) => res.json({
   ok: true,
   service: "readix",
-  version: "20.0",
+  version: "21.0",
   actionEngine: true,
   copilotAction: true,
   config: {
