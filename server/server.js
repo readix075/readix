@@ -918,4 +918,3 @@ initDb()
       if (!stripe) console.log("⚠️  Stripe non configuré : paiement désactivé.");
     });
   });
-
