@@ -1161,7 +1161,15 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxid-item.rxid-frame:not(.sel){box-shadow:none!important}
 .rxid-item.rxid-text:not(.sel)>.rxid-item-text,.rxid-item.rxid-note:not(.sel)>.rxid-item-text{outline:none!important}
 .rxid-item.sel{outline:2px solid rgba(22,140,255,.48)!important}
-</style><style id="rx54-1-visible-launcher">
+</style><style id="rx55-creative-studio">
+.rxid .rx55-overlay{position:absolute;inset:0;z-index:1000;background:rgba(5,9,25,.78);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Inter,"Segoe UI",Arial,sans-serif}
+.rxid .rx55-studio{width:min(1000px,97%);max-height:94%;overflow:auto;color:#f6f5ff;background:linear-gradient(145deg,#14152c,#0c1325 70%);border:1px solid #54507e;border-radius:22px;box-shadow:0 35px 100px #000b}
+.rxid .rx55-header{display:flex;align-items:center;gap:14px;padding:21px 27px;border-bottom:1px solid #ffffff1c}.rxid .rx55-header h2{font-size:20px;letter-spacing:-.4px;margin:0;color:#fff}.rxid .rx55-header p{margin:4px 0 0;color:#b8b9d4;font-size:12px}.rxid .rx55-logo{width:45px;height:45px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#8e64ff,#4e68f4);font-size:26px;box-shadow:0 0 30px #7958f955}.rxid .rx55-iconbutton{margin-left:auto;background:#ffffff12;color:#fff;border:1px solid #ffffff22;border-radius:10px;width:34px;height:34px;font-size:24px;cursor:pointer}
+.rxid .rx55-main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)}.rxid .rx55-compose{padding:31px 28px 28px}.rxid .rx55-eyebrow,.rxid .rx55-results-top{font-size:10px;letter-spacing:1.7px;font-weight:800;color:#a998ff}.rxid .rx55-compose h3{font-size:28px;line-height:1.12;letter-spacing:-.7px;margin:13px 0;color:#fff}.rxid .rx55-lead{color:#b8bed6;font-size:13px;line-height:1.6;margin:0 0 25px}.rxid .rx55-label{display:block;color:#e2e2fa;font-size:12px;font-weight:700;margin-bottom:10px}.rxid .rx55-compose textarea{box-sizing:border-box;width:100%;height:165px;resize:vertical;background:#0b1225;border:1px solid #555379;color:#fff;border-radius:14px;padding:17px;font:14px/1.6 inherit;outline:none}.rxid .rx55-compose textarea:focus{border-color:#a58aff;box-shadow:0 0 0 3px #8056fa26}.rxid .rx55-compose textarea::placeholder{color:#8e94b0}.rxid .rx55-examples{display:flex;gap:7px;flex-wrap:wrap;margin:15px 0 24px}.rxid .rx55-examples button{background:#242440;color:#cfc9ff;border:1px solid #55517d;border-radius:18px;padding:8px 11px;font-size:11px;cursor:pointer}.rxid .rx55-examples button:hover{background:#39335d}.rxid .rx55-footer{display:flex;flex-direction:column;gap:12px}.rxid .rx55-footer [role=status]{font-size:12px;color:#c0c4df;min-height:16px;overflow-wrap:anywhere}.rxid .rx55-primary,.rxid .rx55-apply{background:linear-gradient(100deg,#8056ef,#5566f7);color:#fff;border:0;border-radius:12px;padding:14px 16px;font-weight:750;cursor:pointer;box-shadow:0 9px 26px #6255f044}.rxid .rx55-primary:disabled,.rxid .rx55-apply:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+.rxid .rx55-results{padding:23px;background:#090e1c;border-left:1px solid #ffffff19;display:flex;flex-direction:column;min-width:0}.rxid .rx55-results-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#c9c8e7}.rxid .rx55-pill{font-size:10px;letter-spacing:0;color:#b9f3d8;background:#163d35;padding:7px 10px;border-radius:20px}.rxid .rx55-preview{flex:1;min-height:380px;display:flex;align-items:center;justify-content:center;margin:19px 0;background:radial-gradient(ellipse at center,#24283e,#11182a);border:1px solid #343955;border-radius:15px;padding:20px;overflow:hidden}.rxid .rx55-artboard{position:relative;max-height:365px;width:auto;height:365px;max-width:100%;box-shadow:0 12px 35px #000a;overflow:hidden;flex-shrink:0}.rxid .rx55-empty{display:flex;align-items:center;flex-direction:column;text-align:center;gap:10px;color:#a5abc9;font-size:12px}.rxid .rx55-empty>div:first-child{font-size:45px;color:#967bff}.rxid .rx55-empty strong{font-size:15px;color:#eeeaff}.rxid .rx55-result-bottom{display:flex;flex-direction:column;gap:13px;color:#a9b3ce;font-size:12px}.rxid .rx55-spinner{width:30px;height:30px;border:3px solid #6256a0;border-top-color:#d4c8ff;border-radius:50%;animation:rx55spin 1s linear infinite}@keyframes rx55spin{to{transform:rotate(360deg)}}
+@media(max-width:780px){.rxid .rx55-main{grid-template-columns:1fr}.rxid .rx55-results{border-left:0;border-top:1px solid #ffffff20}.rxid .rx55-compose{padding:22px}.rxid .rx55-preview{min-height:270px}.rxid .rx55-artboard{height:250px}.rxid .rx55-header{padding:15px}}
+</style>
+<style id="rx54-1-visible-launcher">
 /* Phase 54.1: accessible launcher independent of overflowing InDesign toolbars. */
 .rxid{isolation:isolate}
 .rxid .rx54-fixed-launcher{position:absolute;top:101px;right:18px;z-index:15;display:flex;align-items:center;justify-content:center;min-width:124px;min-height:36px;padding:7px 12px;border:1px solid #b5a0ff;border-radius:10px;background:#6c46e9;color:#fff;font:700 12px "Segoe UI",Arial,sans-serif;box-shadow:0 5px 18px #0007;cursor:pointer}
@@ -11415,64 +11423,84 @@ root.querySelectorAll('.rxid-page').forEach(pg=>{pg.addEventListener('pointerdow
  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);if(changed){dirty(t);render(t,stage)}else{root.querySelectorAll('.rxid-item').forEach(n=>n.classList.toggle('sel',(s.selectedIds||[]).includes(n.dataset.itemId)));const body=root.querySelector('[data-panel-body]');if(body){body.innerHTML=propsHTML(s);bindPanel(t,stage,root)}}};
  document.addEventListener('pointermove',move);document.addEventListener('pointerup',up,{once:true});document.addEventListener('pointercancel',up,{once:true});};el.querySelectorAll('[data-resize]').forEach(h=>h.onpointerdown=e=>{e.stopPropagation();e.preventDefault();const it=all().find(o=>o.id===id);if(!it||it.locked||layerLocked(s,it))return;const dir=h.dataset.resize,sx=e.clientX,sy=e.clientY,orig={x:it.x,y:it.y,w:it.w,h:it.h};const page=el.closest('.rxid-page'),rr=page.getBoundingClientRect(),kx=rr.width/(page.offsetWidth||rr.width),ky=rr.height/(page.offsetHeight||rr.height);const anchors=it.anchors?JSON.parse(JSON.stringify(it.anchors)):null,pts=it.pathPoints?JSON.parse(JSON.stringify(it.pathPoints)):null;let changed=false;const move=ev=>{const dx=(ev.clientX-sx)/kx,dy=(ev.clientY-sy)/ky;let x=orig.x,y=orig.y,w=orig.w,hh=orig.h;if(dir.includes('e'))w=Math.max(2,orig.w+dx);if(dir.includes('s'))hh=Math.max(2,orig.h+dy);if(dir.includes('w')){w=Math.max(2,orig.w-dx);x=orig.x+orig.w-w}if(dir.includes('n')){hh=Math.max(2,orig.h-dy);y=orig.y+orig.h-hh}if(it.keepRatio&&dir.length===2){const ratio=orig.w/Math.max(1,orig.h);if(Math.abs(dx)>Math.abs(dy)){hh=w/ratio;if(dir.includes('n'))y=orig.y+orig.h-hh}else{w=hh*ratio;if(dir.includes('w'))x=orig.x+orig.w-w}}Object.assign(it,{x,y,w,h:hh});changed=true;const ax=w/Math.max(1,orig.w),ay=hh/Math.max(1,orig.h);if(anchors)it.anchors=anchors.map(a=>({...a,x:x+(a.x-orig.x)*ax,y:y+(a.y-orig.y)*ay,inX:x+((a.inX??a.x)-orig.x)*ax,inY:y+((a.inY??a.y)-orig.y)*ay,outX:x+((a.outX??a.x)-orig.x)*ax,outY:y+((a.outY??a.y)-orig.y)*ay}));if(pts)it.pathPoints=pts.map(q=>[q[0]*ax,q[1]*ay]);Object.assign(el.style,{left:x+'px',top:y+'px',width:w+'px',height:hh+'px'});const mm=v=>(v/(96/25.4)*(100/(s.zoom||100))).toFixed(2)+' mm';root.querySelectorAll('[data-obj],[data-ctx]').forEach(input=>{const k=input.dataset.obj||input.dataset.ctx;if(['x','y','w','h'].includes(k)&&'value'in input)input.value=mm(it[k])})};const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);if(changed)dirty(t);render(t,stage)};document.addEventListener('pointermove',move);document.addEventListener('pointerup',up,{once:true});document.addEventListener('pointercancel',up,{once:true})});const rh=el.querySelector('[data-rotate]');if(rh)rh.onpointerdown=e=>{e.stopPropagation();const it=all().find(o=>o.id===id);if(!it||it.locked||layerLocked(s,it))return;const rr=el.getBoundingClientRect(),cx=rr.left+rr.width/2,cy=rr.top+rr.height/2;rh.setPointerCapture(e.pointerId);rh.onpointermove=ev=>{it.rot=Math.round(Math.atan2(ev.clientY-cy,ev.clientX-cx)*180/Math.PI+90);el.style.transform='rotate('+it.rot+'deg)'};rh.onpointerup=()=>{rh.onpointermove=null;dirty(t)}};el.querySelectorAll('td[data-cell]').forEach(td=>{td.onclick=e=>{e.stopPropagation();const it=all().find(o=>o.id===id);if(!it||it.locked||layerLocked(s,it))return;const k=td.dataset.cell,itset=new Set(it.selectedCells||[]);if(e.ctrlKey||e.metaKey){itset.has(k)?itset.delete(k):itset.add(k)}else{itset.clear();itset.add(k)}it.selectedCells=[...itset];s.selected=id;render(t,stage)};td.oninput=()=>{const it=all().find(o=>o.id===id);if(!it||it.locked||layerLocked(s,it))return;const [r,c]=td.dataset.cell.split(':').map(Number),cols=it.cols||3;it.cells=it.cells||[];it.cells[r*cols+c]=td.innerText;dirty(t)}});const ed=el.querySelector('.rxid-item-text');if(ed){el.ondblclick=e=>{e.stopPropagation();const it=all().find(o=>o.id===id);if(!it||it.locked||layerLocked(s,it))return;s.selected=id;s.selectedIds=[id];s._editTextId=id;ed.contentEditable='true';ed.style.caretColor='#17283a';ed.focus();const range=document.createRange();range.selectNodeContents(ed);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);};ed.onblur=()=>{if(s._editTextId===id){s._editTextId=null;ed.contentEditable='false'}};ed.onclick=ev=>{if(s._editTextId===id){ev.stopPropagation();ed.focus()}};}if(ed)ed.oninput=()=>{const it=all().find(o=>o.id===id);if(it&&!it.locked&&!layerLocked(s,it)){it.text=ed.innerText;it.html=ed.innerHTML;dirty(t);if(it.nextFrameId){clearTimeout(t._flowTimer);t._flowTimer=setTimeout(()=>{if(rx26Flow(s,it,false)){dirty(t);render(t,stage)}},180)}}}})}
 // Phase 54 — Passerelle IA documentaire. Opérations explicites, validation et aperçu avant application.
-const RX54_CAPABILITIES=Object.freeze(['add_text','add_rectangle','set_page_background']);
+const RX54_CAPABILITIES=Object.freeze(['add_text','add_rectangle','add_ellipse','set_page_background']);
 function rx54Validate(plan){
- if(!plan||!Array.isArray(plan.operations)||plan.operations.length>24)throw Error('Plan IA invalide (24 opérations maximum).');
- return plan.operations.map((raw)=>{
-  if(!raw||!RX54_CAPABILITIES.includes(raw.tool))throw Error('Outil non pris en charge : '+String(raw?.tool||'?'));
-  const n=(k,d)=>{const v=Number(raw[k]??d);if(!Number.isFinite(v))throw Error('Coordonnée invalide : '+k);return v};
-  const page=Math.round(n('page',1));if(page<1||page>100)throw Error('Page invalide');
-  const op={tool:raw.tool,page};
-  if(raw.tool==='set_page_background'){if(!/^#[0-9a-f]{6}$/i.test(raw.color||''))throw Error('Couleur invalide');op.color=raw.color;return op}
-  op.x=n('x',15);op.y=n('y',15);op.w=n('w',80);op.h=n('h',30);
-  if(op.x<0||op.y<0||op.w<=0||op.h<=0||op.x+op.w>600||op.y+op.h>600)throw Error('Dimensions invalides');
+ if(!plan||!Array.isArray(plan.operations)||!plan.operations.length||plan.operations.length>50)throw Error('La proposition ne contient pas de composition valide.');
+ return plan.operations.map(raw=>{
+  if(!raw||!RX54_CAPABILITIES.includes(raw.tool))throw Error('Opération indisponible : '+String(raw?.tool||'?'));
+  const n=(k,d)=>{const v=Number(raw[k]??d);if(!Number.isFinite(v))throw Error('Valeur invalide : '+k);return v};
+  const op={tool:raw.tool,page:Math.round(n('page',1))};if(op.page<1||op.page>100)throw Error('Page invalide');
+  if(!/^#[0-9a-f]{6}$/i.test(raw.color||''))throw Error('Couleur invalide');op.color=raw.color;
+  if(raw.tool==='set_page_background')return op;
+  for(const k of ['x','y','w','h'])op[k]=n(k,k==='w'?80:k==='h'?30:15);
+  if(op.x<0||op.y<0||op.w<=0||op.h<=0||op.x+op.w>600||op.y+op.h>600)throw Error('Un objet dépasse les dimensions autorisées');
   if(raw.tool==='add_text'){
-   op.text=String(raw.text||'').slice(0,4000);op.fontSize=Math.max(6,Math.min(120,n('fontSize',18)));
-   op.color=/^#[0-9a-f]{6}$/i.test(raw.color||'')?raw.color:'#17283a';
-  }else{op.color=/^#[0-9a-f]{6}$/i.test(raw.color||'')?raw.color:'#dbeafe'}
+   op.text=String(raw.text||'').slice(0,1200);op.fontSize=Math.max(7,Math.min(100,n('fontSize',18)));
+   op.align=['left','center','right'].includes(raw.align)?raw.align:'left';
+   op.fontFamily=['Georgia','Arial','Times New Roman','Verdana'].includes(raw.fontFamily)?raw.fontFamily:'Georgia';
+   op.bold=raw.bold===true;op.letterSpacing=Math.max(-1,Math.min(8,n('letterSpacing',0)));
+  }
   return op;
  });
 }
 function rx54Apply(t,stage,plan){
- const ops=rx54Validate(plan),s=ensure(t);
- // Validate the entire plan before any mutation, and stage in a separate snapshot.
- const staged=JSON.parse(JSON.stringify(s));
+ const ops=rx54Validate(plan),s=ensure(t),staged=JSON.parse(JSON.stringify(s));
  for(const op of ops){
-  if(op.page>staged.pages)throw Error('Page '+op.page+' absente : ajoutez-la manuellement avant application.');
-  const px=(v)=>mmPx(v,staged);const list=staged.pageItems[op.page]||(staged.pageItems[op.page]=[]);
+  if(op.page>staged.pages)throw Error('Page '+op.page+' indisponible');
+  const px=v=>mmPx(v,staged),list=staged.pageItems[op.page]||(staged.pageItems[op.page]=[]);
   if(op.tool==='set_page_background'){
-   list.unshift({id:'obj'+(staged.nextItemId++),type:'rect',layerId:staged.activeLayer,x:0,y:0,w:px(staged.width),h:px(staged.height),z:-100,fill:op.color,stroke:'transparent',strokeWidth:0,rot:0});
+   list.push({id:'obj'+staged.nextItemId++,type:'rect',layerId:staged.activeLayer,x:0,y:0,w:px(staged.width),h:px(staged.height),z:-1000,fill:op.color,stroke:'transparent',strokeWidth:0,rot:0,rx55Generated:true});
   }else{
-   const item={id:'obj'+(staged.nextItemId++),type:op.tool==='add_text'?'text':'rect',layerId:staged.activeLayer,x:px(op.x),y:px(op.y),w:px(op.w),h:px(op.h),z:list.length+1,fill:op.tool==='add_text'?'transparent':op.color,stroke:'transparent',strokeWidth:0,rot:0};
-   if(op.tool==='add_text')Object.assign(item,{text:op.text,fontFamily:'Georgia',fontSize:op.fontSize,lineHeight:1.35,textColor:op.color,textAlign:'left',textInset:5});
+   const item={id:'obj'+staged.nextItemId++,type:op.tool==='add_text'?'text':op.tool==='add_ellipse'?'ellipse':'rect',layerId:staged.activeLayer,x:px(op.x),y:px(op.y),w:px(op.w),h:px(op.h),z:list.length+1,fill:op.tool==='add_text'?'transparent':op.color,stroke:'transparent',strokeWidth:0,rot:0,opacity:1,rx55Generated:true};
+   if(op.tool==='add_text')Object.assign(item,{text:op.text,fontFamily:op.fontFamily,fontSize:op.fontSize,bold:op.bold,letterSpacing:op.letterSpacing,lineHeight:1.14,textColor:op.color,textAlign:op.align,textInset:0});
    list.push(item);
   }
  }
  t.idState=staged;dirty(t);render(t,stage);
 }
+function rx55Escape(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function rx55Preview(ops,s){
+ const W=s.width,H=s.height;
+ const bg=ops.filter(o=>o.tool==='set_page_background'&&o.page===s.current).at(-1)?.color||'#ffffff';
+ const shapes=ops.filter(o=>o.page===s.current&&o.tool!=='set_page_background').map(o=>{
+  const x=o.x/W*100,y=o.y/H*100,w=o.w/W*100,h=o.h/H*100;
+  const st=`left:${x}%;top:${y}%;width:${w}%;height:${h}%;`;
+  if(o.tool==='add_text')return `<div style="position:absolute;${st}color:${o.color};font-family:${o.fontFamily};font-size:${Math.max(7,Math.min(35,o.fontSize*0.63))}px;font-weight:${o.bold?700:400};text-align:${o.align};letter-spacing:${o.letterSpacing*.5}px;line-height:1.12;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere">${rx55Escape(o.text)}</div>`;
+  return `<div style="position:absolute;${st}background:${o.color};border-radius:${o.tool==='add_ellipse'?'50%':'0'}"></div>`;
+ }).join('');
+ return `<div class="rx55-artboard" style="aspect-ratio:${W}/${H};background:${bg}">${shapes}</div>`;
+}
 function rx54Open(t,stage,root){
  if(root.querySelector('[data-rx54-dialog]'))return;
- const dlg=document.createElement('div');dlg.setAttribute('data-rx54-dialog','');
- dlg.style.cssText='position:absolute;inset:0;z-index:1000;background:#101828aa;display:flex;align-items:center;justify-content:center;padding:16px';
- dlg.innerHTML='<section style="width:min(540px,95vw);max-height:85vh;overflow:auto;background:#fff;color:#18283a;padding:22px;border-radius:14px;box-shadow:0 10px 45px #0005"><h2>✦ Readox IA Créative — Phase 54</h2><p>Décrivez une mise en page. L’IA propose un plan contrôlable avant son application. Fonctionnalités pilotes : texte, rectangles et fond de page.</p><textarea data-rx54-prompt style="width:100%;min-height:110px;box-sizing:border-box" placeholder="Ex. Crée une couverture scientifique avec un titre et un bandeau bleu."></textarea><p data-rx54-status role="status"></p><pre data-rx54-preview style="white-space:pre-wrap;max-height:180px;overflow:auto;background:#f2f5f9;padding:10px;border-radius:8px"></pre><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-rx54-plan>Proposer une maquette</button><button data-rx54-apply disabled>Appliquer au document</button><button data-rx54-close>Fermer</button></div></section>';
+ const dlg=document.createElement('div');dlg.setAttribute('data-rx54-dialog','');dlg.className='rx55-overlay';
+ dlg.innerHTML=`<section class="rx55-studio" role="dialog" aria-modal="true" aria-label="Readox IA Créative">
+ <header class="rx55-header"><div class="rx55-logo">✦</div><div><h2>Readox IA Créative</h2><p>Votre atelier de conception éditoriale</p></div><button class="rx55-iconbutton" data-rx54-close aria-label="Fermer">×</button></header>
+ <div class="rx55-main"><div class="rx55-compose"><div class="rx55-eyebrow">STUDIO DE CRÉATION</div><h3>Imaginez. Créez. Personnalisez.</h3><p class="rx55-lead">Décrivez votre couverture. Readox prépare une composition que vous pourrez modifier objet par objet.</p>
+ <label class="rx55-label" for="rx55-prompt">Votre idée</label><textarea id="rx55-prompt" data-rx54-prompt placeholder="Ex. Une couverture de livre scientifique sur les mystères de l'univers, élégante, avec un grand titre, une composition céleste et le nom de l'auteur."></textarea>
+ <div class="rx55-examples"><button data-rx55-example="Crée une couverture de livre scientifique élégante sur les mystères de l'univers, avec le titre LES MYSTÈRES DE L’UNIVERS, un sous-titre, une composition géométrique inspirée des planètes et le nom de l'auteur. Palette bleu nuit, or et ivoire.">✧ Livre scientifique</button><button data-rx55-example="Conçois une couverture de roman littéraire contemporain intitulé LES JOURS D’APRÈS, avec une composition minimaliste, une typographie expressive et le nom de l'auteur. Palette crème, terracotta et anthracite.">✧ Roman</button><button data-rx55-example="Conçois une couverture de magazine d'architecture intitulé PERSPECTIVES, avec une grille éditoriale moderne, des formes architecturales abstraites et une hiérarchie typographique nette.">✧ Magazine</button></div>
+ <div class="rx55-footer"><span data-rx54-status role="status">Prêt à créer votre maquette.</span><button class="rx55-primary" data-rx54-plan>✦ Générer une proposition</button></div>
+ </div><div class="rx55-results"><div class="rx55-results-top"><span>APERÇU DE LA MAQUETTE</span><span class="rx55-pill">Objets éditables</span></div><div class="rx55-preview" data-rx54-preview><div class="rx55-empty"><div>✧</div><strong>Votre création apparaîtra ici</strong><span>Une composition pensée pour votre document.</span></div></div><div class="rx55-result-bottom"><div data-rx55-summary>Votre document reste sous votre contrôle.</div><button class="rx55-apply" data-rx54-apply disabled>Appliquer au document →</button></div></div></div>
+ </section>`;
  root.appendChild(dlg);let proposed=null;
- const status=dlg.querySelector('[data-rx54-status]'),preview=dlg.querySelector('[data-rx54-preview]'),apply=dlg.querySelector('[data-rx54-apply]');
- dlg.querySelector('[data-rx54-close]').onclick=()=>dlg.remove();
- dlg.querySelector('[data-rx54-plan]').onclick=async()=>{
-  proposed=null;apply.disabled=true;preview.textContent='';const prompt=dlg.querySelector('[data-rx54-prompt]').value.trim();
-  if(!prompt){status.textContent='Veuillez saisir une instruction.';return}
+ const status=dlg.querySelector('[data-rx54-status]'),preview=dlg.querySelector('[data-rx54-preview]'),apply=dlg.querySelector('[data-rx54-apply]'),generate=dlg.querySelector('[data-rx54-plan]'),summary=dlg.querySelector('[data-rx55-summary]');
+ dlg.querySelector('[data-rx54-close]').onclick=()=>dlg.remove();dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.remove()});
+ dlg.querySelectorAll('[data-rx55-example]').forEach(b=>b.onclick=()=>{dlg.querySelector('[data-rx54-prompt]').value=b.dataset.rx55Example;dlg.querySelector('[data-rx54-prompt]').focus()});
+ generate.onclick=async()=>{
+  proposed=null;apply.disabled=true;const prompt=dlg.querySelector('[data-rx54-prompt]').value.trim();
+  if(!prompt){status.textContent='Décrivez votre projet pour commencer.';return}
   const token=typeof getToken==='function'?getToken():localStorage.getItem('readix_token');
-  if(!token){status.textContent='Connectez-vous à votre compte pour utiliser l’IA.';return}
-  status.textContent='Conception en cours…';
+  if(!token){status.textContent='Connectez-vous pour utiliser la création IA.';return}
+  generate.disabled=true;status.textContent='L’IA compose votre maquette…';preview.innerHTML='<div class="rx55-empty"><div class="rx55-spinner"></div><strong>Création en cours</strong><span>Recherche d’une composition harmonieuse…</span></div>';
   try{
-   const s=ensure(t);const response=await fetch('/api/readox/layout/plan',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({prompt,document:{width:s.width,height:s.height,pages:s.pages,current:s.current,capabilities:RX54_CAPABILITIES}})});
+   const s=ensure(t),response=await fetch('/api/readox/layout/plan',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({prompt,document:{width:s.width,height:s.height,pages:s.pages,current:s.current,capabilities:RX54_CAPABILITIES}})});
    const data=await response.json();if(!response.ok)throw Error(data.error||'Erreur serveur');
-   const operations=rx54Validate(data.plan);proposed={operations};
-   preview.textContent=operations.map((o,i)=>(i+1)+'. '+o.tool+' — page '+o.page+(o.text?' : '+o.text.slice(0,90):'')).join('\n');
-   status.textContent='Plan prêt : '+operations.length+' opération(s). Vérifiez avant application.';apply.disabled=false;
-  }catch(e){status.textContent='Impossible de préparer le plan : '+e.message}
+   const operations=rx54Validate(data.plan);proposed={operations};preview.innerHTML=rx55Preview(operations,s);
+   const count=operations.filter(o=>o.tool!=='set_page_background').length;
+   summary.textContent=count+' éléments indépendants · page '+s.current+' · modifiables après application';status.textContent='Votre proposition est prête.';apply.disabled=false;
+  }catch(e){preview.innerHTML='<div class="rx55-empty"><div>!</div><strong>Proposition indisponible</strong><span>Vérifiez votre connexion et réessayez.</span></div>';status.textContent=e.message}
+  finally{generate.disabled=false}
  };
- apply.onclick=()=>{try{rx54Apply(t,stage,proposed);toast('Maquette IA appliquée.','ok')}catch(e){status.textContent=e.message}};
+ apply.onclick=()=>{try{rx54Apply(t,stage,proposed);toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
 }
 function bindPanel(t,stage,root){const s=ensure(t);
 root.querySelectorAll('[data-rx54-open]').forEach(button=>button.onclick=()=>rx54Open(t,stage,root));
