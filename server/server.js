@@ -448,6 +448,24 @@ app.get("/api/ai/status", auth, async (req, res) => {
   } catch (e) { res.status(500).json({ ok:false, error:e.message }); }
 });
 
+// Phase 54: génération de plans de mise en page, sans exécution de code ni accès direct au document.
+app.post('/api/readox/layout/plan',auth,async(req,res)=>{
+ if(!OPENAI_API_KEY)return res.status(503).json({error:'Clé OpenAI non configurée sur le serveur.'});
+ if(levelOf(req.user.plan)<2&&!isUnlimited(req.user.email))return res.status(403).json({error:'Plan Pro ou Studio requis pour la conception IA.'});
+ const prompt=String(req.body?.prompt||'').trim();const doc=req.body?.document||{};
+ if(!prompt||prompt.length>5000)return res.status(400).json({error:'Instruction invalide (1 à 5000 caractères).'});
+ const pages=Number(doc.pages),width=Number(doc.width),height=Number(doc.height);
+ if(!Number.isInteger(pages)||pages<1||pages>100||![width,height].every(n=>Number.isFinite(n)&&n>=30&&n<=600))return res.status(400).json({error:'Dimensions document invalides.'});
+ const schema={type:'object',additionalProperties:false,required:['operations'],properties:{operations:{type:'array',maxItems:24,items:{type:'object',additionalProperties:false,required:['tool','page','x','y','w','h','text','fontSize','color'],properties:{tool:{type:'string',enum:['add_text','add_rectangle','set_page_background']},page:{type:'integer',minimum:1,maximum:pages},x:{type:'number'},y:{type:'number'},w:{type:'number'},h:{type:'number'},text:{type:'string'},fontSize:{type:'number'},color:{type:'string'}}}}}};
+ try{
+  const r=await fetch(OPENAI_BASE+'/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+OPENAI_API_KEY},body:JSON.stringify({model:process.env.READOX_LAYOUT_MODEL||'gpt-4.1-mini',temperature:0.3,response_format:{type:'json_schema',json_schema:{name:'readox_layout_plan',strict:true,schema}},messages:[{role:'system',content:'Tu es un moteur de mise en page. Réponds uniquement par des opérations JSON respectant le schéma. Coordonnées en millimètres. Document '+width+' x '+height+' mm, '+pages+' pages. Utilise exclusivement les outils déclarés. Pour set_page_background utilise x=0,y=0,w=1,h=1,text="",fontSize=12. Pour add_rectangle text="",fontSize=12. Pour add_text utilise des textes courts. Couleurs hexadécimales #RRGGBB. Ne place aucun objet hors des limites de la page. Ne prétends pas exécuter une opération indisponible.'},{role:'user',content:prompt}]} )});
+  if(!r.ok)return res.status(502).json({error:'Le fournisseur IA a refusé la requête ('+r.status+').'});
+  const data=await r.json();const plan=JSON.parse(data.choices?.[0]?.message?.content||'{}');
+  if(!Array.isArray(plan.operations)||plan.operations.length>24||plan.operations.some(o=>!['add_text','add_rectangle','set_page_background'].includes(o.tool)||o.page<1||o.page>pages||!/^#[0-9a-f]{6}$/i.test(o.color)||[o.x,o.y,o.w,o.h].some(n=>!Number.isFinite(n))||(o.tool!=='set_page_background'&&(o.x<0||o.y<0||o.w<=0||o.h<=0||o.x+o.w>width||o.y+o.h>height))))return res.status(502).json({error:'Plan IA non conforme aux capacités de Readox.'});
+  return res.json({ok:true,plan,capabilities:['add_text','add_rectangle','set_page_background']});
+ }catch(e){return res.status(502).json({error:'Plan IA indisponible : '+e.message});}
+});
+
 app.post("/api/ai/chatbot", auth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
   const message = String((req.body && req.body.message) || "").trim();
