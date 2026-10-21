@@ -11469,6 +11469,54 @@ function rx554ContentIssues(ops,required){
  const texts=ops.filter(o=>o.tool==='add_text').map(o=>String(o.text||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('fr'));
  return required.filter(x=>!texts.some(t=>t.includes(x.replace(/\s+/g,' ').trim().toLocaleLowerCase('fr')))).map(x=>'Texte demandé absent : « '+x.slice(0,70)+' »');
 }
+// Phase 55.5 — contrat éditorial : les chaînes citées dans le brief ne sont pas réécrites par l'IA.
+function rx555Norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr').replace(/[^a-z0-9]+/g,' ').trim()}
+function rx555Distance(a,b){const x=rx555Norm(a),y=rx555Norm(b);if(!x||!y)return 999;let prev=Array.from({length:y.length+1},(_,i)=>i);for(let i=1;i<=x.length;i++){const row=[i];for(let j=1;j<=y.length;j++)row[j]=Math.min(row[j-1]+1,prev[j]+1,prev[j-1]+(x[i-1]===y[j-1]?0:1));prev=row}return prev[y.length]}
+function rx555RestoreContent(ops,required,doc){
+ const notes=[],W=Number(doc.width)||210,H=Number(doc.height)||297;
+ const texts=ops.filter(o=>o.tool==='add_text');
+ for(const phrase of required){
+  if(texts.some(o=>rx555Norm(o.text).includes(rx555Norm(phrase))))continue;
+  let best=null,score=0;
+  for(const o of texts){const a=rx555Norm(o.text),b=rx555Norm(phrase);const d=rx555Distance(a,b),sim=1-d/Math.max(a.length,b.length,1);if(sim>score){best=o;score=sim}}
+  if(best&&(score>=.69||(rx555Norm(phrase).startsWith(rx555Norm(best.text))&&rx555Norm(best.text).length>=8&&rx555Norm(best.text).length/rx555Norm(phrase).length>=.5))){notes.push('Texte restauré : « '+phrase.slice(0,45)+' »');best.text=phrase;best.w=Math.min(W-18,Math.max(best.w,Math.min(W-18,phrase.length*1.9)));continue}
+  // Ne pas inventer d'emplacement si le contenu manque : conserver un diagnostic bloquant.
+  notes.push('Texte obligatoire absent, non inséré automatiquement : « '+phrase.slice(0,45)+' »');
+ }
+ return notes;
+}
+// Vérifie le moteur de rendu réel du navigateur, pas uniquement une estimation Canvas.
+function rx555RenderedTextAudit(ops,doc){
+ const issues=[];const px=v=>mmPx(v,doc);
+ const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none;width:1px;height:1px;overflow:visible';document.body.appendChild(host);
+ try{
+  for(const [i,o] of ops.entries()){
+   if(o.tool!=='add_text')continue;
+   const outer=document.createElement('div');outer.style.cssText='position:relative;box-sizing:border-box;overflow:hidden;width:'+px(o.w)+'px;height:'+px(o.h)+'px';
+   const inner=document.createElement('div');inner.className='rxid-item-text';inner.style.cssText='box-sizing:border-box;width:100%;height:100%;padding:0;white-space:normal;overflow-wrap:break-word;font-family:'+o.fontFamily+';font-size:'+o.fontSize+'px;font-weight:'+(o.bold?'700':'400')+';line-height:1.14;letter-spacing:'+o.letterSpacing+'px;text-align:'+o.align;inner.textContent=o.text;outer.appendChild(inner);host.appendChild(outer);
+   if(inner.scrollHeight>outer.clientHeight+1||inner.scrollWidth>outer.clientWidth+1)issues.push({index:i,text:o.text,needed:Math.ceil(inner.scrollHeight/Math.max(1,px(1)))+1});
+  }
+ }finally{host.remove()}
+ return issues;
+}
+function rx555Compose(operations,doc,required=[]){
+ const ops=operations.map(o=>({...o}));const restored=rx555RestoreContent(ops,required,doc);
+ let result=rx553Compose(ops,doc,required);
+ // Ajuster avec les dimensions typographiques effectivement calculées par le navigateur.
+ for(let pass=0;pass<4;pass++){
+  const overflow=rx555RenderedTextAudit(result.operations,doc);if(!overflow.length)break;
+  let changed=false;
+  for(const e of overflow){const o=result.operations[e.index],maxH=(Number(doc.height)||297)-9-o.y;
+   if(e.needed>o.h&&e.needed<=maxH){o.h=e.needed;changed=true}
+   else if(o.fontSize>12){o.fontSize=Math.max(12,o.fontSize-2);changed=true}
+  }
+  if(!changed)break;
+  result=rx553Compose(result.operations,doc,required);
+ }
+ const overflow=rx555RenderedTextAudit(result.operations,doc);
+ const blocking=[...result.blocking,...overflow.map(e=>'Texte débordant au rendu : « '+e.text.slice(0,45)+' »')];
+ return {...result,issues:[...restored.filter(x=>x.startsWith('Texte restauré')),...result.issues],blocking:[...new Set(blocking)]};
+}
 function rx553Compose(operations,doc,required=[]){
  const ops=operations.map(o=>({...o})),issues=[],blocking=[];
  const W=Number(doc.width)||210,H=Number(doc.height)||297,safe=9;
@@ -11598,7 +11646,7 @@ function rx54Open(t,stage,root){
     for(const op of imageOps)op.imageSrc=idata.imageSrc;
    }
    const required=rx554Required(prompt);
-   let composed=rx553Compose(operations,s,required);
+   let composed=rx555Compose(operations,s,required);
    proposed={operations:composed.operations};preview.innerHTML=rx55Preview(composed.operations,s);
    if(composed.issues.length||composed.blocking.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+[...composed.blocking,...composed.issues].join(' · ');preview.appendChild(info)}
    const count=composed.operations.filter(o=>o.tool!=='set_page_background').length;
@@ -11606,7 +11654,7 @@ function rx54Open(t,stage,root){
   }catch(e){preview.innerHTML='<div class="rx55-empty"><div>!</div><strong>Proposition indisponible</strong><span>Vérifiez votre connexion et réessayez.</span></div>';status.textContent=e.message}
   finally{generate.disabled=false}
  };
- apply.onclick=()=>{try{if(!proposed)throw Error('Aucune proposition disponible');const finalCheck=rx553Compose(proposed.operations,ensure(t),rx554Required(dlg.querySelector('[data-rx54-prompt]').value));if(finalCheck.blocking.length)throw Error('Application bloquée : '+finalCheck.blocking[0]);rx54Apply(t,stage,proposed);toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
+ apply.onclick=()=>{try{if(!proposed)throw Error('Aucune proposition disponible');const finalCheck=rx555Compose(proposed.operations,ensure(t),rx554Required(dlg.querySelector('[data-rx54-prompt]').value));if(finalCheck.blocking.length)throw Error('Application bloquée : '+finalCheck.blocking[0]);rx54Apply(t,stage,proposed);toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
 }
 function bindPanel(t,stage,root){const s=ensure(t);
 root.querySelectorAll('[data-rx54-open]').forEach(button=>button.onclick=()=>rx54Open(t,stage,root));
