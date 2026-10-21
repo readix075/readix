@@ -11458,54 +11458,72 @@ function rx54Validate(plan){
 }
 // Phase 55.3 — contrôle éditorial avant aperçu ET application.
 // Aucune suppression de mots : les textes trop longs sont ajustés ou signalés.
-function rx553Compose(operations,doc){
- const ops=operations.map(o=>({...o}));
- const issues=[],safe=7,W=Number(doc.width)||210,H=Number(doc.height)||297;
- const texts=ops.filter(o=>o.tool==='add_text');
- const mmToPx=v=>mmPx(v,doc);
- let ctx=null;
- try{const canvas=document.createElement('canvas');ctx=canvas.getContext('2d')}catch(_e){}
- function lineCount(op,fs){
-  const width=Math.max(10,mmToPx(op.w)-3),words=String(op.text||'').split(/\s+/).filter(Boolean);
-  if(!words.length)return 1;
-  if(ctx)ctx.font=(op.bold?'700 ':'400 ')+fs+'px '+(op.fontFamily||'Georgia');
+// Phase 55.4 — contenu protégé, correction géométrique et diagnostics bloquants.
+function rx554Required(prompt){
+ const found=[];const add=v=>{v=String(v||'').trim().replace(/[«»“”]/g,'').trim();if(v.length>3&&v.length<180&&!found.some(x=>x.toLocaleLowerCase('fr')===v.toLocaleLowerCase('fr')))found.push(v)};
+ for(const m of prompt.matchAll(/[«“]([^»”]{4,180})[»”]/g))add(m[1]);
+ for(const m of prompt.matchAll(/(?:intitul[ée]|titre(?: principal)?(?: est)?|sous-titre|auteur(?:e)?|accroche(?:s)?(?: secondaires)?)\s*[:：]\s*([^\n.]{4,180})/gi))add(m[1]);
+ return found.filter(x=>!/^à |^les textes|^une |^le résultat/i.test(x));
+}
+function rx554ContentIssues(ops,required){
+ const texts=ops.filter(o=>o.tool==='add_text').map(o=>String(o.text||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('fr'));
+ return required.filter(x=>!texts.some(t=>t.includes(x.replace(/\s+/g,' ').trim().toLocaleLowerCase('fr')))).map(x=>'Texte demandé absent : « '+x.slice(0,70)+' »');
+}
+function rx553Compose(operations,doc,required=[]){
+ const ops=operations.map(o=>({...o})),issues=[],blocking=[];
+ const W=Number(doc.width)||210,H=Number(doc.height)||297,safe=9;
+ const texts=ops.filter(o=>o.tool==='add_text');let ctx=null;
+ try{ctx=document.createElement('canvas').getContext('2d')}catch(_e){}
+ const px=v=>mmPx(v,doc);
+ const measure=(o,fs)=>{
+  const width=Math.max(1,px(o.w)-5),words=String(o.text||'').split(/\s+/).filter(Boolean);
+  if(!words.length)return Infinity;
+  if(ctx)ctx.font=(o.bold?'700 ':'400 ')+fs+'px '+(o.fontFamily||'Georgia');
   let lines=1,used=0;
-  for(const word of words){
-   const wordWidth=ctx?ctx.measureText(word).width+word.length*(op.letterSpacing||0):word.length*fs*.58;
-   if(wordWidth>width)return Infinity;
-   const space=fs*.3;
-   if(used&&used+space+wordWidth>width){lines++;used=wordWidth}else used+=wordWidth+(used?space:0);
+  for(const word of words){const ww=(ctx?ctx.measureText(word).width:word.length*fs*.62)+word.length*Math.max(0,o.letterSpacing||0);
+   if(ww>width)return Infinity;
+   const sp=fs*.36;if(used&&used+sp+ww>width){lines++;used=ww}else used+=ww+(used?sp:0);
   }
-  return lines;
- }
- function fits(op){return lineCount(op,op.fontSize)*op.fontSize*1.19<=mmToPx(op.h)-2}
- for(const op of texts){
-  if(!op.text.trim()){issues.push('Bloc de texte vide');continue}
-  if(op.x<safe){op.w-=safe-op.x;op.x=safe}
-  if(op.y<safe)op.y=safe;
-  if(op.x+op.w>W-safe)op.w=Math.max(10,W-safe-op.x);
-  if(op.y+op.h>H-safe)op.h=Math.max(4,H-safe-op.y);
-  if(op.w<=0||op.h<=0){issues.push('Bloc hors page : '+op.text.slice(0,32));continue}
-  const initial=op.fontSize;
-  while(op.fontSize>12&&!fits(op))op.fontSize=Math.max(12,op.fontSize-1);
-  if(!fits(op)){
-   const maxH=Math.max(0,H-safe-op.y);
-   if(maxH>op.h){op.h=maxH;while(op.fontSize>12&&!fits(op))op.fontSize=Math.max(12,op.fontSize-1)}
+  return lines*fs*1.28+5;
+ };
+ const fit=o=>measure(o,o.fontSize)<=px(o.h);
+ const inside=o=>o.x>=safe-.01&&o.y>=safe-.01&&o.x+o.w<=W-safe+.01&&o.y+o.h<=H-safe+.01;
+ for(const o of texts){
+  if(!o.text.trim()){blocking.push('Bloc de texte vide');continue}
+  o.x=Math.max(safe,Math.min(o.x,W-safe-12));o.y=Math.max(safe,Math.min(o.y,H-safe-6));
+  o.w=Math.max(12,Math.min(o.w,W-safe-o.x));o.h=Math.max(6,Math.min(o.h,H-safe-o.y));
+  const old=o.fontSize;
+  // Préserver la taille quand une zone plus large est disponible.
+  if(!fit(o)){o.w=Math.max(o.w,W-safe-o.x);}
+  for(let f=o.fontSize;f>=12&&!fit(o);f--)o.fontSize=f-1;
+  o.fontSize=Math.max(12,o.fontSize);
+  if(!fit(o)){
+   const need=measure(o,o.fontSize)/Math.max(.01,px(1));
+   if(Number.isFinite(need)&&o.y+need<=H-safe)o.h=Math.max(o.h,need);
   }
-  if(!fits(op))issues.push('Texte non ajustable : « '+op.text.slice(0,45)+' »');
-  else if(initial!==op.fontSize)issues.push('Taille adaptée : « '+op.text.slice(0,28)+' » ('+initial+' → '+op.fontSize+' px)');
+  if(!fit(o)||!inside(o))blocking.push('Texte non ajustable : « '+o.text.slice(0,48)+' »');
+  else if(old!==o.fontSize)issues.push('Taille adaptée : « '+o.text.slice(0,28)+' » ('+old+' → '+o.fontSize+' px)');
  }
- // Vérifier les collisions texte/texte; ne jamais déplacer les illustrations intentionnellement superposées.
+ const intersects=(a,b)=>Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>1&&Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y)>1;
+ // Déplacer les blocs plutôt que de déclarer une proposition « prête » avec collisions.
+ for(let pass=0;pass<16;pass++){
+  let moved=false;
+  for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){
+   const a=texts[i],b=texts[j];if(a.page!==b.page||!intersects(a,b))continue;
+   const candidate=[a.y+a.h+2,b.y+b.h+2];
+   if(candidate[0]+b.h<=H-safe){b.y=candidate[0];moved=true}
+   else if(candidate[1]+a.h<=H-safe){a.y=candidate[1];moved=true}
+   else if(a.x+a.w+2+b.w<=W-safe){b.x=a.x+a.w+2;moved=true}
+   else if(b.x+b.w+2+a.w<=W-safe){a.x=b.x+b.w+2;moved=true}
+  }
+  if(!moved)break;
+ }
  for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){
-  const a=texts[i],b=texts[j];if(a.page!==b.page)continue;
-  const x=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),y=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
-  if(x>2&&y>2){
-   const proposedY=a.y+a.h+2;
-   if(b.y>=a.y&&proposedY+b.h<=H-safe){b.y=proposedY;issues.push('Espacement corrigé entre deux textes')}
-   else issues.push('Chevauchement à vérifier : « '+a.text.slice(0,18)+' » / « '+b.text.slice(0,18)+' »');
-  }
+  const a=texts[i],b=texts[j];if(a.page===b.page&&intersects(a,b))blocking.push('Chevauchement : « '+a.text.slice(0,22)+' » / « '+b.text.slice(0,22)+' »');
  }
- return {operations:ops,issues,blocking:issues.filter(x=>x.startsWith('Texte non ajustable')||x.startsWith('Bloc hors page')||x.startsWith('Chevauchement à vérifier'))};
+ for(const o of texts)if(!inside(o)||!fit(o))blocking.push('Bloc hors zone sûre : « '+o.text.slice(0,40)+' »');
+ blocking.push(...rx554ContentIssues(ops,required));
+ return {operations:ops,issues,blocking:[...new Set(blocking)]};
 }
 function rx54Apply(t,stage,plan){
  const ops=rx54Validate(plan),s=ensure(t),staged=JSON.parse(JSON.stringify(s));
@@ -11579,15 +11597,16 @@ function rx54Open(t,stage,root){
     if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
     for(const op of imageOps)op.imageSrc=idata.imageSrc;
    }
-   const composed=rx553Compose(operations,s);
+   const required=rx554Required(prompt);
+   let composed=rx553Compose(operations,s,required);
    proposed={operations:composed.operations};preview.innerHTML=rx55Preview(composed.operations,s);
-   if(composed.issues.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+composed.issues.join(' · ');preview.appendChild(info)}
+   if(composed.issues.length||composed.blocking.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+[...composed.blocking,...composed.issues].join(' · ');preview.appendChild(info)}
    const count=composed.operations.filter(o=>o.tool!=='set_page_background').length;
-   summary.textContent=count+' éléments indépendants dont '+imageOps.length+' illustration(s) IA · page '+s.current+' · modifiables après application';status.textContent=composed.blocking.length?'Corrigez la proposition : '+composed.blocking.join(' · '):'Votre proposition est prête.';apply.disabled=!!composed.blocking.length;
+   summary.textContent=count+' éléments indépendants dont '+imageOps.length+' illustration(s) IA · page '+s.current+' · modifiables après application';status.textContent=composed.blocking.length?'Révision nécessaire : '+composed.blocking.slice(0,3).join(' · '):'Maquette prête : contrôles essentiels satisfaits.';apply.disabled=!!composed.blocking.length;
   }catch(e){preview.innerHTML='<div class="rx55-empty"><div>!</div><strong>Proposition indisponible</strong><span>Vérifiez votre connexion et réessayez.</span></div>';status.textContent=e.message}
   finally{generate.disabled=false}
  };
- apply.onclick=()=>{try{rx54Apply(t,stage,proposed);toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
+ apply.onclick=()=>{try{if(!proposed)throw Error('Aucune proposition disponible');const finalCheck=rx553Compose(proposed.operations,ensure(t),rx554Required(dlg.querySelector('[data-rx54-prompt]').value));if(finalCheck.blocking.length)throw Error('Application bloquée : '+finalCheck.blocking[0]);rx54Apply(t,stage,proposed);toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
 }
 function bindPanel(t,stage,root){const s=ensure(t);
 root.querySelectorAll('[data-rx54-open]').forEach(button=>button.onclick=()=>rx54Open(t,stage,root));
