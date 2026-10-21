@@ -1169,6 +1169,7 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxid .rx55-results{padding:23px;background:#090e1c;border-left:1px solid #ffffff19;display:flex;flex-direction:column;min-width:0}.rxid .rx55-results-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#c9c8e7}.rxid .rx55-pill{font-size:10px;letter-spacing:0;color:#b9f3d8;background:#163d35;padding:7px 10px;border-radius:20px}.rxid .rx55-preview{flex:1;min-height:380px;display:flex;align-items:center;justify-content:center;margin:19px 0;background:radial-gradient(ellipse at center,#24283e,#11182a);border:1px solid #343955;border-radius:15px;padding:20px;overflow:hidden}.rxid .rx55-artboard{position:relative;max-height:365px;width:auto;height:365px;max-width:100%;box-shadow:0 12px 35px #000a;overflow:hidden;flex-shrink:0}.rxid .rx55-empty{display:flex;align-items:center;flex-direction:column;text-align:center;gap:10px;color:#a5abc9;font-size:12px}.rxid .rx55-empty>div:first-child{font-size:45px;color:#967bff}.rxid .rx55-empty strong{font-size:15px;color:#eeeaff}.rxid .rx55-result-bottom{display:flex;flex-direction:column;gap:13px;color:#a9b3ce;font-size:12px}.rxid .rx55-spinner{width:30px;height:30px;border:3px solid #6256a0;border-top-color:#d4c8ff;border-radius:50%;animation:rx55spin 1s linear infinite}@keyframes rx55spin{to{transform:rotate(360deg)}}
 @media(max-width:780px){.rxid .rx55-main{grid-template-columns:1fr}.rxid .rx55-results{border-left:0;border-top:1px solid #ffffff20}.rxid .rx55-compose{padding:22px}.rxid .rx55-preview{min-height:270px}.rxid .rx55-artboard{height:250px}.rxid .rx55-header{padding:15px}}
 </style>
+<style id="rx553-composition">.rxid .rx553-diagnostics{font:11px/1.45 Inter,Arial,sans-serif;color:#f5d5a0;background:#322b2a;border:1px solid #85674e;border-radius:9px;padding:10px;max-width:310px;max-height:90px;overflow:auto;margin:10px auto 0}.rxid .rx55-preview:has(.rx553-diagnostics){flex-direction:column;overflow:auto;justify-content:flex-start}</style>
 <style id="rx551-fidelity">
 /* Fonds natifs, prévisualisation et texte transparent pour les compositions IA */
 .rxid .rx551-ai-text .rxid-item-text{background:transparent!important}
@@ -11447,13 +11448,64 @@ function rx54Validate(plan){
   if(op.x<0||op.y<0||op.w<=0||op.h<=0||op.x+op.w>600||op.y+op.h>600)throw Error('Un objet dépasse les dimensions autorisées');
   if(raw.tool==='add_image'){op.imageSrc=String(raw.imageSrc||'');if(op.imageSrc&&!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(op.imageSrc))throw Error('Image IA invalide');return op;}
   if(raw.tool==='add_text'){
-   op.text=String(raw.text||'').slice(0,1200);op.fontSize=Math.max(7,Math.min(100,n('fontSize',18)));
+   if(String(raw.text||'').length>1200)throw Error('Texte supérieur à 1200 caractères : répartissez-le en plusieurs blocs.');op.text=String(raw.text||'');op.fontSize=Math.max(7,Math.min(100,n('fontSize',18)));
    op.align=['left','center','right'].includes(raw.align)?raw.align:'left';
    op.fontFamily=['Georgia','Arial','Times New Roman','Verdana'].includes(raw.fontFamily)?raw.fontFamily:'Georgia';
    op.bold=raw.bold===true;op.letterSpacing=Math.max(-1,Math.min(8,n('letterSpacing',0)));
   }
   return op;
  });
+}
+// Phase 55.3 — contrôle éditorial avant aperçu ET application.
+// Aucune suppression de mots : les textes trop longs sont ajustés ou signalés.
+function rx553Compose(operations,doc){
+ const ops=operations.map(o=>({...o}));
+ const issues=[],safe=7,W=Number(doc.width)||210,H=Number(doc.height)||297;
+ const texts=ops.filter(o=>o.tool==='add_text');
+ const mmToPx=v=>mmPx(v,doc);
+ let ctx=null;
+ try{const canvas=document.createElement('canvas');ctx=canvas.getContext('2d')}catch(_e){}
+ function lineCount(op,fs){
+  const width=Math.max(10,mmToPx(op.w)-3),words=String(op.text||'').split(/\s+/).filter(Boolean);
+  if(!words.length)return 1;
+  if(ctx)ctx.font=(op.bold?'700 ':'400 ')+fs+'px '+(op.fontFamily||'Georgia');
+  let lines=1,used=0;
+  for(const word of words){
+   const wordWidth=ctx?ctx.measureText(word).width+word.length*(op.letterSpacing||0):word.length*fs*.58;
+   if(wordWidth>width)return Infinity;
+   const space=fs*.3;
+   if(used&&used+space+wordWidth>width){lines++;used=wordWidth}else used+=wordWidth+(used?space:0);
+  }
+  return lines;
+ }
+ function fits(op){return lineCount(op,op.fontSize)*op.fontSize*1.19<=mmToPx(op.h)-2}
+ for(const op of texts){
+  if(!op.text.trim()){issues.push('Bloc de texte vide');continue}
+  if(op.x<safe){op.w-=safe-op.x;op.x=safe}
+  if(op.y<safe)op.y=safe;
+  if(op.x+op.w>W-safe)op.w=Math.max(10,W-safe-op.x);
+  if(op.y+op.h>H-safe)op.h=Math.max(4,H-safe-op.y);
+  if(op.w<=0||op.h<=0){issues.push('Bloc hors page : '+op.text.slice(0,32));continue}
+  const initial=op.fontSize;
+  while(op.fontSize>12&&!fits(op))op.fontSize=Math.max(12,op.fontSize-1);
+  if(!fits(op)){
+   const maxH=Math.max(0,H-safe-op.y);
+   if(maxH>op.h){op.h=maxH;while(op.fontSize>12&&!fits(op))op.fontSize=Math.max(12,op.fontSize-1)}
+  }
+  if(!fits(op))issues.push('Texte non ajustable : « '+op.text.slice(0,45)+' »');
+  else if(initial!==op.fontSize)issues.push('Taille adaptée : « '+op.text.slice(0,28)+' » ('+initial+' → '+op.fontSize+' px)');
+ }
+ // Vérifier les collisions texte/texte; ne jamais déplacer les illustrations intentionnellement superposées.
+ for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){
+  const a=texts[i],b=texts[j];if(a.page!==b.page)continue;
+  const x=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),y=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+  if(x>2&&y>2){
+   const proposedY=a.y+a.h+2;
+   if(b.y>=a.y&&proposedY+b.h<=H-safe){b.y=proposedY;issues.push('Espacement corrigé entre deux textes')}
+   else issues.push('Chevauchement à vérifier : « '+a.text.slice(0,18)+' » / « '+b.text.slice(0,18)+' »');
+  }
+ }
+ return {operations:ops,issues,blocking:issues.filter(x=>x.startsWith('Texte non ajustable')||x.startsWith('Bloc hors page')||x.startsWith('Chevauchement à vérifier'))};
 }
 function rx54Apply(t,stage,plan){
  const ops=rx54Validate(plan),s=ensure(t),staged=JSON.parse(JSON.stringify(s));
@@ -11527,9 +11579,11 @@ function rx54Open(t,stage,root){
     if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
     for(const op of imageOps)op.imageSrc=idata.imageSrc;
    }
-   proposed={operations};preview.innerHTML=rx55Preview(operations,s);
-   const count=operations.filter(o=>o.tool!=='set_page_background').length;
-   summary.textContent=count+' éléments indépendants dont '+imageOps.length+' illustration(s) IA · page '+s.current+' · modifiables après application';status.textContent='Votre proposition est prête.';apply.disabled=false;
+   const composed=rx553Compose(operations,s);
+   proposed={operations:composed.operations};preview.innerHTML=rx55Preview(composed.operations,s);
+   if(composed.issues.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+composed.issues.join(' · ');preview.appendChild(info)}
+   const count=composed.operations.filter(o=>o.tool!=='set_page_background').length;
+   summary.textContent=count+' éléments indépendants dont '+imageOps.length+' illustration(s) IA · page '+s.current+' · modifiables après application';status.textContent=composed.blocking.length?'Corrigez la proposition : '+composed.blocking.join(' · '):'Votre proposition est prête.';apply.disabled=!!composed.blocking.length;
   }catch(e){preview.innerHTML='<div class="rx55-empty"><div>!</div><strong>Proposition indisponible</strong><span>Vérifiez votre connexion et réessayez.</span></div>';status.textContent=e.message}
   finally{generate.disabled=false}
  };
