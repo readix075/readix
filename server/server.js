@@ -21,9 +21,9 @@ const PORT = process.env.PORT || 8787;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_LAYOUT_MODEL = process.env.GEMINI_LAYOUT_MODEL || 'gemini-2.5-pro';
-const GEMINI_FAST_MODEL = process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash';
-const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image-preview';
+const GEMINI_LAYOUT_MODEL = (process.env.GEMINI_LAYOUT_MODEL || '').trim();
+const GEMINI_FAST_MODEL = (process.env.GEMINI_FAST_MODEL || '').trim();
+const GEMINI_IMAGE_MODEL = (process.env.GEMINI_IMAGE_MODEL || '').trim();
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -423,13 +423,15 @@ function geminiParts(content) {
 }
 async function geminiRequest(model,contents,config={}) {
   if(!GEMINI_API_KEY)throw new Error('GEMINI_API_KEY manquante');
+  if(!model)throw new Error('Identifiant de modèle Gemini manquant : configurez GEMINI_LAYOUT_MODEL, GEMINI_FAST_MODEL et GEMINI_IMAGE_MODEL dans Render.');
+  if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(model))throw new Error('Identifiant de modèle Gemini invalide : '+model);
   const r=await fetch(GEMINI_BASE+encodeURIComponent(model)+':generateContent',{
     method:'POST',headers:{'content-type':'application/json','x-goog-api-key':GEMINI_API_KEY},
     body:JSON.stringify({contents,...config})
   });
   const raw=await r.text();let data;
   try{data=JSON.parse(raw)}catch{throw new Error('Réponse Gemini illisible ('+r.status+')')}
-  if(!r.ok)throw new Error('Gemini '+r.status+' ('+model+') : '+String(data.error?.message||raw).slice(0,700));
+  if(!r.ok){const detail=String(data.error?.message||raw).slice(0,700); const advice=(r.status===404?' Modèle indisponible pour cette clé ou cet endpoint. Vérifiez son identifiant via l’API models.list de Google et la variable Render correspondante.':r.status===403?' Vérifiez les autorisations du projet Google et sa facturation.':r.status===429?' Quota ou limite de débit atteinte.':'');throw new Error('Gemini '+r.status+' ('+model+') : '+detail+advice);}
   if(!data.candidates?.length)throw new Error('Gemini n’a retourné aucun candidat : '+String(data.promptFeedback?.blockReason||'réponse vide'));
   return data;
 }
@@ -487,7 +489,7 @@ app.post('/api/readox/layout/illustration',auth,async(req,res)=>{
  const prompt=String(req.body?.prompt||'').trim().slice(0,3000);
  if(prompt.length<5)return res.status(400).json({error:'Description manquante.'});
  try{
-  const body={model:process.env.READOX_IMAGE_MODEL||'gpt-image-1',size:'1024x1536',quality:'medium',n:1,prompt:'Illustration éditoriale haut de gamme pour couverture de livre ou magazine. '+prompt+'. Illustration seule, sans aucun texte, sans lettres, sans logo, sans signature, sans typographie. Composition artistique soignée, image de haute qualité. La typographie sera ajoutée séparément comme objets éditables.'};
+  const body={model:GEMINI_IMAGE_MODEL,size:'1024x1536',quality:'medium',n:1,prompt:'Illustration éditoriale haut de gamme pour couverture de livre ou magazine. '+prompt+'. Illustration seule, sans aucun texte, sans lettres, sans logo, sans signature, sans typographie. Composition artistique soignée, image de haute qualité. La typographie sera ajoutée séparément comme objets éditables.'};
   const data=await geminiImageJson('/images/generations',body);
   const b64=data?.data?.[0]?.b64_json;
   if(typeof b64!=='string'||b64.length<100||b64.length>15000000)return res.status(502).json({error:'Image absente ou trop volumineuse.'});
@@ -644,8 +646,7 @@ app.post("/api/image/generate", auth, async (req, res) => {
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
   const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
-  // Compatible gpt-image-1 (défaut) ET dall-e-3 (alternative si l'organisation OpenAI n'est pas
-  // vérifiée pour gpt-image-1 : il suffit de poser GEMINI_IMAGE_MODEL=dall-e-3 sur le serveur).
+  // Génération par le modèle d'image Gemini configuré sur Render.
   const isDalle = false;
   const body = { model: GEMINI_IMAGE_MODEL, prompt: prompt.slice(0, 4000), n: isDalle ? 1 : n };
   if (isDalle) body.response_format = "b64_json"; // DALL·E renvoie une URL par défaut ; on force le base64 exploitable.
@@ -656,7 +657,7 @@ app.post("/api/image/generate", auth, async (req, res) => {
   else if (isDalle) size = /portrait|2\s*[:x]\s*3|9\s*[:x]\s*16/.test(ar) ? "1024x1792" : /paysage|landscape|wide|3\s*[:x]\s*2|16\s*[:x]\s*9/.test(ar) ? "1792x1024" : "1024x1024";
   else { const s = sizeFromAspect(ar); if (s !== "auto") size = s; }
   if (size) body.size = size;
-  // gpt-image-1 : qualité économique par défaut (grosse différence de coût). DALL·E garde sa qualité standard.
+  // La qualité demandée est conservée côté interface; Gemini utilise sa propre configuration.
   if (!isDalle) body.quality = String((req.body && req.body.quality) || 'medium');
   try {
     const data = await geminiImageJson("/images/generations", body);
