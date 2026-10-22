@@ -4206,7 +4206,7 @@ function renderCvBuilder(t,stage){
     else if(b.dataset.x==="ai"){toggleCopilotFloating();toast("Demandez au Copilot de rédiger ou d’améliorer une section, puis recopiez le texte dans le formulaire.","ok");}
   };
 }
-// ===== Génération IA (texte) via le serveur Claude =====
+// ===== Génération IA (texte) via le serveur Gemini =====
 async function aiGenerate(prompt,system,maxTokens){
   if(!copilotAuthed())throw new Error("Connectez-vous avec un plan Pro ou Studio pour utiliser l’IA.");
   const d=await api("/api/ai/generate",{prompt,system:system||"",maxTokens:maxTokens||1400});
@@ -9543,7 +9543,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     };
   }
 
-  // Formulaires PDF : la vision de Claude détecte les champs → champs remplissables (AcroForm) réels.
+  // Formulaires PDF : la vision de Gemini détecte les champs → champs remplissables (AcroForm) réels.
   var FORM_PROMPT = "Tu analyses l'image d'UNE page de formulaire. Repère les CHAMPS À REMPLIR (lignes vides, cadres à compléter, cases à cocher) avec leur libellé. Réponds UNIQUEMENT en JSON strict : {\"fields\":[{\"label\":\"...\",\"type\":\"text\"|\"checkbox\",\"x\":0.0,\"y\":0.0,\"w\":0.0,\"h\":0.0}]}. Coordonnées normalisées (0 à 1), origine en HAUT À GAUCHE ; x,y = coin supérieur gauche du champ ; w,h = largeur,hauteur. N'invente aucun champ inexistant. Aucun champ → {\"fields\":[]}.";
   async function runFormsPdf() {
     var t = activeTabSafe();
@@ -9934,7 +9934,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     else { toast("Ouverture du document impossible.", "err"); }
   }
 
-  // Reconnaissance partagée : vision de Claude (document structuré) sinon Tesseract (texte).
+  // Reconnaissance partagée : vision de Gemini (document structuré) sinon Tesseract (texte).
   async function recognize(t, ov) {
     var html = null, text = null;
     if (visionAvailable()) {
@@ -10254,7 +10254,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 <script id="readix-book-ai">/* ============================================================
    READIX BOOK AI ENGINE — Studio Livre IA
    Additif : un studio où l'auteur décrit un livre, et Readix
-   orchestre la fabrication — plan (Claude) → rédaction chapitre
+   orchestre la fabrication — plan (Gemini) → rédaction chapitre
    par chapitre en s'auto-relançant → affichage en accordéon.
    Réutilise aiGenerate, parseJsonLoose, toast, dialog du socle.
    S'accroche au Book Studio via t._mode === "ai".
@@ -11678,7 +11678,7 @@ function rx54Open(t,stage,root){
    const operations=rx54Validate(data.plan);
    const imageOps=operations.filter(o=>o.tool==='add_image');
    if(imageOps.length){
-    status.textContent='Création de l’illustration par OpenAI…';
+    status.textContent='Création de l’illustration par Gemini…';
     const ir=await fetch('/api/readox/layout/illustration',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({prompt})});
     const idata=await ir.json();
     if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
