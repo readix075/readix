@@ -11469,7 +11469,7 @@ function rx54Validate(plan){
   if(raw.tool==='set_page_background')return op;
   for(const k of ['x','y','w','h'])op[k]=n(k,k==='w'?80:k==='h'?30:15);
   if(op.x<0||op.y<0||op.w<=0||op.h<=0||op.x+op.w>600||op.y+op.h>600)throw Error('Un objet dépasse les dimensions autorisées');
-  if(raw.tool==='add_image'){op.imageSrc=String(raw.imageSrc||'');if(op.imageSrc&&!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(op.imageSrc))throw Error('Image IA invalide');return op;}
+  if(raw.tool==='add_image'){op.imageSrc=String(raw.imageSrc||'');if(op.imageSrc&&!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(op.imageSrc))throw Error('Image IA invalide (PNG, JPEG ou WebP attendu)');return op;}
   if(raw.tool==='add_text'){
    if(String(raw.text||'').length>1200)throw Error('Texte supérieur à 1200 caractères : répartissez-le en plusieurs blocs.');op.text=String(raw.text||'');op.fontSize=Math.max(7,Math.min(100,n('fontSize',18)));
    op.align=['left','center','right'].includes(raw.align)?raw.align:'left';
@@ -11489,8 +11489,8 @@ function rx554Required(prompt){
  return found.filter(x=>!/^à |^les textes|^une |^le résultat/i.test(x));
 }
 function rx554ContentIssues(ops,required){
- const texts=ops.filter(o=>o.tool==='add_text').map(o=>String(o.text||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('fr'));
- return required.filter(x=>!texts.some(t=>t.includes(x.replace(/\s+/g,' ').trim().toLocaleLowerCase('fr')))).map(x=>'Texte demandé absent : « '+x.slice(0,70)+' »');
+ const texts=ops.filter(o=>o.tool==='add_text').map(o=>rx555Norm(o.text));
+ return required.filter(x=>!texts.some(t=>t.includes(rx555Norm(x)))).map(x=>'Texte demandé absent : « '+x.slice(0,70)+' »');
 }
 // Phase 55.5 — contrat éditorial : les chaînes citées dans le brief ne sont pas réécrites par l'IA.
 function rx555Norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -11646,7 +11646,7 @@ function rx54Open(t,stage,root){
  <div class="rx55-footer"><span data-rx54-status role="status">Prêt à créer votre maquette.</span><button class="rx55-primary" data-rx54-plan>✦ Générer une proposition</button></div>
  </div><div class="rx55-results"><div class="rx55-results-top"><span>APERÇU DE LA MAQUETTE</span><span class="rx55-pill">Textes et images séparés</span></div><div class="rx55-preview" data-rx54-preview><div class="rx55-empty"><div>✧</div><strong>Votre création apparaîtra ici</strong><span>Une composition pensée pour votre document.</span></div></div><div class="rx556-options" style="padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label for="rx556-format" style="font-size:12px">Format à appliquer</label><select id="rx556-format" data-rx556-format style="background:#101a32;color:white;border:1px solid #536184;border-radius:6px;padding:6px"><option value="original">Document actuel</option><option value="A3">A3</option><option value="A4">A4</option><option value="A5">A5</option></select><span style="font-size:11px;color:#b7c4d8" data-rx556-format-note>Adaptation proportionnelle, contrôle avant application</span></div><div class="rx55-result-bottom"><div data-rx55-summary>Votre document reste sous votre contrôle.</div><button class="rx55-apply" data-rx54-apply disabled>Appliquer au document →</button></div></div></div>
  </section>`;
- root.appendChild(dlg);let proposed=null;let sourceSize=null;let sourceOperations=null;
+ root.appendChild(dlg);let proposed=null;let sourceSize=null;let sourceOperations=null;let imageWarning='';
  const formatSelect=dlg.querySelector('[data-rx556-format]');
  const status=dlg.querySelector('[data-rx54-status]'),preview=dlg.querySelector('[data-rx54-preview]'),apply=dlg.querySelector('[data-rx54-apply]'),generate=dlg.querySelector('[data-rx54-plan]'),summary=dlg.querySelector('[data-rx55-summary]');
  dlg.querySelector('[data-rx54-close]').onclick=()=>dlg.remove();dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.remove()});
@@ -11657,17 +11657,20 @@ function rx54Open(t,stage,root){
   const candidate=rx556ResizeOperations(sourceOperations,sourceSize,target);
   const virtual={...s,width:target.width,height:target.height};
   const checked=rx555Compose(candidate,virtual,rx554Required(dlg.querySelector('[data-rx54-prompt]').value));
-  proposed={operations:checked.operations,target};
+  if(checked.operations.some(o=>o.tool==='add_image'&&!o.imageSrc))checked.blocking.push('Illustration manquante : réessayez la génération avant application');
+  proposed={operations:checked.operations,target,blocking:[...checked.blocking],prompt:dlg.querySelector('[data-rx54-prompt]').value};
   preview.innerHTML=rx55Preview(checked.operations,virtual);
   if(checked.issues.length||checked.blocking.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+[...checked.blocking,...checked.issues].join(' · ');preview.appendChild(info)}
   const count=checked.operations.filter(o=>o.tool!=='set_page_background').length;
   summary.textContent=count+' objets éditables · '+target.width+' × '+target.height+' mm · page '+s.current;
-  status.textContent=checked.blocking.length?'Révision nécessaire : '+checked.blocking.slice(0,3).join(' · '):'Maquette prête : contrôles essentiels satisfaits.';
+  status.textContent=checked.blocking.length?'Révision nécessaire : '+checked.blocking.slice(0,3).join(' · '):(imageWarning?'Maquette prête sans illustration : '+imageWarning:'Maquette prête : contrôles essentiels satisfaits.');
   apply.disabled=!!checked.blocking.length;
+  apply.title=checked.blocking.length?checked.blocking.join(' · '):'Appliquer la maquette validée';
  };
  formatSelect.onchange=refreshFormat;
+ dlg.querySelector('[data-rx54-prompt]').addEventListener('input',()=>{if(sourceOperations){apply.disabled=true;apply.title='Brief modifié : générez une nouvelle proposition';status.textContent='Brief modifié : générez une nouvelle proposition avant application.';}});
  generate.onclick=async()=>{
-  proposed=null;sourceOperations=null;sourceSize=null;apply.disabled=true;const prompt=dlg.querySelector('[data-rx54-prompt]').value.trim();
+  proposed=null;sourceOperations=null;sourceSize=null;imageWarning='';apply.disabled=true;const prompt=dlg.querySelector('[data-rx54-prompt]').value.trim();
   if(!prompt){status.textContent='Décrivez votre projet pour commencer.';return}
   const token=typeof getToken==='function'?getToken():localStorage.getItem('readix_token');
   if(!token){status.textContent='Connectez-vous pour utiliser la création IA.';return}
@@ -11679,10 +11682,13 @@ function rx54Open(t,stage,root){
    const imageOps=operations.filter(o=>o.tool==='add_image');
    if(imageOps.length){
     status.textContent='Création de l’illustration par Gemini…';
+    try{
     const ir=await fetch('/api/readox/layout/illustration',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({prompt})});
     const idata=await ir.json();
     if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
+    if(!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(String(idata.imageSrc||'')))throw Error('Format image Gemini invalide');
     for(const op of imageOps)op.imageSrc=idata.imageSrc;
+    }catch(imageError){imageWarning=imageError.message;for(const op of imageOps)op.imageSrc='';}
    }
    sourceSize={width:s.width,height:s.height};sourceOperations=operations;
    refreshFormat();
@@ -11693,9 +11699,11 @@ function rx54Open(t,stage,root){
   const resized=target.width!==current.width||target.height!==current.height;
   if(resized&&Object.values(current.pageItems||{}).some(items=>Array.isArray(items)&&items.length))throw Error('Changement de format réservé à un document sans objets existants. Créez un nouveau document pour préserver les objets actuels.');
   const virtual={...current,width:target.width,height:target.height};
-  const finalCheck=rx555Compose(proposed.operations,virtual,rx554Required(dlg.querySelector('[data-rx54-prompt]').value));if(finalCheck.blocking.length)throw Error('Application bloquée : '+finalCheck.blocking[0]);
+  if(proposed.prompt!==dlg.querySelector('[data-rx54-prompt]').value)throw Error('Le brief a changé : générez une nouvelle proposition avant application.');
+  if(proposed.blocking.length)throw Error('Application bloquée : '+proposed.blocking[0]);
+  const finalCheck={operations:proposed.operations}; // Appliquer exactement le plan affiché et validé, sans recalcul divergent.
   if(resized){current.width=target.width;current.height=target.height;}
-  rx54Apply(t,stage,{operations:finalCheck.operations});toast('Maquette appliquée : chaque objet reste éditable.','ok')}catch(e){status.textContent=e.message}};
+  rx54Apply(t,stage,{operations:finalCheck.operations});toast('Maquette appliquée : chaque objet reste éditable.','ok');dlg.remove()}catch(e){status.textContent=e.message}};
 }
 function bindPanel(t,stage,root){const s=ensure(t);
 root.querySelectorAll('[data-rx54-open]').forEach(button=>button.onclick=()=>rx54Open(t,stage,root));
