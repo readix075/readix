@@ -1,370 +1,936 @@
-# Readix Reader — Projet complet
-
-Plateforme web de traitement de PDF (lecture, édition, remplissage/signature de formulaires,
-organisation, conversion) avec back-end pour comptes, abonnements Stripe et assistant IA.
-
-Phases incluses : 1 à 6 + Phase 7 (Stripe) + Phase 8 (Assistant IA) + Phase 9 (Intelligence documentaire).
-
-## Structure
-
-```
-readix/
-├── public/
-│   ├── index.html   → la vitrine (page d'accueil marketing)
-│   └── app.html     → l'application (l'outil de travail)
-├── server/
-│   ├── server.js    → back-end Node/Express (comptes, IA, sert le front)
-│   ├── package.json → dépendances + scripts
-│   └── .env.example → modèle de configuration (à copier en .env)
-├── .gitignore
-└── README.md
-```
-
-Le serveur sert automatiquement le dossier `public/`. En ligne :
-`https://VOTRE-APP.onrender.com/` = vitrine, `.../app.html` = application.
-
-## Redéploiement (pas à pas)
-
-### 1) GitHub
-1. Crée un dépôt (ex. `readix`) sur github.com.
-2. Dépose **tout le contenu de ce dossier** à la racine du dépôt (via GitHub Desktop : glisse les fichiers dans le dossier local du dépôt, puis Commit → Push).
-
-### 2) Base de données (Supabase)
-1. Sur supabase.com → ton projet → **Connect** → **Connection string** → mode **Transaction / Pooler** (port **6543**).
-2. Copie l'URL `postgresql://...pooler.supabase.com:6543/postgres` (remplace `[YOUR-PASSWORD]` par ton mot de passe DB).
-   → ce sera la variable `DATABASE_URL`.
-   *(Les tables `users` et `usage` sont créées automatiquement au démarrage du serveur.)*
-
-### 3) Render (hébergement)
-1. render.com → **New +** → **Web Service** → connecte ton dépôt GitHub `readix`.
-2. Réglages :
-   - **Root Directory** : `server`
-   - **Build Command** : `npm install`
-   - **Start Command** : `npm start`
-3. Onglet **Environment** → ajoute les variables (voir `server/.env.example`) :
-   - `DATABASE_URL` (Supabase, port 6543)
-   - `JWT_SECRET` (longue chaîne aléatoire — bouton « Generate »)
-   - `ANTHROPIC_API_KEY` (ta clé `sk-ant-…`)
-   - `ANTHROPIC_MODEL` = `claude-sonnet-5`
-   - `CLIENT_URL` = l'URL publique de ton service Render
-   - Stripe : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` et les identifiants `STRIPE_PRICE_STANDARD_MONTH/YEAR`, `STRIPE_PRICE_PRO_MONTH/YEAR`, `STRIPE_PRICE_STUDIO_MONTH/YEAR`.
-4. **Create Web Service**. Render installe et démarre. Les logs doivent afficher
-   « ✅ Base de données prête » puis « Your service is live ».
-
-### 4) Vérification
-- Ouvre `https://VOTRE-APP.onrender.com/app.html` → l'application se charge.
-- Ouvre `https://VOTRE-APP.onrender.com/` → la vitrine.
-
-## Développement local (facultatif)
-```
-cd server
-cp .env.example .env      # puis remplis les valeurs
-npm install
-npm start                 # http://localhost:8787/app.html
-```
-
-## Notes
-- Le traitement des PDF (lecture, édition, remplissage, signature, conversion) se fait
-  **entièrement dans le navigateur** (confidentialité). Le serveur ne sert qu'aux comptes,
-  abonnements et fonctions IA.
-- L'application (`public/app.html`) fonctionne même sans back-end pour tous les outils PDF locaux.
-  Les comptes et l'IA nécessitent le serveur configuré.
-
-
-## Phase 7 — Abonnements Stripe
-
-- menu « Abonnements et tarifs » dans le compte ;
-- ouverture d'une session Stripe Checkout ;
-- périodicité mensuelle ou annuelle ;
-- mise à jour du plan après `checkout.session.completed` ;
-- retour au plan gratuit lorsqu'un abonnement devient inactif ;
-- les identifiants de prix restent configurables dans `.env`.
-
-## Phase 8 — Assistant Readix
-
-- bouton compact dans l'application et accès depuis le rail droit ;
-- le bouton ne recouvre pas le bloc de zoom ;
-- historique court de conversation côté navigateur ;
-- route serveur `POST /api/ai/chatbot` ;
-- manuel Readix injecté côté serveur ;
-- aucune clé Anthropic exposée au navigateur.
-
-## Signature — comportement de sélection
-
-Dans « Remplir & Signer », une signature reste redimensionnable et déplaçable. Un clic sur la signature la sélectionne ; un clic dans une zone vide du document retire le cadre de sélection.
-
-## Phase 9 — Intelligence documentaire
-La Phase 9 transforme l'IA de Readix en véritable espace de travail documentaire. L'interface affiche chaque module avec une courte description afin que l'utilisateur comprenne immédiatement son utilité.
-
-### 1. Readix AI Workspace (Pro)
-Analyse du document, questions-réponses et réponses avec références aux pages. Les réponses peuvent afficher des boutons « Page N » permettant d'aller directement à la page concernée.
-
-### 2. Recherche intelligente (Pro)
-Recherche sémantique dans le document : l'utilisateur peut rechercher une idée ou un sujet même lorsque les mots exacts ne sont pas présents.
-
-### 3. Extraction structurée (Pro)
-Transforme les informations du PDF en données structurées (dates, montants, personnes, organisations, références, etc.) avec export JSON.
-
-### 4. Comparaison intelligente (Pro)
-Compare deux PDF et explique les ajouts, suppressions et modifications significatives de contenu ou de sens, avec références aux pages lorsque disponibles.
-
-### 5. Readix Copilot (Pro)
-Assistant contextuel capable d'utiliser le document ouvert comme contexte pour répondre aux questions et guider l'utilisateur vers les outils Readix. Le Copilot flottant existant a également été rendu conscient du document ouvert.
-
-Le texte d'un PDF est extrait localement dans le navigateur avant l'appel au serveur IA. Les contrôles d'abonnement et de quota restent côté serveur.
-
-
-## Phase 10 — IA avancée flottante et Readix Copilot
-- Le premier bouton du rail droit ouvre **IA avancée**. L'ouverture se fait en **panneau flottant au-dessus de l'onglet actif** : l'onglet PDF n'est ni supprimé ni remplacé.
-- Dans IA avancée, les cinq modules sont visibles au départ ; après sélection, **seul le module choisi reste affiché**, avec un retour « Tous les modules ».
-- Le panneau IA peut être réduit ou fermé sans modifier l'onglet PDF sous-jacent.
-- **Readix Copilot** est un espace conversationnel séparé des onglets PDF. Le bouton robot flottant ouvre/ferme le Copilot ; le Copilot ne participe pas à l'historique Précédent/Suivant des onglets.
-- Le bouton **+** du Copilot sert à joindre un PDF, le document ouvert ou la page actuelle. Chaque pièce jointe est liée au message qui l'accompagne et apparaît en miniature dans la conversation ; elle n'est pas placée au-dessus du champ de recherche comme un contexte global permanent.
-- Les conversations Copilot sont organisées en **nouvelles discussions** et **historique**. Elles sont conservées localement dans IndexedDB afin de permettre de reprendre une discussion et de continuer avec d'autres PDF.
-- Les messages précédents et les pièces jointes de la discussion active sont renvoyés au serveur IA comme mémoire de conversation lorsque l'utilisateur poursuit le même chat.
-- La saisie vocale utilise Web Speech API lorsque le navigateur la prend en charge.
-- Les boutons **Précédent / Suivant** de l'entête utilisent maintenant un historique **propre à chaque onglet**. Ils sont activés uniquement lorsqu'un onglet possède une étape précédente/suivante ; la fermeture d'un onglet ne mélange pas son historique avec celui d'un autre.
-- Le Copilot reste indépendant de cet historique de navigation : changer d'onglet ou utiliser Précédent/Suivant ne change pas la conversation active du Copilot.
-
-## Phase 11 — Readix Document Studio
-
-Readix includes a first native, local-first document editor foundation. It provides a Word-like writing workspace without requiring a Microsoft Word license: create documents, edit rich text, headings, lists, links, tables, autosave locally, import DOCX, and export DOCX. The editor is designed as a new Readix tab so PDF tabs and their navigation remain independent.
-
-The current implementation intentionally uses browser-native editing plus the existing JSZip dependency to generate DOCX packages. It is a foundation for progressively adding advanced document features (pagination fidelity, images, headers/footers, comments, track changes, richer DOCX round-tripping, and cloud collaboration) without replacing the existing PDF/AI architecture.
-
-## Phase 12 — Document Studio : tableaux avancés et mise en page
-
-Le Document Studio ajoute une vraie couche d’édition de tableaux : sélection du tableau, ajout/suppression de lignes et colonnes, suppression du tableau, déplacement vers le haut/bas du document, alignement gauche/centre/droite, largeur 50/75/100 %, première ligne d’en-tête, retrait de l’en-tête et lignes alternées. Les cellules restent directement éditables.
-
-La mise en page de base comprend aussi les sauts de page, les marges normales/étroites/larges et les formats A4/Lettre. Ces réglages sont conservés localement avec le document.
-
-## Phase 13 — Mise en page avancée
-- Correction : les outils insérés dans le document ne doivent plus afficher leur nom comme contenu parasite. Le saut de page est désormais un séparateur visuel sans texte « Saut de page » dans le document.
-- Saut de page avec comportement de pagination à l'impression.
-- Zones d'en-tête et de pied de page éditables dans Document Studio.
-- Insertion d'un marqueur de numéro de page `{PAGE}`.
-- Conservation locale des zones de mise en page.
-
-
-## Phase 15 — Document Studio : interface Word naturelle + révision locale
-- Barre d’outils éclaircie et simplifiée, avec rendu SVG net et style proche d’un traitement de texte classique.
-- Poids de police normal, contrastes modérés, pas d’agrandissement artificiel des caractères.
-- Commentaires locaux sur une sélection et mode Révision local pour marquer des passages modifiés.
-- Les marques de révision restent dans le document local et peuvent être retirées.
-
-
-## Phase 17 — Document Word et navigation
-- Bouton « Document Word » ajouté directement à côté de « Fusionner » dans la barre principale.
-- Chaque clic ouvre un nouvel onglet Document Word indépendant.
-- Volet de navigation des titres H1/H2/H3 dans Document Studio.
-- Navigation locale par titres avec défilement vers la section choisie.
-
-
-## Phase 18 — IA avancée fonctionnelle
-- Les modules IA avancés disposent maintenant d’un sélecteur de source explicite : PDF ouvert ou téléversement direct.
-- Workspace, Recherche intelligente et Extraction structurée peuvent fonctionner sans document PDF déjà ouvert dans un onglet.
-- Comparaison intelligente accepte un PDF A (ouvert/téléversé) et un PDF B téléversé.
-- Ajout de `/api/ai/status` pour diagnostiquer l’authentification, le plan, le quota et la configuration de la clé IA avant une requête.
-- Les erreurs IA sont affichées directement à l’utilisateur au lieu de laisser une interface inerte.
-
-## Phase 19 — Readix Copilot Action Engine 1.0
-- Copilot passe d’un assistant purement conversationnel à un moteur d’actions Readix.
-- Ajout de `/api/copilot/action` : l’IA renvoie un plan d’actions JSON contrôlé plutôt qu’une simple réponse textuelle.
-- Actions locales prises en charge : création réelle de PDF, création réelle de DOCX, création/ouverture dans Document Studio, ouverture d’outils Readix, extraction de pages, suppression de pages avec confirmation, rotation de pages.
-- Le Copilot transmet désormais le contexte du PDF ouvert au moteur d’actions.
-- Les pièces jointes PDF restent liées au message et leurs contenus sont disponibles au moteur d’actions.
-- Création PDF côté navigateur avec pdf-lib et création DOCX avec le moteur DOCX existant.
-- Les opérations destructives demandent une confirmation avant exécution.
-- Les actions exécutées retournent un état explicite dans la conversation.
-- Ajout/rétablissement de `/api/ai/status` pour diagnostiquer clé Anthropic, plan et quota.
-- Les modules IA avancés affichent un bouton de téléversement PDF avec icône SVG et acceptent aussi le glisser-déposer.
-- Le bouton de téléversement ne remplace pas le PDF ouvert : l’utilisateur peut choisir explicitement sa source.
-
-## Phase 19.1 — Copilot Action Engine hotfix
-
-Cette version corrige le flux d'exécution du Copilot et ajoute des diagnostics plus explicites.
-
-- alias API `/api/copilot/action/` et `/api/copilot/actions` ;
-- endpoint public `/api/health` pour vérifier la version réellement déployée ;
-- le client détecte un 404 du moteur et affiche une erreur de déploiement explicite ;
-- les erreurs Anthropic indiquent désormais le code HTTP et le modèle utilisé ;
-- si une ancienne valeur `ANTHROPIC_MODEL` provoque un 404, le serveur retente avec `claude-sonnet-5` ;
-- le moteur d'action reste compatible avec le plan Pro/Studio et le quota existant.
-
-Après déploiement, `https://VOTRE-APP.onrender.com/api/health` doit renvoyer JSON avec `version: "25.0"` et `actionEngine: true`.
-
-
-## Phase A — Readix Document Studio / Word Engine
-
-Cette version introduit la première couche du Word Engine : l'interface professionnelle de Document Studio, inspirée de l'organisation d'un traitement de texte classique.
-
-### Ajouts Phase A
-- barre de titre du document ;
-- barre de menus : Fichier, Édition, Affichage, Insertion, Format, Révision, Outils, Aide ;
-- menus déroulants fonctionnels ;
-- barre d'accès rapide ;
-- barre de mise en forme structurée ;
-- choix de police et taille ;
-- gras, italique, souligné, barré ;
-- styles Normal/Titre 1/Titre 2/Titre 3/Citation ;
-- alignements ;
-- listes et retraits ;
-- surlignage et interligne ;
-- liens ;
-- insertion de tableau, saut de page et commentaire ;
-- règles horizontale et verticale ;
-- zone de page type traitement de texte ;
-- barre d'état avec page, section, langue, mode, statistiques et zoom ;
-- commandes d'impression, recherche, navigation, import/export ;
-- export PDF branché sur le moteur PDF local existant ;
-- conservation des fonctions Document Studio déjà présentes : tableaux, révision, recherche/remplacement, en-tête/pied de page, navigation, autosave, DOCX.
-
-### Règle de non-régression
-La Phase A ne remplace pas le moteur PDF, Copilot, AI Advanced, Project Engine ou les fonctions existantes. Elle enrichit uniquement l'interface et les points d'entrée du Document Studio.
-
-## Phase A.2 — Word Engine reference polish + document-only printing
-
-- Document Studio UI aligned to the professional Word Engine reference layout.
-- Cleaner, readable drawing/status bars.
-- Expanded quick-access controls (navigation/search).
-- Print command is document-scoped: it no longer prints the Readix application shell.
-- DOCX/Document Studio printing opens a clean document-only print window.
-- PDF printing renders only the active PDF pages in a clean print window.
-- Ctrl+P and the Document Studio print menu/toolbar use the document-scoped print engine.
-
-
-## Phase A.3 — Readix Word Engine A3 (Document Studio fidèle à la maquette)
-
-Document Studio est entièrement reconstruit. L’interface reprend la maquette de référence : barre de titre bleue avec recherche, 10 menus, barre standard, barre de mise en forme, règles, barre de dessin et barre d’état. Chaque icône exécute réellement le rôle annoncé dans son infobulle (« Nom — rôle »), et **Aide › Aide sur les outils** liste le rôle des 115 outils.
-
-### Ce qui fonctionne
-- **Pages réelles** A4 / Lettre / Légal / A5, portrait ou paysage, marges réglables (règles ou Fichier › Mise en page). Un paragraphe qui ne tient plus sur la page passe à la page suivante. Saut de page avec Ctrl+Entrée.
-- **En-têtes et pieds de page** sur toutes les pages (double-clic dans la marge), numéros de page automatiques « Page X sur Y ».
-- **Règles déplaçables** : retraits de première ligne, négatif, gauche et droit ; marges ; tabulations gauche, centrée, droite et décimale (le coin « L » change le type).
-- **Mise en forme** :
-  - police, taille, gras, italique, souligné, barré, couleur, surlignage, exposant et indice, casse ;
-  - alignements, interligne, espacement, retraits, trame, bordures, colonnes ;
-  - styles (Titre, Titre 1 à 3, Citation, Code) ;
-  - reproduction de la mise en forme (pinceau).
-- **Listes** : puces (7 symboles), numérotation, listes multiniveaux (1/a/i, 1.1.1, I/A/1) ; Tab et Maj+Tab changent de niveau.
-- **Tableaux** :
-  - grille d’insertion, ajout et suppression de lignes et colonnes, fusion et fractionnement ;
-  - tri, formules (somme, moyenne, max, min, nombre) ;
-  - en-tête, bandes, sans bordure, tableau de calcul avec totaux automatiques.
-- **Dessin** :
-  - une trentaine de formes, lignes, flèches, forme libre, zone de texte, ellipse avec texte, WordArt, diagrammes (organigramme, processus, cycle, pyramide) ;
-  - graphiques (histogramme, courbe, secteurs), images, cliparts intégrés, stylo, surligneur et gomme ;
-  - sélection, déplacement, redimensionnement, rotation, remplissage, trait, tirets, flèches, ombre et relief 3D, ordre, alignement, habillage.
-- **Révision** :
-  - suivi des modifications (RÉV, Ctrl+Maj+E), accepter ou refuser ;
-  - commentaires avec leur volet ;
-  - langue, vérification orthographique, statistiques, correction automatique (« », majuscules, ©, →, —, …).
-- **Barre d’état vivante** :
-  - Page X sur Y, Section, « À x cm », Li, Col, mots, caractères ;
-  - INS/RFP (touche Inser, refrappe réelle) et STD/EXT (F8, sélection étendue) ;
-  - modes Page, Web et Plan, zoom réel de 25 à 300 %.
-- **Recherche** :
-  - en direct depuis la barre de titre, avec surlignage de toutes les occurrences ;
-  - Rechercher, Remplacer et Atteindre (Ctrl+F, Ctrl+H, Ctrl+G).
-- **Fichiers** :
-  - ouverture de fichiers .docx (avec mise en forme, listes, tableaux, images, en-têtes, commentaires et révisions), .txt, .html et .md ;
-  - enregistrement en **.docx** qui conserve toute la mise en forme, y compris les formes et images ancrées ;
-  - export **PDF** fidèle à l’affichage, HTML et texte ;
-  - impression des seules pages du document.
-- **Annuler / Rétablir** avec historique détaillé : la flèche ▾ permet d’annuler plusieurs actions d’un coup.
-- **Personnalisation** :
-  - barres affichables ou masquables ;
-  - barre standard et barre de dessin ancrables en haut ou en bas (glisser la poignée) ;
-  - réduire, agrandir, plein écran, mode lecture.
-
-### Intégration
-- `public/app.html` embarque le moteur (`<script id="readix-word-engine">` et `<style id="readix-word-engine-css">`). `renderDocStudio()` le monte dans l’onglet actif et le relie à l’onglet (`t.doc`, `t.docMeta`, nom, autosave IndexedDB, Copilot).
-- `saveDocStudio`, `printActiveReadixDocument` et l’import (`#hiddenDocFile`) passent désormais par le moteur. `buildDocxBlob` (utilisé par Copilot) produit maintenant des DOCX mis en forme, avec repli sur l’ancien export.
-- Correctif : la reprise de session restaure aussi la mise en page (`docMeta`).
-- `public/document-studio-demo.html` : version autonome pour tester Document Studio hors de l’application.
-- Sources du moteur : `word-engine/src/`. Après modification, lancez `python3 word-engine/build.py` pour réinjecter le moteur dans `app.html`.
-
-### Notes
-- Le zoom affiche le pourcentage réel. Les boutons (police, taille, gras, alignement…) reflètent le texte sous le curseur, comme dans Word.
-- L’export PDF est une image fidèle de chaque page : le texte n’y est pas sélectionnable.
-- Les notes sont placées en fin de document (notes de fin).
-- L’en-tête et le pied de page sont identiques sur toutes les pages.
-
-
-## Nouveautés — Studio de publication (Phase A.3+)
-
-Le moteur Word intègre désormais un ensemble complet de fonctions de publication, toutes fonctionnelles et exportées fidèlement en .docx :
-
-**Références et structure**
-- **Table des matières automatique** (Insertion › Table des matières) : générée à partir des styles Titre 1 à 3, cliquable (Ctrl+clic pour atteindre le titre), numéros de page mis à jour automatiquement.
-- **Notes de bas de page** (Insertion › Note de bas de page, Ctrl+Alt+B) : véritables notes rendues au bas de la page contenant l'appel, exportées dans `footnotes.xml`. Les notes de fin (Ctrl+Alt+F) restent disponibles.
-- **Légendes** (Insertion › Légende) : « Figure N », « Tableau N », etc., numérotées automatiquement.
-- **Index** (Insertion › Marquer une entrée, puis Insérer l'index) : liste alphabétique avec numéros de page.
-
-**Mise en page**
-- **Filigrane** (Format › Filigrane) : texte (avec préréglages CONFIDENTIEL, BROUILLON…) ou image, en diagonale, opacité réglable. Exporté en VML dans l'en-tête .docx (lu par Word et LibreOffice).
-- **Bordure de page** (Format › Bordure de page) : style, épaisseur, couleur, marge — exportée via `w:pgBorders`.
-- **Couleur de page** (Format › Couleur de page) — exportée via `w:background`.
-- **En-têtes et pieds différenciés** (Format › En-têtes et pieds de page) : première page différente et pages paires/impaires distinctes (`w:titlePg`, `w:evenAndOddHeaders`, références d'en-tête multiples).
-- **Zoom jusqu'à 500 %**.
-
-**Publipostage et révision**
-- **Publipostage** (Outils › Publipostage) : import CSV (séparateur virgule ou point-virgule), insertion de champs «Champ», fusion produisant un document avec une copie par enregistrement (séparées par un saut de page).
-- **Comparer des versions** (Outils › Comparer) : compare le document actuel avec un .docx révisé et affiche les différences en modifications suivies (ajouts soulignés, suppressions barrées) à accepter/refuser via l'onglet Révision.
-- **Dictionnaire personnel** (Outils › Dictionnaire personnel) : mots à ne pas signaler, conservés localement, en complément du correcteur du navigateur selon la langue.
-
-**PDF avec texte sélectionnable** : l'export PDF conserve le rendu fidèle des pages et ajoute une couche de texte invisible, rendant le PDF sélectionnable et consultable (recherche).
-
-### Limites assumées (hors périmètre du moteur navigateur)
-- **Coédition en temps réel** : nécessite un serveur (WebSocket/CRDT) — relève de la couche serveur, pas du moteur client.
-- **Macros / VBA** : volontairement exclues (sécurité et périmètre).
-- **Correcteur grammatical et dictionnaire de synonymes complets** : nécessitent une grande base lexicale française. Le correcteur orthographique du navigateur (souligné rouge) et le dictionnaire personnel sont fournis à la place.
-- **Sections multiples à orientation/marges mixtes dans un même document** : reportées (nécessitent une refonte de la pagination).
-
-
-## Phase 1 — Common Core (intégration au socle existant)
-
-Le Common Core est une **façade additive** injectée dans `public/app.html` sous le bloc `<script id="readix-core">` (source maintenable : `core/readix-core.js`). Elle **nomme et unifie l'existant** sans rien réécrire ni dupliquer : elle expose `window.Readix.core` avec cinq modules qui délèguent aux systèmes déjà présents.
-
-- **Project Engine** (`Readix.core.projects`) — schéma de projet complet (id, name, description, domain, status, settings, skills, tabs, documents, generatedObjects, tasks, history, versions, metadata, createdAt, updatedAt). S'appuie sur `newProject`, `PROJECT_STATE` et le magasin IndexedDB `projects` **existant** (+ synchro serveur `/api/projects` déjà en place). Création, liste, projet actif, ajout de documents/objets générés, journal d'historique.
-- **Document Engine** (`Readix.core.documents`) — représentation commune d'un document et **registre de formats** : PDF, DOCX, TXT, HTML, MD, PNG, JPG marqués `supported` ; XLSX, PPTX, CSV, EPUB, SVG marqués `planned` (prévus architecturalement, non implémentés — état honnête). `describe(tab)` normalise un onglet ; `supports(fmt)` dit la vérité sur ce qui est réellement pris en charge.
-- **Context Engine** (`Readix.core.context.snapshot()`) — instantané pour l'IA/Copilot : outil actif, onglet/document actif, projet actif, sélection courante, nombre d'onglets, actions récentes.
-- **Storage Engine** (`Readix.core.storage`) — **adaptateur** vers le stockage existant (IndexedDB `readix` : magasins `tabs`, `projects`, `copilotChats`) + préférences légères `localStorage` préfixées `rx:`. **Aucune seconde base de données n'est créée** (règle §1.4 / §9).
-- **Action Registry** (`Readix.core.actions`) — registre où **chaque action est reliée à une fonction réelle** du code (`open_tool`, `open_pdf_editor`, `open_document_studio`, `open_book_studio`, `open_cv_studio`, `create_project`, `open_project`, `new_tab`, `switch_tab`, `close_tab`, `open_file`, `save_document`, `export_pdf`, `export_docx`, `rename_document`). Aucune action fictive (§10) ; `run(id,args)` journalise l'historique et refuse proprement une action inconnue.
-
-**Garanties vérifiées (tests automatisés) :** 31/31 modules du socle strictement identiques à l'original (lecteur PDF, éditeur, fusion, division, remplissage, signature, rails, onglets, stockage, Copilot, Document Studio) ; une seule base IndexedDB `readix` ; création/persistance de projet à travers le magasin existant ; contexte et actions fonctionnels ; **zéro erreur console**. Le Common Core est strictement additif : il ne modifie aucune fonction existante.
-
-**Note produit :** la démo autonome `document-studio-demo.html` a été retirée de `public/` (règle §14 — aucune application autonome dans le produit). Les sources de build du moteur Word (`word-engine/`) et du core (`core/`) ne sont pas servies ; le seul produit est `public/app.html` + `server/`.
-
-
----
-
-## Phase 2 — Readix Shell v2.1 (évolution visuelle, fidèle au prototype)
-
-Cette phase fait **évoluer l'interface** vers le prototype cible (barre latérale sombre, en-tête avec recherche + IA avancée + compte, tableau de bord riche, rail droit d'assistance), **sans remplacer l'application ni casser une seule fonction du socle**. Elle est **strictement additive** : injectée dans `public/app.html` sous les blocs `<style id="readix-shell-css">` et `<script id="readix-shell">`, à partir des sources `shell/readix-shell.css` et `shell/readix-shell.js`. Retirer ces deux blocs restaure l'application d'origine à l'octet près.
-
-**Ce qui change visuellement :**
-
-- **Barre latérale sombre persistante** — marque *Readix*, navigation à plat fidèle au prototype (Accueil, Mes projets, Documents, Book Studio, CV Studio, Document Studio, PDF Reader/Editor, IA/Copilot, Paramètres), indicateur de stockage et carte *Readix Pro*. **Chaque entrée appelle une fonction réelle** (`openTool`, `openBookStudio`, `openCvBuilder`, `toggleCopilotFloating`, ouverture de fichier, menu Projet). L'item actif reflète l'outil courant.
-- **En-tête** — barre de **recherche fonctionnelle** (filtre les outils et ouvre le vrai outil), bouton **IA avancée** (`openAIFloating`), cloche de notifications, puce **compte** (reflète `APP.user`/`APP.plan`, ouvre les Paramètres).
-- **Tableau de bord d'accueil** — bandeau daté « Bonjour », **5 cartes d'outils colorées** (PDF Reader/Editor, IA/Copilot, Book Studio, CV Studio, Document Studio), *Projets récents* (`Readix.core.projects`) et *Fichiers récents* (`Readix.core.storage`) avec badges d'état, **Accès rapide** (6 outils) et **Raccourcis** (Créer, Importer, Ouvrir, Gérer projets, Paramètres).
-- **Rail droit d'accueil** — *Espace IA* (→ IA avancée), *Raccourcis rapides* (Résumé, Traduction, Analyser PDF, Créer image, Aide → Copilot), *Assistant Readix* (→ Copilot) et *Outils de lecture* (Zoom câblé sur `#zIn/#zOut`, Mode nuit sur le thème réel, Plein écran). Affiché **uniquement à l'accueil** ; sur les vues outil, le rail fin d'origine et la barre d'outils native reviennent intacts.
-- **Modale Paramètres** — bascule de thème et sélecteur de langue **pilotant les contrôles réels** existants (`#themeBtn`, `#langSel`).
-- **Repli responsive** (< 1024 px : rail droit escamoté ; < 900 px : barre latérale escamotable, barre d'outils horizontale rétablie).
-
-**Garanties vérifiées (tests automatisés Playwright) :**
-
-- **34/35** modules `render*` du socle **identiques octet pour octet** à l'original (le seul différent, `renderDocStudio`, relève de l'intégration Document Studio livrée précédemment) ; **309/314** fonctions du socle inchangées. **Le shell n'a modifié aucune fonction inline.**
-- La barre latérale native (`.lrail`) et le rail fin (`.rrail`) sont **masqués uniquement à l'accueil** et **réapparaissent** sur les vues outil (non-régression prouvée).
-- La navigation et la recherche ouvrent les **vrais outils** ; Document Studio monte bien le moteur Word A3.
-- `Readix.core` (Common Core) intact, **une seule** base IndexedDB, **zéro erreur console**.
-
-> **Écart connu (prochaine tranche)** : le rail droit de la *vue lecteur PDF* du prototype (Actions rapides / Outils d'édition / Outils IA) et le sélecteur d'espace de travail ne sont pas encore posés — l'accueil (écran principal) est traité en priorité.
-
-
-
-## Phase 25 — cohérence de déploiement
-- `/api/health` annonce `25.0`.
-- Le moteur Copilot Action Engine annonce `25.0`.
-- Readix InDesign utilise une source de vérité unique dans `public/app.html`.
-- Cypress cible par défaut le serveur Readix local sur le port `8787`.
+// ============================================================
+//  Readix Reader — serveur back-end (Node.js / Express, ESM)
+//  Comptes réels (PostgreSQL/Supabase), 4 paliers, quota IA,
+//  abonnements Stripe, fonctions IA premium.
+//  Node 18+ requis. Voir README.md.
+// ============================================================
+import express from "express";
+import cors from "cors";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+import pg from "pg";
+
+dotenv.config();
+const { Pool } = pg;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const PORT = process.env.PORT || 8787;
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
+const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_LAYOUT_MODEL = (process.env.GEMINI_LAYOUT_MODEL || '').trim();
+const GEMINI_FAST_MODEL = (process.env.GEMINI_FAST_MODEL || '').trim();
+const GEMINI_IMAGE_MODEL = (process.env.GEMINI_IMAGE_MODEL || '').trim();
+
+const DATABASE_URL = process.env.DATABASE_URL;
+
+// ---- Paliers d'abonnement ----
+const PLAN_LEVEL = { free: 0, standard: 1, pro: 2, studio: 3, owner: 9 };
+const AI_QUOTA = { free: 0, standard: 0, pro: 50, studio: 200, owner: 1000000 }; // opérations IA / mois
+// Comptes propriétaire/testeurs : accès IA sans limite. Renseigner UNLIMITED_EMAILS sur le serveur
+// (liste d'adresses séparées par des virgules). N'affecte QUE ces comptes ; les clients gardent leur quota.
+const UNLIMITED_EMAILS = String(process.env.UNLIMITED_EMAILS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+const isUnlimited = (email) => UNLIMITED_EMAILS.includes(String(email || "").toLowerCase());
+const FREE_OP_LIMIT = 15; // opérations incluses sur un compte gratuit avant l'invitation à passer à un plan payant (compteur caché, géré en arrière-plan)
+const levelOf = (plan) => PLAN_LEVEL[plan] ?? 0;
+const ym = () => new Date().toISOString().slice(0, 7); // "2026-09"
+
+// ---- Base de données PostgreSQL (Supabase) ----
+let pool = null;
+if (DATABASE_URL) {
+  pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 5 });
+}
+async function initDb() {
+  if (!pool) { console.log("⚠️  DATABASE_URL absente : les comptes sont désactivés."); return; }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      email      TEXT PRIMARY KEY,
+      name       TEXT NOT NULL,
+      pass_hash  TEXT NOT NULL,
+      plan       TEXT NOT NULL DEFAULT 'free',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS usage (
+      email    TEXT NOT NULL,
+      ym       TEXT NOT NULL,
+      ai_count INTEGER NOT NULL DEFAULT 0,
+      op_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (email, ym)
+    );`);
+  await pool.query(`ALTER TABLE usage ADD COLUMN IF NOT EXISTS op_count INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      email      TEXT NOT NULL,
+      id         TEXT NOT NULL,
+      title      TEXT NOT NULL DEFAULT 'Nouvelle discussion',
+      data       JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at BIGINT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS conversations_email_idx ON conversations(email, updated_at DESC);`);
+  await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS project_id TEXT;`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      email       TEXT NOT NULL,
+      id          TEXT NOT NULL,
+      name        TEXT NOT NULL DEFAULT 'Projet',
+      description TEXT NOT NULL DEFAULT '',
+      domain      TEXT NOT NULL DEFAULT '',
+      status      TEXT NOT NULL DEFAULT 'active',
+      data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at  BIGINT NOT NULL DEFAULT 0,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (email, id)
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS projects_email_idx ON projects(email, updated_at DESC);`);
+  console.log("✅ Base de données prête (tables users, usage, conversations, projects).");
+}
+async function getUser(email) {
+  const r = await pool.query("SELECT email, name, pass_hash, plan FROM users WHERE email=$1", [email]);
+  return r.rows[0] || null;
+}
+async function createUser(email, name, passHash) {
+  await pool.query("INSERT INTO users(email,name,pass_hash,plan) VALUES($1,$2,$3,'free')", [email, name, passHash]);
+}
+async function setPlan(email, plan) {
+  await pool.query("UPDATE users SET plan=$2 WHERE email=$1", [email, plan]);
+}
+async function getUsage(email) {
+  const r = await pool.query("SELECT ai_count FROM usage WHERE email=$1 AND ym=$2", [email, ym()]);
+  return r.rows[0] ? r.rows[0].ai_count : 0;
+}
+async function incUsage(email) {
+  await pool.query(
+    `INSERT INTO usage(email,ym,ai_count) VALUES($1,$2,1)
+     ON CONFLICT (email,ym) DO UPDATE SET ai_count = usage.ai_count + 1`,
+    [email, ym()]
+  );
+}
+async function getOps(email) {
+  const r = await pool.query("SELECT op_count FROM usage WHERE email=$1 AND ym=$2", [email, ym()]);
+  return r.rows[0] ? r.rows[0].op_count : 0;
+}
+async function incOps(email) {
+  await pool.query(
+    `INSERT INTO usage(email,ym,op_count) VALUES($1,$2,1)
+     ON CONFLICT (email,ym) DO UPDATE SET op_count = usage.op_count + 1`,
+    [email, ym()]
+  );
+}
+function dbReady(res) {
+  if (!pool) { res.status(503).json({ error: "Base de données non configurée" }); return false; }
+  return true;
+}
+
+// ---- Stripe (optionnel) ----
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  const Stripe = (await import("stripe")).default;
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+const app = express();
+app.use(cors({ origin: true, credentials: false }));
+
+// Le webhook Stripe a besoin du corps BRUT : déclaré AVANT express.json().
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(400).send("Stripe non configuré");
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).send(`Webhook invalide : ${err.message}`);
+  }
+  if (event.type === "checkout.session.completed") {
+    const s = event.data.object;
+    const email = s.client_reference_id || s.customer_email;
+    const plan = (s.metadata && s.metadata.plan) || "pro";
+    if (email && pool) { try { await setPlan(email, plan); } catch (e) { console.error(e); } }
+  } else if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    const sub = event.data.object;
+    const email = sub.metadata && sub.metadata.readix_email;
+    const plan = sub.status === "active" || sub.status === "trialing" ? ((sub.metadata && sub.metadata.plan) || "pro") : "free";
+    if (email && pool) { try { await setPlan(email, plan); } catch (e) { console.error(e); } }
+  }
+  res.json({ received: true });
+});
+
+app.use(express.json({ limit: "12mb" }));
+
+// Diagnostic public: permet de distinguer un ancien déploiement Render d'une erreur IA.
+// N'expose AUCUN secret : uniquement la présence (true/false) des variables de configuration.
+app.get("/api/health", (req, res) => res.json({
+  ok: true,
+  service: "readix",
+  version: "25.0",
+  actionEngine: true,
+  copilotAction: true,
+  config: {
+    database: !!DATABASE_URL,
+    aiKey: !!GEMINI_API_KEY,
+    aiModel: GEMINI_FAST_MODEL,
+    imageReady: !!GEMINI_API_KEY,
+    imageModel: GEMINI_IMAGE_MODEL,
+    stripe: !!process.env.STRIPE_SECRET_KEY,
+    clientUrl: CLIENT_URL,
+    ownerEmails: UNLIMITED_EMAILS.length
+  },
+  timestamp: new Date().toISOString()
+}));
+
+
+// ---- Auth ----
+function sign(user) { return jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "30d" }); }
+async function auth(req, res, next) {
+  const h = req.headers.authorization || "";
+  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!token) { console.log("[AUTH] requête sans jeton :", req.method, req.path); return res.status(401).json({ error: "Non authentifié" }); }
+  if (!dbReady(res)) return;
+  try {
+    const { email } = jwt.verify(token, JWT_SECRET);
+    const u = await getUser(email);
+    if (!u) return res.status(401).json({ error: "Compte introuvable" });
+    req.user = { email: u.email, name: u.name, plan: isUnlimited(u.email) ? "owner" : u.plan };
+    next();
+  } catch { return res.status(401).json({ error: "Session expirée" }); }
+}
+function requireLevel(min) {
+  return (req, res, next) => {
+    if (levelOf(req.user.plan) < min) return res.status(402).json({ error: "Plan supérieur requis" });
+    next();
+  };
+}
+
+// ---- Comptes ----
+app.post("/api/signup", async (req, res) => {
+  if (!dbReady(res)) return;
+  const { name, email, password } = req.body || {};
+  if (!name || !email || !password) return res.status(400).json({ error: "Champs manquants" });
+  const key = email.toLowerCase();
+  try {
+    if (await getUser(key)) return res.status(409).json({ error: "Ce compte existe déjà" });
+    await createUser(key, name, await bcrypt.hash(password, 10));
+    const user = { email: key, name, plan: "free" };
+    res.json({ token: sign(user), user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/login", async (req, res) => {
+  if (!dbReady(res)) return;
+  const { email, password } = req.body || {};
+  const key = (email || "").toLowerCase();
+  try {
+    const u = await getUser(key);
+    if (!u || !(await bcrypt.compare(password || "", u.pass_hash)))
+      return res.status(401).json({ error: "Identifiants incorrects" });
+    const user = { email: key, name: u.name, plan: u.plan };
+    res.json({ token: sign(user), user });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/me", auth, (req, res) => res.json({ user: req.user }));
+
+// ---- Readix Copilot : persistance des discussions (Phase 6) ----
+// Liste les discussions de l'utilisateur (les plus récentes d'abord).
+app.get("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const proj = req.query && req.query.project;
+    let r;
+    if (proj) {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 AND project_id=$2 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email, String(proj)]
+      );
+    } else {
+      r = await pool.query(
+        "SELECT id, title, data, updated_at, project_id FROM conversations WHERE email=$1 ORDER BY updated_at DESC LIMIT 200",
+        [req.user.email]
+      );
+    }
+    const conversations = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, title: x.title, updatedAt: Number(x.updated_at), projectId: x.project_id || null };
+    });
+    res.json({ conversations });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour une discussion (upsert par id, propre à l'utilisateur).
+app.post("/api/copilot/conversations", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const chat = req.body && req.body.chat;
+  if (!chat || !chat.id) return res.status(400).json({ error: "Discussion invalide" });
+  const id = String(chat.id).slice(0, 80);
+  const title = String(chat.title || "Nouvelle discussion").slice(0, 200);
+  const updatedAt = Number(chat.updatedAt) || Date.now();
+  const projectId = chat.projectId ? String(chat.projectId).slice(0, 80) : null;
+  try {
+    await pool.query(
+      `INSERT INTO conversations(email,id,title,data,updated_at,project_id,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,now())
+       ON CONFLICT (email,id) DO UPDATE SET title=EXCLUDED.title, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at, project_id=EXCLUDED.project_id`,
+      [req.user.email, id, title, JSON.stringify(chat), updatedAt, projectId]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime une discussion.
+app.delete("/api/copilot/conversations/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    await pool.query("DELETE FROM conversations WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Readix Project Engine : projets (Étape A1) ----
+// Liste les projets de l'utilisateur (récents d'abord).
+app.get("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query(
+      "SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 ORDER BY updated_at DESC LIMIT 300",
+      [req.user.email]
+    );
+    const projects = r.rows.map(x => {
+      const base = (x.data && typeof x.data === "object") ? x.data : {};
+      return { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) };
+    });
+    res.json({ projects });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Récupère un projet précis.
+app.get("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const r = await pool.query("SELECT id, name, description, domain, status, data, updated_at FROM projects WHERE email=$1 AND id=$2", [req.user.email, String(req.params.id)]);
+    if (!r.rows.length) return res.status(404).json({ error: "Projet introuvable" });
+    const x = r.rows[0]; const base = (x.data && typeof x.data === "object") ? x.data : {};
+    res.json({ project: { ...base, id: x.id, name: x.name, description: x.description, domain: x.domain, status: x.status, updatedAt: Number(x.updated_at) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Crée ou met à jour un projet (upsert par id, propre à l'utilisateur).
+app.post("/api/projects", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const p = req.body && req.body.project;
+  if (!p || !p.id) return res.status(400).json({ error: "Projet invalide" });
+  const id = String(p.id).slice(0, 80);
+  const name = String(p.name || "Projet").slice(0, 200);
+  const description = String(p.description || "").slice(0, 2000);
+  const domain = String(p.domain || "").slice(0, 120);
+  const status = String(p.status || "active").slice(0, 40);
+  const updatedAt = Number(p.updatedAt) || Date.now();
+  try {
+    await pool.query(
+      `INSERT INTO projects(email,id,name,description,domain,status,data,updated_at,created_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
+       ON CONFLICT (email,id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, domain=EXCLUDED.domain, status=EXCLUDED.status, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
+      [req.user.email, id, name, description, domain, status, JSON.stringify(p), updatedAt]
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Supprime un projet (les conversations liées sont détachées, pas supprimées).
+app.delete("/api/projects/:id", auth, async (req, res) => {
+  if (!dbReady(res)) return;
+  const id = String(req.params.id);
+  try {
+    await pool.query("UPDATE conversations SET project_id=NULL WHERE email=$1 AND project_id=$2", [req.user.email, id]);
+    await pool.query("DELETE FROM projects WHERE email=$1 AND id=$2", [req.user.email, id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Quota IA de l'utilisateur (pour l'affichage du compteur côté site)
+app.get("/api/usage", auth, async (req, res) => {
+  try {
+    const used = await getUsage(req.user.email);
+    res.json({ plan: req.user.plan, used, quota: AI_QUOTA[req.user.plan] ?? 0 });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Compteur d'opérations gratuites — GÉRÉ EN ARRIÈRE-PLAN, jamais affiché à l'utilisateur.
+// Sert uniquement à savoir quand rediriger vers un plan payant.
+app.get("/api/op", auth, async (req, res) => {
+  try {
+    const lvl = levelOf(req.user.plan);
+    if (lvl >= 1) return res.json({ used: 0, limit: null, over: false });
+    const used = await getOps(req.user.email);
+    res.json({ used, limit: FREE_OP_LIMIT, over: used >= FREE_OP_LIMIT });
+  } catch (e) { res.json({ used: 0, limit: FREE_OP_LIMIT, over: false }); }
+});
+app.post("/api/op", auth, async (req, res) => {
+  try {
+    const lvl = levelOf(req.user.plan);
+    if (lvl >= 1) return res.json({ used: 0, over: false }); // payant : illimité
+    const used = await getOps(req.user.email);
+    if (used >= FREE_OP_LIMIT) return res.json({ used, over: true });
+    await incOps(req.user.email);
+    res.json({ used: used + 1, over: (used + 1) >= FREE_OP_LIMIT });
+  } catch (e) { res.json({ used: 0, over: false }); }
+});
+
+// ---- Abonnement Stripe ----
+app.post("/api/billing/checkout", auth, async (req, res) => {
+  if (!stripe) return res.status(500).json({ error: "Stripe non configuré (voir .env)" });
+  const plan = (req.body && req.body.plan) || "pro";
+  const period = (req.body && req.body.period) === "year" ? "YEAR" : "MONTH";
+  const priceId = process.env[`STRIPE_PRICE_${plan.toUpperCase()}_${period}`] || process.env.STRIPE_PRICE_ID;
+  if (!priceId) return res.status(500).json({ error: "Aucun prix Stripe configuré pour ce plan" });
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
+    client_reference_id: req.user.email,
+    customer_email: req.user.email,
+    metadata: { plan, readix_email: req.user.email },
+    subscription_data: { metadata: { plan, readix_email: req.user.email } },
+    success_url: `${CLIENT_URL}/?upgrade=success`,
+    cancel_url: `${CLIENT_URL}/?upgrade=cancel`,
+  });
+  res.json({ url: session.url });
+});
+
+// ---- Fonctions IA premium ----
+const AI_PROMPTS = {
+  workspace: `Tu es Readix AI Workspace, un assistant d'intelligence documentaire. Analyse le document fourni. Réponds en français, de façon structurée et factuelle. Pour chaque information importante, indique la page sous la forme [Page N], en te basant sur les marqueurs --- Page N --- présents dans le texte. Si l'information n'est pas dans le document, dis-le clairement. Si une question est posée, réponds d'abord directement puis donne les éléments du document qui justifient la réponse. Ne fabrique aucune citation.`,
+  smartsearch: `Tu es le moteur de recherche sémantique de Readix. La demande de l'utilisateur est une recherche dans un PDF. Identifie les passages réellement pertinents même si les mots employés diffèrent. Retourne une liste courte des résultats les plus pertinents avec [Page N], un titre court et un extrait fidèle du document. Si aucun passage pertinent n'est trouvé, indique-le. Ne fabrique aucune citation.`,
+  extractdata: `Tu es le moteur d'extraction structurée de Readix. Transforme le document en données exploitables. Retourne UNIQUEMENT un JSON valide, sans markdown ni commentaire. Adapte les champs au contenu : dates, montants, devises, personnes, organisations, références, numéros, adresses, échéances, tableaux, etc. Chaque élément important doit comporter une source de page sous la clé page quand elle est identifiable. Si aucune donnée d'une catégorie n'existe, ne l'invente pas.`,
+  compareai: `Tu es le moteur de comparaison intelligente de Readix. Compare DOCUMENT A et DOCUMENT B, pas seulement les mots mais aussi le contenu et le sens. Présente les ajouts, suppressions et modifications significatives. Pour chaque différence, indique la source avec [Page N] lorsqu'elle est identifiable. Distingue les changements certains des interprétations. Réponds en français.`,
+  copilot: `Tu es Readix Copilot, l'assistant contextuel de Readix Reader. Tu connais le document fourni et aides l'utilisateur à comprendre son contenu et à utiliser les outils Readix. Réponds en français. Pour les informations provenant du document, utilise [Page N]. Tu peux expliquer comment réaliser une action dans Readix (fusionner, diviser, signer, organiser, caviarder, etc.), mais n'affirme pas avoir exécuté une opération que le serveur ne t'a pas réellement demandé d'exécuter. Si la demande concerne le document, privilégie le document ouvert comme source. Readix peut générer des images par IA : pour une image, une illustration ou une couverture, n'affirme jamais que c'est impossible — oriente l'utilisateur vers le raccourci « Créer une image » du panneau IA, ou vers les studios « Couverture »/« Illustrations » d'un livre, sans prétendre générer l'image toi-même (la génération demande un compte connecté et un plan Pro ou supérieur).`,
+};
+const AI_MIN_LEVEL = { workspace:2, smartsearch:2, extractdata:2, compareai:2, copilot:2 };
+
+// Adaptateur Gemini natif : toutes les routes historiques conservent leur contrat JSON côté navigateur.
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+function geminiParts(content) {
+  const blocks = typeof content === 'string' ? [{type:'text',text:content}] : (Array.isArray(content) ? content : [{type:'text',text:String(content||'')}]);
+  const parts=[];
+  for(const block of blocks){
+    if(block.type==='text') parts.push({text:String(block.text||'')});
+    else if(block.type==='image' && block.source?.data && block.source?.media_type)
+      parts.push({inlineData:{mimeType:block.source.media_type,data:block.source.data}});
+    else if(block.type==='image' && block.source?.url && /^data:image\//.test(block.source.url)){
+      const m=/^data:([^;]+);base64,(.+)$/s.exec(block.source.url);
+      if(m)parts.push({inlineData:{mimeType:m[1],data:m[2]}});
+    }
+  }
+  return parts.length?parts:[{text:''}];
+}
+async function geminiRequest(model,contents,config={}) {
+  if(!GEMINI_API_KEY)throw new Error('GEMINI_API_KEY manquante');
+  if(!model)throw new Error('Identifiant de modèle Gemini manquant : configurez GEMINI_LAYOUT_MODEL, GEMINI_FAST_MODEL et GEMINI_IMAGE_MODEL dans Render.');
+  if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(model))throw new Error('Identifiant de modèle Gemini invalide : '+model);
+  const r=await fetch(GEMINI_BASE+encodeURIComponent(model)+':generateContent',{
+    method:'POST',headers:{'content-type':'application/json','x-goog-api-key':GEMINI_API_KEY},
+    body:JSON.stringify({contents,...config})
+  });
+  const raw=await r.text();let data;
+  try{data=JSON.parse(raw)}catch{throw new Error('Réponse Gemini illisible ('+r.status+')')}
+  if(!r.ok){const detail=String(data.error?.message||raw).slice(0,700); const advice=(r.status===404?' Modèle indisponible pour cette clé ou cet endpoint. Vérifiez son identifiant via l’API models.list de Google et la variable Render correspondante.':r.status===403?' Vérifiez les autorisations du projet Google et sa facturation.':r.status===429?' Quota ou limite de débit atteinte.':'');throw new Error('Gemini '+r.status+' ('+model+') : '+detail+advice);}
+  if(!data.candidates?.length)throw new Error('Gemini n’a retourné aucun candidat : '+String(data.promptFeedback?.blockReason||'réponse vide'));
+  return data;
+}
+function geminiText(data){return (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n')}
+async function geminiMessage(payload) {
+  const messages=(payload.messages||[]).map(m=>({role:m.role==='assistant'?'model':'user',parts:geminiParts(m.content)}));
+  const config={generationConfig:{maxOutputTokens:Math.min(8192,Math.max(256,Number(payload.max_tokens)||2048))}};
+  if(payload.system)config.systemInstruction={parts:[{text:String(payload.system)}]};
+  const data=await geminiRequest(GEMINI_FAST_MODEL,messages,config);
+  return {content:[{type:'text',text:geminiText(data)}]};
+}
+
+async function callGemini(system, userContent) {
+  const data = await geminiMessage({model:GEMINI_FAST_MODEL,max_tokens:2000,system,messages:[{role:"user",content:userContent}]});
+  return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+}
+
+app.get("/api/ai/status", auth, async (req, res) => {
+  try {
+    const quota = AI_QUOTA[req.user.plan] ?? 0;
+    const used = await getUsage(req.user.email);
+    if (!GEMINI_API_KEY) return res.status(503).json({ ok:false, error:"La clé IA du serveur n’est pas configurée (GEMINI_API_KEY)." });
+    if (levelOf(req.user.plan) < 2) return res.status(402).json({ ok:false, error:"Un abonnement Pro ou Studio est requis pour les modules IA avancés." });
+    if (used >= quota) return res.status(429).json({ ok:false, error:`Quota IA mensuel atteint (${quota}).` });
+    res.json({ ok:true, plan:req.user.plan, used, quota, model:GEMINI_FAST_MODEL });
+  } catch (e) { res.status(500).json({ ok:false, error:e.message }); }
+});
+
+// Phase 54: génération de plans de mise en page, sans exécution de code ni accès direct au document.
+const READOX_PAO_TOOLS=Object.freeze({add_text:'Bloc de texte natif éditable : text, position, taille, police, alignement, couleur, espacement',add_image:'Cadre image indépendant : position, taille, image générée séparément',add_rectangle:'Forme rectangle décorative indépendante',add_ellipse:'Forme ellipse décorative indépendante',set_page_background:'Couleur de fond native de page'});
+app.post('/api/readox/layout/plan',auth,async(req,res)=>{
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Clé Gemini non configurée sur le serveur.'});
+ if(levelOf(req.user.plan)<2&&!isUnlimited(req.user.email))return res.status(403).json({error:'Plan Pro ou Studio requis pour la conception IA.'});
+ const prompt=String(req.body?.prompt||'').trim();const doc=req.body?.document||{};
+ if(!prompt||prompt.length>5000)return res.status(400).json({error:'Instruction invalide (1 à 5000 caractères).'});
+ const pages=Number(doc.pages),width=Number(doc.width),height=Number(doc.height);
+ if(!Number.isInteger(pages)||pages<1||pages>100||![width,height].every(n=>Number.isFinite(n)&&n>=30&&n<=600))return res.status(400).json({error:'Dimensions document invalides.'});
+ const schema={type:'object',additionalProperties:false,required:['operations'],properties:{operations:{type:'array',maxItems:50,items:{type:'object',additionalProperties:false,required:['tool','page','x','y','w','h','text','fontSize','color','align','fontFamily','bold','letterSpacing'],properties:{tool:{type:'string',enum:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']},page:{type:'integer',minimum:1,maximum:pages},x:{type:'number'},y:{type:'number'},w:{type:'number'},h:{type:'number'},text:{type:'string'},fontSize:{type:'number'},color:{type:'string'},align:{type:'string',enum:['left','center','right']},fontFamily:{type:'string',enum:['Georgia','Arial','Times New Roman','Verdana']},bold:{type:'boolean'},letterSpacing:{type:'number'}}}}}};
+ try{
+  const systemPrompt='Outils PAO réellement disponibles et leur rôle : '+JSON.stringify(READOX_PAO_TOOLS)+'. Ne demande jamais un outil absent. Préserve intégralement les titres et noms. Tu es un directeur artistique expert en couvertures de livres et magazines. Génère une composition éditoriale sophistiquée, équilibrée et professionnelle, pas un simple bandeau. Réponds uniquement en JSON selon le schéma. Coordonnées en millimètres, document '+width+' x '+height+' mm, '+pages+' pages. Travaille sur la page '+(Number(doc.current)||1)+'. Utilise set_page_background pour le fond intégral, add_image pour UNE illustration photographique ou artistique principale sans texte, add_rectangle et add_ellipse pour des motifs abstraits, formes architecturales, orbites et accents, add_text pour la typographie. Utilise exactement une opération add_image pour réserver une grande zone visuelle, sans recouvrir les textes. Produis 8 à 20 objets bien composés avec hiérarchie, espaces négatifs, contrastes, et nom d’auteur si fourni; ne fabrique pas de nom réel si absent (utilise AUTEUR). Évite tout chevauchement des textes, respecte une marge de sécurité de 12 mm. Le titre doit être grand et lisible, avec un sous-titre si pertinent. Tous les objets doivent rester indépendants et éditables. Pour CHAQUE opération remplis tous les champs requis: tool,page,x,y,w,h,text,fontSize,color,align,fontFamily,bold,letterSpacing. Pour set_page_background et formes, utilise x=0,y=0,w=1,h=1,text="",fontSize=12,align="left",fontFamily="Georgia",bold=false,letterSpacing=0. Pour les formes text="". Couleurs #RRGGBB. L’image de add_image sera générée séparément par le service d’images Gemini : n’ajoute pas de texte dans cette image. Garde les titres comme add_text éditables. Ne dépasse jamais les limites de la page.';
+  const data=await geminiRequest(GEMINI_LAYOUT_MODEL,[{role:'user',parts:[{text:prompt}]}],{
+    systemInstruction:{parts:[{text:systemPrompt}]},
+    generationConfig:{responseMimeType:'application/json',maxOutputTokens:8192}
+  });
+  const plan=JSON.parse(geminiText(data).replace(/^```(?:json)?\s*|\s*```$/g,'').trim());
+  if(!Array.isArray(plan.operations)||plan.operations.length>50||plan.operations.some(o=>!['add_text','add_rectangle','add_ellipse','set_page_background','add_image'].includes(o.tool)||o.page<1||o.page>pages||!/^#[0-9a-f]{6}$/i.test(o.color)||[o.x,o.y,o.w,o.h].some(n=>!Number.isFinite(n))||(o.tool!=='set_page_background'&&(o.x<0||o.y<0||o.w<=0||o.h<=0||o.x+o.w>width||o.y+o.h>height))))return res.status(502).json({error:'Plan IA non conforme aux capacités de Readox.'});
+  return res.json({ok:true,plan,capabilities:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']});
+ }catch(e){return res.status(502).json({error:'Plan IA indisponible : '+e.message});}
+});
+
+// Phase 55.2 : illustration générée séparément, sans texte incrusté. Clé uniquement serveur.
+app.post('/api/readox/layout/illustration',auth,async(req,res)=>{
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Clé Gemini non configurée.'});
+ if(levelOf(req.user.plan)<2&&!isUnlimited(req.user.email))return res.status(403).json({error:'Plan Pro ou Studio requis.'});
+ const prompt=String(req.body?.prompt||'').trim().slice(0,3000);
+ if(prompt.length<5)return res.status(400).json({error:'Description manquante.'});
+ try{
+  const body={model:GEMINI_IMAGE_MODEL,size:'1024x1536',quality:'medium',n:1,prompt:'Illustration éditoriale haut de gamme pour couverture de livre ou magazine. '+prompt+'. Illustration seule, sans aucun texte, sans lettres, sans logo, sans signature, sans typographie. Composition artistique soignée, image de haute qualité. La typographie sera ajoutée séparément comme objets éditables.'};
+  const data=await geminiImageJson('/images/generations',body);
+  const b64=data?.data?.[0]?.b64_json;
+  if(typeof b64!=='string'||b64.length<100||b64.length>15000000)return res.status(502).json({error:'Image absente ou trop volumineuse.'});
+  return res.json({ok:true,imageSrc:'data:'+(data?.data?.[0]?.mime_type||'image/png')+';base64,'+b64,model:body.model});
+ }catch(e){return res.status(502).json({error:'Illustration indisponible : '+e.message});}
+});
+
+app.post("/api/ai/chatbot", auth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-10) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 40000);
+  if (!message) return res.status(400).json({ error: "Message vide" });
+  const manual = `Tu es l'Assistant Readix Reader, un GUIDE D'UTILISATION intégré à l'interface. Ta mission est uniquement d'expliquer comment utiliser Readix et d'orienter l'utilisateur vers les bons outils et les bonnes étapes.
+Règles : réponds en français sauf demande contraire; sois concret, court et structuré; n'invente jamais un outil ou une fonction qui n'existe pas; si une fonction dépend d'un compte, d'un plan, de Stripe ou d'une clé IA, indique-le clairement.
+Tu ne dois pas générer de contenu de document, de texte à insérer, de PDF, de fichier, de signature, de contrat, de code ou de résultat créatif. Tu ne dois pas exécuter une opération à la place de l'utilisateur. Tu expliques seulement quoi cliquer, dans quel ordre, et pourquoi.
+IMPORTANT — Readix DISPOSE d'une génération d'images par IA. Si l'utilisateur veut une image, une illustration ou une couverture, n'affirme JAMAIS que c'est impossible : oriente-le vers le raccourci « Créer une image » du panneau IA (à droite), ou vers les studios « Couverture » et « Illustrations » d'un livre. Explique comment s'en servir, sans produire l'image toi-même (c'est le serveur qui la génère quand l'utilisateur clique). La génération d'images nécessite un compte connecté et un plan Pro ou supérieur.
+Outils disponibles : Lecteur, Modifier, Remplir & Signer, Organiser, Fusionner, Diviser/Extraire, Caviarder, Comparer, Extraire le texte, OCR, Protection, Métadonnées, Créer une image (génération IA), et les fonctions IA premium.
+Remplir & Signer permet de déplacer/redimensionner une signature puis de la désélectionner en cliquant dans le document.
+Les opérations PDF locales sont réalisées dans le navigateur. Les comptes, abonnements et fonctions IA utilisent le serveur Readix.
+Plans : Gratuit, Standard, Pro, Studio. Les quotas IA premium dépendent du plan.
+Quand l'utilisateur demande comment faire une action, donne les étapes exactes dans l'interface et signale les prérequis. Si la demande concerne une fonction IA avancée, indique quel module choisir et explique son rôle sans produire le résultat à sa place.`;
+  try {
+    const data = await geminiMessage({max_tokens:900,system:manual,messages:[...history.filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||'').slice(0,4000)})),{role:'user',content:(documentContext?'CONTEXTE DU DOCUMENT OUVERT:\n'+documentContext+'\n\nDEMANDE UTILISATEUR:\n':'')+message.slice(0,6000)}]});
+    const answer = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join("\n");
+    res.json({ answer });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Génération de texte libre (rédaction assistée : plans, chapitres, réécriture…). Auth + plan Pro+ + quota.
+app.post("/api/ai/generate", auth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Fonction IA non configurée sur le serveur." });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  const system = String((req.body && req.body.system) || "").slice(0, 6000);
+  const maxTokens = Math.min(Math.max(Number(req.body && req.body.maxTokens) || 1400, 200), 8000);
+  if (!prompt) return res.status(400).json({ error: "Demande vide" });
+  const need = 2; // Pro ou supérieur
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Cette fonction IA nécessite le plan Pro ou supérieur." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const images = Array.isArray(req.body && req.body.images) ? req.body.images : [];
+  const imageBlocks = buildImageBlocks(images.map(im => ({ image: im })));
+  const userContent = imageBlocks.length
+    ? [...imageBlocks, { type: "text", text: prompt.slice(0, 14000) }]
+    : prompt.slice(0, 14000);
+  try {
+    const data = await geminiMessage({
+      max_tokens: maxTokens,
+      system: system || "Tu es un assistant de rédaction expert. Réponds en français, de façon claire, structurée et complète.",
+      messages: [{ role: "user", content: userContent }]
+    });
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    await incUsage(req.user.email);
+    res.json({ text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Traitement d'image Readix. Claude reste sur le texte/la
+// lecture ; le service d'image s'occupe des pixels : génération (couvertures, illustrations)
+// et retouche (arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
+// ──────────────────────────────────────────────────────────────────────────
+
+// Appel JSON (génération). Le modèle renvoie du base64 : pas de response_format.
+async function geminiImage(prompt,source,aspect='2:3') {
+  const parts=[{text:String(prompt).slice(0,4000)}];
+  if(source){const im=await sourceToBlob(source);const bytes=Buffer.from(await im.blob.arrayBuffer());
+    if(bytes.length>12*1024*1024)throw new Error('Image source trop volumineuse (12 Mo maximum).');
+    parts.push({inlineData:{mimeType:im.blob.type||'image/png',data:bytes.toString('base64')}});
+  }
+  const data=await geminiRequest(GEMINI_IMAGE_MODEL,[{role:'user',parts}],{
+    generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:{aspectRatio:aspect}}
+  });
+  const img=(data.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData?.data);
+  if(!img)throw new Error('Le modèle Gemini ne retourne pas d’image. Vérifier GEMINI_IMAGE_MODEL et ses droits.');
+  return {data:[{b64_json:img.inlineData.data,mime_type:img.inlineData.mimeType||'image/png'}]};
+}
+async function geminiImageJson(path,body){
+  const aspect=body.size==='1024x1024'?'1:1':body.size==='1536x1024'?'3:2':'2:3';
+  return geminiImage(body.prompt,null,aspect);
+}
+async function geminiImageEdit(fields){
+  if(fields.mask)throw new Error('La retouche avec masque n’est pas encore prise en charge par le connecteur Gemini.');
+  return geminiImage(fields.prompt,fields.image);
+}
+
+// Extrait un message d'erreur lisible du corps d'erreur du service d'image.
+function geminiErrText(txt) {
+  try { const j = JSON.parse(txt); if (j && j.error && j.error.message) return j.error.message; } catch (e) {}
+  return String(txt || "").slice(0, 400);
+}
+
+// Convertit une data URL (data:image/...;base64,...) ou une URL https en Blob fichier.
+async function sourceToBlob(src) {
+  src = String(src || "");
+  const m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(src);
+  if (m) {
+    const mime = m[1] || "image/png";
+    const buf = m[2] ? Buffer.from(m[3], "base64") : Buffer.from(decodeURIComponent(m[3]));
+    return { blob: new Blob([buf], { type: mime }), name: "image." + extFromMime(mime) };
+  }
+  const rr = await fetch(src); // URL distante : le service n'accepte pas d'URL en retouche, on récupère les octets.
+  if (!rr.ok) throw new Error("Image source inaccessible (" + rr.status + ").");
+  const ab = await rr.arrayBuffer();
+  const mime = rr.headers.get("content-type") || "image/png";
+  return { blob: new Blob([Buffer.from(ab)], { type: mime }), name: "image." + extFromMime(mime) };
+}
+function extFromMime(m) {
+  m = String(m || "").toLowerCase();
+  if (m.includes("png")) return "png";
+  if (m.includes("webp")) return "webp";
+  if (m.includes("jpeg") || m.includes("jpg")) return "jpg";
+  return "png";
+}
+
+// Réponse du service → data URLs affichables ({ data:[{ b64_json | url }] }).
+function imagesToUrls(data) {
+  let arr = Array.isArray(data && data.data) ? data.data
+    : (data && data.url) ? [{ url: data.url }]
+    : [];
+  return arr.map(function (it) {
+    if (it && it.b64_json) return "data:"+(it.mime_type||"image/png")+";base64," + it.b64_json;
+    if (it && it.url) return it.url;
+    return null;
+  }).filter(Boolean);
+}
+
+// Ratio → taille du modèle (1024x1024 | 1536x1024 | 1024x1536 | auto).
+function sizeFromAspect(ar) {
+  const s = String(ar || "").toLowerCase();
+  if (/1\s*[:x]\s*1|square|carr/.test(s)) return "1024x1024";
+  if (/3\s*[:x]\s*2|16\s*[:x]\s*9|paysage|landscape|wide/.test(s)) return "1536x1024";
+  if (/2\s*[:x]\s*3|9\s*[:x]\s*16|portrait|couvertur|cover|book/.test(s)) return "1024x1536";
+  return "auto";
+}
+
+function imageGateError(req) {
+  if (!GEMINI_API_KEY) return { code: 503, error: "La génération d'image n'est pas encore configurée sur le serveur." };
+  if (levelOf(req.user.plan) < 2) return { code: 402, error: "Le traitement d'image par IA nécessite le plan Pro ou supérieur." };
+  return null;
+}
+
+app.get("/api/image/status", auth, (req, res) => {
+  res.json({ ok: !!GEMINI_API_KEY, configured: !!GEMINI_API_KEY });
+});
+
+// Génération d'image à partir d'un texte (couvertures, illustrations).
+app.post("/api/image/generate", auth, async (req, res) => {
+  const gate = imageGateError(req); if (gate) return res.status(gate.code).json({ error: gate.error });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  if (!prompt) return res.status(400).json({ error: "Décrivez l'image à générer." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
+  // Génération par le modèle d'image Gemini configuré sur Render.
+  const isDalle = false;
+  const body = { model: GEMINI_IMAGE_MODEL, prompt: prompt.slice(0, 4000), n: isDalle ? 1 : n };
+  if (isDalle) body.response_format = "b64_json"; // DALL·E renvoie une URL par défaut ; on force le base64 exploitable.
+  const ar = String((req.body && req.body.aspect_ratio) || "").toLowerCase();
+  const szReq = req.body && req.body.size;
+  let size;
+  if (szReq && /^\d+x\d+$/.test(String(szReq))) size = String(szReq);
+  else if (isDalle) size = /portrait|2\s*[:x]\s*3|9\s*[:x]\s*16/.test(ar) ? "1024x1792" : /paysage|landscape|wide|3\s*[:x]\s*2|16\s*[:x]\s*9/.test(ar) ? "1792x1024" : "1024x1024";
+  else { const s = sizeFromAspect(ar); if (s !== "auto") size = s; }
+  if (size) body.size = size;
+  // La qualité demandée est conservée côté interface; Gemini utilise sa propre configuration.
+  if (!isDalle) body.quality = String((req.body && req.body.quality) || 'medium');
+  try {
+    const data = await geminiImageJson("/images/generations", body);
+    const images = imagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
+    await incUsage(req.user.email);
+    res.json({ images });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Retouche d'une image existante (arrière-plan/objet, style…).
+// image = data URL (data:image/...;base64,...) ou URL https ; mask = PNG optionnel.
+app.post("/api/image/edit", auth, async (req, res) => {
+  const gate = imageGateError(req); if (gate) return res.status(gate.code).json({ error: gate.error });
+  const prompt = String((req.body && req.body.prompt) || "").trim();
+  const image = String((req.body && req.body.image) || "").trim();
+  if (!prompt) return res.status(400).json({ error: "Décrivez la retouche souhaitée." });
+  if (!image) return res.status(400).json({ error: "Image source manquante." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+  const fields = { model: GEMINI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), image };
+  const sz = req.body && req.body.size; if (sz && /^\d+x\d+$/.test(String(sz))) fields.size = String(sz);
+  const mask = req.body && req.body.mask; if (mask) fields.mask = String(mask);
+  try {
+    const data = await geminiImageEdit(fields);
+    const images = imagesToUrls(data);
+    if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
+    await incUsage(req.user.email);
+    res.json({ images });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/copilot", auth, async (req, res) => {
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-16) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 50000);
+  const attachments = Array.isArray(req.body && req.body.attachments) ? req.body.attachments.slice(0, 5) : [];
+  const page = Number(req.body && req.body.page) || 1;
+  const documentName = String((req.body && req.body.documentName) || "").slice(0, 180);
+  if (!message) return res.status(400).json({ error: "Message vide" });
+  const cleanAttachment = (a) => ({
+    name: String((a && a.name) || "Document.pdf").slice(0, 180),
+    type: String((a && a.type) || "pdf").slice(0, 20),
+    page: Number((a && a.page) || 0) || 0,
+    text: String((a && a.text) || "").slice(0, 45000)
+  });
+  const currentAttachments = attachments.map(cleanAttachment).filter(a => a.text);
+  const historyForModel = history.filter(x => x && (x.role === "user" || x.role === "assistant")).map(x => {
+    let content = String(x.content || "").slice(0, 6000);
+    const atts = Array.isArray(x.attachments) ? x.attachments.slice(0, 4).map(cleanAttachment).filter(a => a.text) : [];
+    if (atts.length) content += "\n\nPIÈCES JOINTES DE CE MESSAGE :\n" + atts.map(a => `--- ${a.name}${a.page ? ` — page ${a.page}` : ""} ---\n${a.text}`).join("\n\n");
+    return { role: x.role, content: content.slice(0, 30000) };
+  });
+
+  const need = AI_MIN_LEVEL.copilot ?? 2;
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Readix Copilot est disponible avec le plan Pro ou supérieur." });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+
+  const system = `Tu es Readix Copilot, l’assistant intelligent intégré à Readix Reader.
+
+MISSION : être le guide intelligent de Readix. Tu aides l’utilisateur à comprendre son document et à utiliser l’application. Tu fonctionnes comme un assistant conversationnel moderne, dans le cadre spécifique de Readix et des PDF.
+
+RÈGLES FONDAMENTALES :
+- Réponds en français sauf demande contraire.
+- Réponds de façon naturelle, claire, structurée et concise.
+- Tu peux expliquer le contenu du document fourni dans le contexte.
+- Pour toute information tirée du document, cite les pages avec [Page N] lorsque la page est identifiable.
+- Tu connais les outils Readix : Lecteur, Modifier, Remplir & Signer, Organiser, Fusionner, Diviser/Extraire, Caviarder, Comparer, Extraire le texte, OCR, Protection, Métadonnées, Compresser et les modules IA avancés.
+- Quand l’utilisateur veut accomplir une opération dans Readix, explique-lui exactement quel outil utiliser et les étapes à suivre.
+- Tu peux proposer un bouton ou une action à effectuer ensuite dans l’interface, mais tu ne dois jamais prétendre avoir exécuté une opération si elle n’a pas réellement été exécutée par Readix.
+- Tu ne modifies, ne signes, ne fusionnes, ne supprimes et ne télécharges jamais un fichier de toi-même.
+- Tu ne fabriques jamais une information absente du document.
+- Si le document ne permet pas de répondre, dis-le clairement.
+- Si l’utilisateur demande une fonctionnalité qui n’existe pas dans Readix, ne l’invente pas.
+- Tu peux garder le fil de la conversation et comprendre des formulations comme « ce document », « cette page », « l’autre version » ou « cette information » en utilisant le contexte fourni.
+- Le document ouvert, la page actuelle et les éléments ajoutés via le bouton + sont des contextes. Ils ne doivent pas être confondus avec une demande de modification du fichier.
+
+CONTEXTE D’INTERFACE :
+Document : ${documentName || "aucun nom communiqué"}
+Page actuelle : ${page}
+
+${documentContext ? "CONTEXTE FOURNI PAR READIX :\n" + documentContext : "Aucun contenu de document supplémentaire n’a été ajouté à cette demande."}`;
+
+  try {
+    const data = await geminiMessage({max_tokens:1800,system,messages:[...historyForModel,{role:'user',content:((currentAttachments.length?'PIÈCES JOINTES À CETTE QUESTION :\n'+currentAttachments.map(a=>`--- ${a.name}${a.page?` — page ${a.page}`:''} ---\n${a.text}`).join('\n\n')+'\n\n':'')+message).slice(0,60000)}]});
+    const answer = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+    await incUsage(req.user.email);
+    res.json({ answer, used: used + 1, quota });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Extrait le premier objet JSON complet d'un texte (même entouré de prose), en
+// respectant les chaînes et l'échappement. Évite que le JSON brut fuite à l'écran.
+function firstJsonObject(s) {
+  const i = s.indexOf("{"); if (i < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let j = i; j < s.length; j++) {
+    const ch = s[j];
+    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return s.slice(i, j + 1); }
+  }
+  return null;
+}
+function parseCopilotJSON(raw) {
+  let s = String(raw || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  let parsed = null;
+  try { parsed = JSON.parse(s); } catch (e) {
+    const obj = firstJsonObject(s);
+    if (obj) { try { parsed = JSON.parse(obj); } catch (e2) {} }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    // Pas de JSON exploitable : on affiche le texte tel quel, débarrassé d'un éventuel bloc JSON résiduel.
+    const cleaned = s.replace(/\{[\s\S]*"answer"[\s\S]*\}\s*$/i, "").trim() || s;
+    return { answer: cleaned, actions: [] };
+  }
+  if (!Array.isArray(parsed.actions)) parsed.actions = [];
+  parsed.answer = String(parsed.answer == null ? "" : parsed.answer);
+  return parsed;
+}
+// Transforme les pièces jointes image (dataURL) en blocs vision pour l'API Anthropic.
+function buildImageBlocks(attachments) {
+  const blocks = [];
+  const add = (src) => {
+    if (blocks.length >= 6 || typeof src !== "string") return;
+    const m = src.match(/^data:(image\/(?:png|jpe?g|webp|gif));base64,([A-Za-z0-9+/=\s]+)$/i);
+    if (!m) return;
+    let media = m[1].toLowerCase(); if (media === "image/jpg") media = "image/jpeg";
+    const data = m[2].replace(/\s+/g, "");
+    if (data.length < 50 || data.length > 4800000) return; // ~3,5 Mo max/image
+    blocks.push({ type: "image", source: { type: "base64", media_type: media, data } });
+  };
+  for (const a of (Array.isArray(attachments) ? attachments : [])) {
+    if (a && typeof a.image === "string") add(a.image);
+    if (a && Array.isArray(a.images)) a.images.forEach(add);
+    if (blocks.length >= 6) break;
+  }
+  return blocks;
+}
+async function handleCopilotAction(req, res) {
+  console.log("[COPILOT ACTION]", req.method, req.path, "user=", req.user?.email, "plan=", req.user?.plan);
+  if (!GEMINI_API_KEY) return res.status(503).json({ error:"Readix Copilot n’est pas configuré sur le serveur (GEMINI_API_KEY manquante)." });
+  const message = String((req.body && req.body.message) || "").trim();
+  const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-12) : [];
+  const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 45000);
+  const attachments = Array.isArray(req.body && req.body.attachments) ? req.body.attachments.slice(0, 5) : [];
+  const page = Number(req.body && req.body.page) || 1;
+  const documentName = String((req.body && req.body.documentName) || "").slice(0, 180);
+  if (!message) return res.status(400).json({ error:"Message vide" });
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (levelOf(req.user.plan) < (AI_MIN_LEVEL.copilot ?? 2)) return res.status(402).json({ error:"Readix Copilot est disponible avec le plan Pro ou supérieur." });
+  if (used >= quota) return res.status(429).json({ error:`Quota IA mensuel atteint (${quota}).` });
+  const clean = a => ({name:String(a?.name||"Document.pdf").slice(0,160),page:Number(a?.page||0)||0,text:String(a?.text||"").slice(0,35000)});
+  const atts=attachments.map(clean).filter(a=>a.text);
+  const hist=history.filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||"").slice(0,8000)}));
+  const actionSystem = `Tu es Readix Copilot, l'assistant IA généraliste de Readix, propulsé par Claude (Sonnet 5). Tu comprends en profondeur l'intention réelle de l'utilisateur, tu raisonnes avec nuance et rigueur, et tu réponds toujours de façon claire, cohérente, complète et utile — comme le ferait Claude. Tu n'es PAS limité au document ouvert : tu peux aussi répondre à des questions générales, expliquer un concept, rédiger ou reformuler un texte, résumer, traduire, brainstormer, structurer un plan, conseiller, aider à raisonner ou à coder. Adapte-toi au registre, au ton et à la langue de l'utilisateur (réponds en français par défaut ; suis sa langue s'il écrit dans une autre).
+
+Ton rôle a deux facettes :
+(1) RÉPONDRE — la grande majorité des demandes n'exigent AUCUNE action technique. Dans ce cas, renvoie "actions":[] et place dans "answer" une réponse réellement complète, bien structurée et directement exploitable. N'écourte jamais artificiellement : donne une réponse à la hauteur de la question, avec le raisonnement, les exemples et les nuances nécessaires. Si la demande est ambiguë, pose une brève question de clarification plutôt que de deviner au hasard. Ne réponds jamais à côté de la question et n'inverse jamais le sens de la demande.
+(2) AGIR — uniquement lorsque la demande nécessite réellement une opération Readix (créer un fichier, manipuler le PDF ouvert, extraire des données…), ajoute la ou les actions correspondantes EN PLUS d'une explication claire dans "answer".
+
+VISION : des images peuvent être jointes au message (fichiers image comme PNG/JPG, ou pages de PDF — y compris des documents scannés rendus en image). Tu les VOIS réellement : analyse-les directement (lis le texte visible, décris le contenu, extrais les informations) sans prétendre avoir besoin d'un OCR séparé lorsqu'une image est déjà fournie. Ne propose l'action ocr_document que pour un PDF scanné OUVERT dont aucune image n'a été jointe.
+
+Tu réponds TOUJOURS avec un JSON valide, sans markdown, selon ce schéma exact :
+Schéma exact : {"answer":"ta réponse complète et utile à afficher à l’utilisateur","actions":[{"type":"...","title":"...","...":...}]}
+
+Actions autorisées :
+- create_pdf : {type,title,content} crée un vrai PDF local à partir du contenu fourni.
+- create_docx : {type,title,content,open:true} crée un vrai DOCX local.
+- create_docstudio : {type,title,content} ouvre un nouveau document dans Document Studio avec le contenu.
+- open_tool : {type,tool} ouvre un outil Readix existant (view, editpdf, fillsign, organize, merge, split, redact, compare, text, shield, meta, compress, aiadvanced, docstudio).
+- delete_pages : {type,pages:[1,2],requiresConfirmation:true} supprime les pages indiquées du PDF courant.
+- extract_pages : {type,pages:[1,2]} crée un nouveau PDF avec les pages indiquées du PDF courant.
+- rotate_pages : {type,pages:[1,2],degrees:90} fait pivoter les pages du PDF courant.
+- search_document : {type,query} demande une recherche documentaire.
+- extract_data : {type,title,columns:["Col1","Col2"],rows:[["a","b"],["c","d"]]} EXTRAIT directement des données structurées du document et les renvoie sous forme de tableau (colonnes + lignes remplies à partir du document réel). Utilise-le pour « extrais toutes les factures / expériences / dates / montants… » ET pour toute demande d'export CSV, Excel ou tableau Word : le client affiche le tableau et propose les téléchargements CSV, Excel et Word. Remplis réellement columns et rows ; n'invente jamais de données absentes du document. Si rien de pertinent n'existe, renvoie actions:[] et explique-le.
+- summarize : {type} demande un résumé du contexte fourni.
+- convert_pdf_to_docx : {type} convertit le PDF ouvert (ou joint) en document Word éditable ouvert dans Document Studio. À utiliser pour « transforme/convertis ce PDF en Word ». Aucune page ni contenu à fournir : le client lit le PDF ouvert.
+- convert_docx_to_pdf : {type} convertit le document Word actuellement ouvert dans Document Studio en PDF. À utiliser pour « convertis ce document Word en PDF ».
+- ocr_document : {type} lance la reconnaissance de texte (OCR) sur le PDF ouvert quand il est numérisé/scanné (aucun texte sélectionnable). À utiliser explicitement pour « lance l'OCR », « fais un OCR de ce document », « ce PDF est scanné ».
+
+Règles :
+1. N’invente jamais qu’une action a été exécutée : le client l’exécutera après ta réponse.
+2. Pour une demande de création de fichier, utilise create_pdf/create_docx/create_docstudio.
+3. Pour « génère-moi un PDF de ce récapitulatif », crée directement create_pdf avec un contenu complet, structuré et fidèle au contexte disponible. IMPORTANT : le fichier n'est PAS téléchargé automatiquement ; Readix affiche un bouton « Télécharger » que l'utilisateur clique lui-même. Ne dis donc JAMAIS que le fichier a été téléchargé ou enregistré ; formule plutôt « j'ai préparé le document, cliquez sur Télécharger quand vous voulez ».
+4. Pour « mets cela dans Word », utilise create_docstudio ou create_docx selon la demande; si l’utilisateur veut modifier ensuite, préfère create_docstudio. IMPORTANT : create_docstudio n'ouvre PAS l'onglet tout seul ; Readix affiche un bouton « Ouvrir dans Document Studio » que l'utilisateur clique lui-même. Ne dis donc jamais que le document « a été ouvert » : formule une proposition (« j'ai préparé un document, souhaitez-vous l'ouvrir ou l'ajuster d'abord ? »). L'utilisateur garde le contrôle sur ce qui est transféré dans un onglet.
+4a. Tu es un assistant documentaire intelligent, pas un simple exécutant : propose des idées utiles liées au projet de l'utilisateur, pose une question de clarification quand la demande est ambiguë, et suggère l'étape suivante pertinente. Reste concis et concret. N'agis (création de fichier, document, etc.) qu'en proposant le résultat pour que l'utilisateur décide de la suite.
+4b. Distingue bien CONVERSION et CRÉATION : « transforme/convertis CE PDF en Word » → convert_pdf_to_docx (le client lit le PDF ouvert, ne mets pas de content) ; « convertis CE document Word en PDF » → convert_docx_to_pdf. N’utilise create_pdf/create_docx que lorsque tu dois toi-même rédiger un NOUVEAU contenu (résumé, récapitulatif), pas pour convertir un document existant.
+4c. Pour toute demande de DONNÉES ou d'EXPORT (« extrais les factures », « liste les dates/montants », « mets-les dans un tableau Word », « exporte en Excel/CSV ») → une seule action extract_data avec columns et rows remplies. N'utilise pas create_docx pour un tableau de données : extract_data propose déjà l'export CSV, Excel et Word.
+4d. Si le documentContext fourni est vide alors qu'un document est ouvert (documentName présent), c'est probablement un PDF numérisé : n'invente rien, propose l'action ocr_document et explique qu'une reconnaissance de texte est nécessaire.
+5. Les actions delete_pages sont destructives : mets requiresConfirmation:true.
+6. Si le contexte documentaire est insuffisant, ne fabrique pas le contenu; réponds avec actions:[] et explique ce qui manque.
+7. Plusieurs actions peuvent être renvoyées dans l’ordre.
+8. Réponds en français.
+9. Pour une simple question documentaire, actions:[] et answer contient la réponse.
+
+Contexte d’interface : document=${documentName||"aucun"}, page=${page}.
+${documentContext?"DOCUMENT OUVERT :\n"+documentContext:""}
+${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — page ${a.page}`:""} ---\n${a.text}`).join("\n\n"):""}`;
+  try {
+    let data;
+    try {
+      const imageBlocks=buildImageBlocks(attachments);
+      const userContent=imageBlocks.length
+        ? [...imageBlocks,{type:"text",text:message.slice(0,10000)}]
+        : message.slice(0,10000);
+      data=await geminiMessage({model:GEMINI_FAST_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:userContent}]});
+    } catch(e) {
+      console.error("[COPILOT ACTION]", e.message);
+      return res.status(502).json({error:e.message});
+    }
+    const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("\n").trim();
+    const parsed=parseCopilotJSON(raw);
+    await incUsage(req.user.email);
+    res.json({answer:String(parsed.answer||""),actions:parsed.actions.slice(0,5),used:used+1,quota,engine:"24.0"});
+  } catch(e) { console.error("[COPILOT ACTION]", e); res.status(500).json({error:e.message}); }
+}
+
+// Route principale + alias : évite qu'un reverse proxy/ancien déploiement bloque le nouveau moteur.
+app.post("/api/copilot/action", auth, handleCopilotAction);
+app.post("/api/copilot/action/", auth, handleCopilotAction);
+app.post("/api/copilot/actions", auth, handleCopilotAction);
+
+app.post("/api/ai/:feature", auth, async (req, res) => {
+  console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!GEMINI_API_KEY);
+  const feature = req.params.feature;
+  const system = AI_PROMPTS[feature];
+  if (!system) return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
+
+  // 1) niveau d'abonnement suffisant ?
+  const need = AI_MIN_LEVEL[feature] ?? 2;
+  if (levelOf(req.user.plan) < need) return res.status(402).json({ error: "Plan supérieur requis pour cette fonction" });
+
+  // 2) quota mensuel non dépassé ?
+  const quota = AI_QUOTA[req.user.plan] ?? 0;
+  const used = await getUsage(req.user.email);
+  if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
+
+  try {
+    const { text = "", question = "", target = "" } = req.body || {};
+    let userContent = text;
+    if (question) userContent += `\n\nQuestion : ${question}`;
+    if (target) userContent += `\n\nLangue cible : ${target}`;
+    console.log("[AI] reçu: textLen=" + text.length + (question ? " (question)" : ""));
+    const answer = await callGemini(system, userContent.slice(0, 60000));
+    console.log("[AI] réponse: len=" + (answer ? answer.length : 0));
+    await incUsage(req.user.email); // on compte l'opération réussie
+    res.json({ answer, used: used + 1, quota });
+  } catch (e) {
+    console.log("[AI] échec:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---- Sert le front-end (dossier ../public) ----
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// ---- Démarrage ----
+initDb()
+  .catch(e => console.error("⚠️  Init base de données échouée :", e.message))
+  .finally(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Readix serveur démarré sur ${CLIENT_URL} (port ${PORT})`);
+      if (!DATABASE_URL) console.log("⚠️  DATABASE_URL absente : comptes désactivés.");
+      if (!GEMINI_API_KEY) console.log("⚠️  GEMINI_API_KEY absente : fonctions IA indisponibles.");
+      if (!stripe) console.log("⚠️  Stripe non configuré : paiement désactivé.");
+    });
+  });
