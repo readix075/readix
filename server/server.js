@@ -20,15 +20,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8787;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-a-changer";
 const CLIENT_URL = process.env.CLIENT_URL || `http://localhost:${PORT}`;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
-// Service d'image Readix — génération + retouche. Clé côté serveur uniquement.
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_BASE = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
-const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
-const OPENAI_EDIT_MODEL = process.env.OPENAI_EDIT_MODEL || "gpt-image-1";
-// Qualité gpt-image-1 : "low" (défaut, ~15x moins cher) | "medium" | "high". Réglable via OPENAI_IMAGE_QUALITY.
-const OPENAI_IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || "low";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_LAYOUT_MODEL = process.env.GEMINI_LAYOUT_MODEL || 'gemini-2.5-pro';
+const GEMINI_FAST_MODEL = process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash';
+const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image-preview';
+
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Paliers d'abonnement ----
@@ -176,10 +172,10 @@ app.get("/api/health", (req, res) => res.json({
   copilotAction: true,
   config: {
     database: !!DATABASE_URL,
-    aiKey: !!ANTHROPIC_API_KEY,
-    aiModel: ANTHROPIC_MODEL,
-    imageReady: !!OPENAI_API_KEY,
-    imageModel: OPENAI_IMAGE_MODEL,
+    aiKey: !!GEMINI_API_KEY,
+    aiModel: GEMINI_FAST_MODEL,
+    imageReady: !!GEMINI_API_KEY,
+    imageModel: GEMINI_IMAGE_MODEL,
     stripe: !!process.env.STRIPE_SECRET_KEY,
     clientUrl: CLIENT_URL,
     ownerEmails: UNLIMITED_EMAILS.length
@@ -409,31 +405,45 @@ const AI_PROMPTS = {
 };
 const AI_MIN_LEVEL = { workspace:2, smartsearch:2, extractdata:2, compareai:2, copilot:2 };
 
-async function anthropicMessage(payload) {
-  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY manquante");
-  const requestedModel = payload.model || ANTHROPIC_MODEL;
-  const models = [requestedModel];
-  // Si Render conserve un ancien nom de modèle dans l'environnement, retente automatiquement avec le modèle par défaut actuel.
-  if (requestedModel !== "claude-sonnet-5") models.push("claude-sonnet-5");
-  let last = "";
-  for (const model of models) {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST",
-      headers:{"content-type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-      body:JSON.stringify({...payload,model})
-    });
-    const body = await r.text();
-    if (r.ok) {
-      try { return JSON.parse(body); } catch { throw new Error("Réponse JSON invalide reçue d’Anthropic."); }
+// Adaptateur Gemini natif : toutes les routes historiques conservent leur contrat JSON côté navigateur.
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+function geminiParts(content) {
+  const blocks = typeof content === 'string' ? [{type:'text',text:content}] : (Array.isArray(content) ? content : [{type:'text',text:String(content||'')}]);
+  const parts=[];
+  for(const block of blocks){
+    if(block.type==='text') parts.push({text:String(block.text||'')});
+    else if(block.type==='image' && block.source?.data && block.source?.media_type)
+      parts.push({inlineData:{mimeType:block.source.media_type,data:block.source.data}});
+    else if(block.type==='image' && block.source?.url && /^data:image\//.test(block.source.url)){
+      const m=/^data:([^;]+);base64,(.+)$/s.exec(block.source.url);
+      if(m)parts.push({inlineData:{mimeType:m[1],data:m[2]}});
     }
-    last = `Anthropic ${r.status} avec le modèle ${model}: ${body.slice(0,1200)}`;
-    if (r.status !== 404) break;
   }
-  throw new Error(last || "Service IA indisponible");
+  return parts.length?parts:[{text:''}];
+}
+async function geminiRequest(model,contents,config={}) {
+  if(!GEMINI_API_KEY)throw new Error('GEMINI_API_KEY manquante');
+  const r=await fetch(GEMINI_BASE+encodeURIComponent(model)+':generateContent',{
+    method:'POST',headers:{'content-type':'application/json','x-goog-api-key':GEMINI_API_KEY},
+    body:JSON.stringify({contents,...config})
+  });
+  const raw=await r.text();let data;
+  try{data=JSON.parse(raw)}catch{throw new Error('Réponse Gemini illisible ('+r.status+')')}
+  if(!r.ok)throw new Error('Gemini '+r.status+' ('+model+') : '+String(data.error?.message||raw).slice(0,700));
+  if(!data.candidates?.length)throw new Error('Gemini n’a retourné aucun candidat : '+String(data.promptFeedback?.blockReason||'réponse vide'));
+  return data;
+}
+function geminiText(data){return (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n')}
+async function geminiMessage(payload) {
+  const messages=(payload.messages||[]).map(m=>({role:m.role==='assistant'?'model':'user',parts:geminiParts(m.content)}));
+  const config={generationConfig:{maxOutputTokens:Math.min(8192,Math.max(256,Number(payload.max_tokens)||2048))}};
+  if(payload.system)config.systemInstruction={parts:[{text:String(payload.system)}]};
+  const data=await geminiRequest(GEMINI_FAST_MODEL,messages,config);
+  return {content:[{type:'text',text:geminiText(data)}]};
 }
 
-async function callAnthropic(system, userContent) {
-  const data = await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:2000,system,messages:[{role:"user",content:userContent}]});
+async function callGemini(system, userContent) {
+  const data = await geminiMessage({model:GEMINI_FAST_MODEL,max_tokens:2000,system,messages:[{role:"user",content:userContent}]});
   return (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
 }
 
@@ -441,17 +451,17 @@ app.get("/api/ai/status", auth, async (req, res) => {
   try {
     const quota = AI_QUOTA[req.user.plan] ?? 0;
     const used = await getUsage(req.user.email);
-    if (!ANTHROPIC_API_KEY) return res.status(503).json({ ok:false, error:"La clé IA du serveur n’est pas configurée (ANTHROPIC_API_KEY)." });
+    if (!GEMINI_API_KEY) return res.status(503).json({ ok:false, error:"La clé IA du serveur n’est pas configurée (GEMINI_API_KEY)." });
     if (levelOf(req.user.plan) < 2) return res.status(402).json({ ok:false, error:"Un abonnement Pro ou Studio est requis pour les modules IA avancés." });
     if (used >= quota) return res.status(429).json({ ok:false, error:`Quota IA mensuel atteint (${quota}).` });
-    res.json({ ok:true, plan:req.user.plan, used, quota, model:ANTHROPIC_MODEL });
+    res.json({ ok:true, plan:req.user.plan, used, quota, model:GEMINI_FAST_MODEL });
   } catch (e) { res.status(500).json({ ok:false, error:e.message }); }
 });
 
 // Phase 54: génération de plans de mise en page, sans exécution de code ni accès direct au document.
 const READOX_PAO_TOOLS=Object.freeze({add_text:'Bloc de texte natif éditable : text, position, taille, police, alignement, couleur, espacement',add_image:'Cadre image indépendant : position, taille, image générée séparément',add_rectangle:'Forme rectangle décorative indépendante',add_ellipse:'Forme ellipse décorative indépendante',set_page_background:'Couleur de fond native de page'});
 app.post('/api/readox/layout/plan',auth,async(req,res)=>{
- if(!OPENAI_API_KEY)return res.status(503).json({error:'Clé OpenAI non configurée sur le serveur.'});
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Clé Gemini non configurée sur le serveur.'});
  if(levelOf(req.user.plan)<2&&!isUnlimited(req.user.email))return res.status(403).json({error:'Plan Pro ou Studio requis pour la conception IA.'});
  const prompt=String(req.body?.prompt||'').trim();const doc=req.body?.document||{};
  if(!prompt||prompt.length>5000)return res.status(400).json({error:'Instruction invalide (1 à 5000 caractères).'});
@@ -459,9 +469,12 @@ app.post('/api/readox/layout/plan',auth,async(req,res)=>{
  if(!Number.isInteger(pages)||pages<1||pages>100||![width,height].every(n=>Number.isFinite(n)&&n>=30&&n<=600))return res.status(400).json({error:'Dimensions document invalides.'});
  const schema={type:'object',additionalProperties:false,required:['operations'],properties:{operations:{type:'array',maxItems:50,items:{type:'object',additionalProperties:false,required:['tool','page','x','y','w','h','text','fontSize','color','align','fontFamily','bold','letterSpacing'],properties:{tool:{type:'string',enum:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']},page:{type:'integer',minimum:1,maximum:pages},x:{type:'number'},y:{type:'number'},w:{type:'number'},h:{type:'number'},text:{type:'string'},fontSize:{type:'number'},color:{type:'string'},align:{type:'string',enum:['left','center','right']},fontFamily:{type:'string',enum:['Georgia','Arial','Times New Roman','Verdana']},bold:{type:'boolean'},letterSpacing:{type:'number'}}}}}};
  try{
-  const r=await fetch(OPENAI_BASE+'/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+OPENAI_API_KEY},body:JSON.stringify({model:process.env.READOX_LAYOUT_MODEL||'gpt-4.1',temperature:0.3,response_format:{type:'json_schema',json_schema:{name:'readox_layout_plan',strict:true,schema}},messages:[{role:'system',content:'Outils PAO réellement disponibles et leur rôle : '+JSON.stringify(READOX_PAO_TOOLS)+'. Ne demande jamais un outil absent. Préserve intégralement les titres et noms. Tu es un directeur artistique expert en couvertures de livres et magazines. Génère une composition éditoriale sophistiquée, équilibrée et professionnelle, pas un simple bandeau. Réponds uniquement en JSON selon le schéma. Coordonnées en millimètres, document '+width+' x '+height+' mm, '+pages+' pages. Travaille sur la page '+(Number(doc.current)||1)+'. Utilise set_page_background pour le fond intégral, add_image pour UNE illustration photographique ou artistique principale sans texte, add_rectangle et add_ellipse pour des motifs abstraits, formes architecturales, orbites et accents, add_text pour la typographie. Utilise exactement une opération add_image pour réserver une grande zone visuelle, sans recouvrir les textes. Produis 8 à 20 objets bien composés avec hiérarchie, espaces négatifs, contrastes, et nom d’auteur si fourni; ne fabrique pas de nom réel si absent (utilise AUTEUR). Évite tout chevauchement des textes, respecte une marge de sécurité de 12 mm. Le titre doit être grand et lisible, avec un sous-titre si pertinent. Tous les objets doivent rester indépendants et éditables. Pour CHAQUE opération remplis tous les champs requis: tool,page,x,y,w,h,text,fontSize,color,align,fontFamily,bold,letterSpacing. Pour set_page_background et formes, utilise x=0,y=0,w=1,h=1,text="",fontSize=12,align="left",fontFamily="Georgia",bold=false,letterSpacing=0. Pour les formes text="". Couleurs #RRGGBB. L’image de add_image sera générée séparément par le service d’images OpenAI : n’ajoute pas de texte dans cette image. Garde les titres comme add_text éditables. Ne dépasse jamais les limites de la page.'},{role:'user',content:prompt}]} )});
-  if(!r.ok)return res.status(502).json({error:'Le fournisseur IA a refusé la requête ('+r.status+').'});
-  const data=await r.json();const plan=JSON.parse(data.choices?.[0]?.message?.content||'{}');
+  const systemPrompt='Outils PAO réellement disponibles et leur rôle : '+JSON.stringify(READOX_PAO_TOOLS)+'. Ne demande jamais un outil absent. Préserve intégralement les titres et noms. Tu es un directeur artistique expert en couvertures de livres et magazines. Génère une composition éditoriale sophistiquée, équilibrée et professionnelle, pas un simple bandeau. Réponds uniquement en JSON selon le schéma. Coordonnées en millimètres, document '+width+' x '+height+' mm, '+pages+' pages. Travaille sur la page '+(Number(doc.current)||1)+'. Utilise set_page_background pour le fond intégral, add_image pour UNE illustration photographique ou artistique principale sans texte, add_rectangle et add_ellipse pour des motifs abstraits, formes architecturales, orbites et accents, add_text pour la typographie. Utilise exactement une opération add_image pour réserver une grande zone visuelle, sans recouvrir les textes. Produis 8 à 20 objets bien composés avec hiérarchie, espaces négatifs, contrastes, et nom d’auteur si fourni; ne fabrique pas de nom réel si absent (utilise AUTEUR). Évite tout chevauchement des textes, respecte une marge de sécurité de 12 mm. Le titre doit être grand et lisible, avec un sous-titre si pertinent. Tous les objets doivent rester indépendants et éditables. Pour CHAQUE opération remplis tous les champs requis: tool,page,x,y,w,h,text,fontSize,color,align,fontFamily,bold,letterSpacing. Pour set_page_background et formes, utilise x=0,y=0,w=1,h=1,text="",fontSize=12,align="left",fontFamily="Georgia",bold=false,letterSpacing=0. Pour les formes text="". Couleurs #RRGGBB. L’image de add_image sera générée séparément par le service d’images Gemini : n’ajoute pas de texte dans cette image. Garde les titres comme add_text éditables. Ne dépasse jamais les limites de la page.';
+  const data=await geminiRequest(GEMINI_LAYOUT_MODEL,[{role:'user',parts:[{text:prompt}]}],{
+    systemInstruction:{parts:[{text:systemPrompt}]},
+    generationConfig:{responseMimeType:'application/json',maxOutputTokens:8192}
+  });
+  const plan=JSON.parse(geminiText(data).replace(/^```(?:json)?\s*|\s*```$/g,'').trim());
   if(!Array.isArray(plan.operations)||plan.operations.length>50||plan.operations.some(o=>!['add_text','add_rectangle','add_ellipse','set_page_background','add_image'].includes(o.tool)||o.page<1||o.page>pages||!/^#[0-9a-f]{6}$/i.test(o.color)||[o.x,o.y,o.w,o.h].some(n=>!Number.isFinite(n))||(o.tool!=='set_page_background'&&(o.x<0||o.y<0||o.w<=0||o.h<=0||o.x+o.w>width||o.y+o.h>height))))return res.status(502).json({error:'Plan IA non conforme aux capacités de Readox.'});
   return res.json({ok:true,plan,capabilities:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']});
  }catch(e){return res.status(502).json({error:'Plan IA indisponible : '+e.message});}
@@ -469,21 +482,21 @@ app.post('/api/readox/layout/plan',auth,async(req,res)=>{
 
 // Phase 55.2 : illustration générée séparément, sans texte incrusté. Clé uniquement serveur.
 app.post('/api/readox/layout/illustration',auth,async(req,res)=>{
- if(!OPENAI_API_KEY)return res.status(503).json({error:'Clé OpenAI non configurée.'});
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Clé Gemini non configurée.'});
  if(levelOf(req.user.plan)<2&&!isUnlimited(req.user.email))return res.status(403).json({error:'Plan Pro ou Studio requis.'});
  const prompt=String(req.body?.prompt||'').trim().slice(0,3000);
  if(prompt.length<5)return res.status(400).json({error:'Description manquante.'});
  try{
   const body={model:process.env.READOX_IMAGE_MODEL||'gpt-image-1',size:'1024x1536',quality:'medium',n:1,prompt:'Illustration éditoriale haut de gamme pour couverture de livre ou magazine. '+prompt+'. Illustration seule, sans aucun texte, sans lettres, sans logo, sans signature, sans typographie. Composition artistique soignée, image de haute qualité. La typographie sera ajoutée séparément comme objets éditables.'};
-  const data=await openaiImageJson('/images/generations',body);
+  const data=await geminiImageJson('/images/generations',body);
   const b64=data?.data?.[0]?.b64_json;
   if(typeof b64!=='string'||b64.length<100||b64.length>15000000)return res.status(502).json({error:'Image absente ou trop volumineuse.'});
-  return res.json({ok:true,imageSrc:'data:image/png;base64,'+b64,model:body.model});
+  return res.json({ok:true,imageSrc:'data:'+(data?.data?.[0]?.mime_type||'image/png')+';base64,'+b64,model:body.model});
  }catch(e){return res.status(502).json({error:'Illustration indisponible : '+e.message});}
 });
 
 app.post("/api/ai/chatbot", auth, async (req, res) => {
-  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Assistant IA non configuré" });
   const message = String((req.body && req.body.message) || "").trim();
   const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-10) : [];
   const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 40000);
@@ -498,13 +511,7 @@ Les opérations PDF locales sont réalisées dans le navigateur. Les comptes, ab
 Plans : Gratuit, Standard, Pro, Studio. Les quotas IA premium dépendent du plan.
 Quand l'utilisateur demande comment faire une action, donne les étapes exactes dans l'interface et signale les prérequis. Si la demande concerne une fonction IA avancée, indique quel module choisir et explique son rôle sans produire le résultat à sa place.`;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 900, system: manual, messages: [...history.filter(x=>x && (x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||'').slice(0,4000)})), { role:'user', content:(documentContext ? 'CONTEXTE DU DOCUMENT OUVERT:\n'+documentContext+'\n\nDEMANDE UTILISATEUR:\n' : '')+message.slice(0,6000) }] }),
-    });
-    if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
-    const data = await r.json();
+    const data = await geminiMessage({max_tokens:900,system:manual,messages:[...history.filter(x=>x&&(x.role==='user'||x.role==='assistant')).map(x=>({role:x.role,content:String(x.content||'').slice(0,4000)})),{role:'user',content:(documentContext?'CONTEXTE DU DOCUMENT OUVERT:\n'+documentContext+'\n\nDEMANDE UTILISATEUR:\n':'')+message.slice(0,6000)}]});
     const answer = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join("\n");
     res.json({ answer });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -512,7 +519,7 @@ Quand l'utilisateur demande comment faire une action, donne les étapes exactes 
 
 // Génération de texte libre (rédaction assistée : plans, chapitres, réécriture…). Auth + plan Pro+ + quota.
 app.post("/api/ai/generate", auth, async (req, res) => {
-  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Fonction IA non configurée sur le serveur." });
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Fonction IA non configurée sur le serveur." });
   const prompt = String((req.body && req.body.prompt) || "").trim();
   const system = String((req.body && req.body.system) || "").slice(0, 6000);
   const maxTokens = Math.min(Math.max(Number(req.body && req.body.maxTokens) || 1400, 200), 8000);
@@ -528,7 +535,7 @@ app.post("/api/ai/generate", auth, async (req, res) => {
     ? [...imageBlocks, { type: "text", text: prompt.slice(0, 14000) }]
     : prompt.slice(0, 14000);
   try {
-    const data = await anthropicMessage({
+    const data = await geminiMessage({
       max_tokens: maxTokens,
       system: system || "Tu es un assistant de rédaction expert. Réponds en français, de façon claire, structurée et complète.",
       messages: [{ role: "user", content: userContent }]
@@ -545,43 +552,31 @@ app.post("/api/ai/generate", auth, async (req, res) => {
 // et retouche (arrière-plan, objets sur images/graphiques). Clé serveur uniquement.
 // ──────────────────────────────────────────────────────────────────────────
 
-// Appel JSON (génération). Le modèle renvoie toujours du base64 : pas de response_format.
-async function openaiImageJson(path, body) {
-  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
-  const r = await fetch(OPENAI_BASE + path, {
-    method: "POST",
-    headers: { "content-type": "application/json", "authorization": "Bearer " + OPENAI_API_KEY },
-    body: JSON.stringify(body)
+// Appel JSON (génération). Le modèle renvoie du base64 : pas de response_format.
+async function geminiImage(prompt,source,aspect='2:3') {
+  const parts=[{text:String(prompt).slice(0,4000)}];
+  if(source){const im=await sourceToBlob(source);const bytes=Buffer.from(await im.blob.arrayBuffer());
+    if(bytes.length>12*1024*1024)throw new Error('Image source trop volumineuse (12 Mo maximum).');
+    parts.push({inlineData:{mimeType:im.blob.type||'image/png',data:bytes.toString('base64')}});
+  }
+  const data=await geminiRequest(GEMINI_IMAGE_MODEL,[{role:'user',parts}],{
+    generationConfig:{responseModalities:['TEXT','IMAGE'],imageConfig:{aspectRatio:aspect}}
   });
-  const txt = await r.text();
-  if (!r.ok) throw new Error("Erreur de génération d'image (" + r.status + ") : " + openaiErrText(txt));
-  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse du service d'image illisible."); }
-  return data;
+  const img=(data.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData?.data);
+  if(!img)throw new Error('Le modèle Gemini ne retourne pas d’image. Vérifier GEMINI_IMAGE_MODEL et ses droits.');
+  return {data:[{b64_json:img.inlineData.data,mime_type:img.inlineData.mimeType||'image/png'}]};
 }
-
-// Appel multipart (retouche). Le service exige multipart/form-data avec le fichier image.
-async function openaiImageEdit(fields) {
-  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY manquante");
-  const form = new FormData();
-  form.append("model", fields.model);
-  form.append("prompt", fields.prompt);
-  if (fields.size) form.append("size", fields.size);
-  const img = await sourceToBlob(fields.image);
-  form.append("image", img.blob, img.name);
-  if (fields.mask) { const m = await sourceToBlob(fields.mask); form.append("mask", m.blob, "mask.png"); }
-  const r = await fetch(OPENAI_BASE + "/images/edits", {
-    method: "POST",
-    headers: { "authorization": "Bearer " + OPENAI_API_KEY }, // pas de content-type : fetch pose le boundary
-    body: form
-  });
-  const txt = await r.text();
-  if (!r.ok) throw new Error("Erreur de retouche d'image (" + r.status + ") : " + openaiErrText(txt));
-  let data; try { data = JSON.parse(txt); } catch (e) { throw new Error("Réponse du service d'image illisible."); }
-  return data;
+async function geminiImageJson(path,body){
+  const aspect=body.size==='1024x1024'?'1:1':body.size==='1536x1024'?'3:2':'2:3';
+  return geminiImage(body.prompt,null,aspect);
+}
+async function geminiImageEdit(fields){
+  if(fields.mask)throw new Error('La retouche avec masque n’est pas encore prise en charge par le connecteur Gemini.');
+  return geminiImage(fields.prompt,fields.image);
 }
 
 // Extrait un message d'erreur lisible du corps d'erreur du service d'image.
-function openaiErrText(txt) {
+function geminiErrText(txt) {
   try { const j = JSON.parse(txt); if (j && j.error && j.error.message) return j.error.message; } catch (e) {}
   return String(txt || "").slice(0, 400);
 }
@@ -615,7 +610,7 @@ function imagesToUrls(data) {
     : (data && data.url) ? [{ url: data.url }]
     : [];
   return arr.map(function (it) {
-    if (it && it.b64_json) return "data:image/png;base64," + it.b64_json;
+    if (it && it.b64_json) return "data:"+(it.mime_type||"image/png")+";base64," + it.b64_json;
     if (it && it.url) return it.url;
     return null;
   }).filter(Boolean);
@@ -631,13 +626,13 @@ function sizeFromAspect(ar) {
 }
 
 function imageGateError(req) {
-  if (!OPENAI_API_KEY) return { code: 503, error: "La génération d'image n'est pas encore configurée sur le serveur." };
+  if (!GEMINI_API_KEY) return { code: 503, error: "La génération d'image n'est pas encore configurée sur le serveur." };
   if (levelOf(req.user.plan) < 2) return { code: 402, error: "Le traitement d'image par IA nécessite le plan Pro ou supérieur." };
   return null;
 }
 
 app.get("/api/image/status", auth, (req, res) => {
-  res.json({ ok: !!OPENAI_API_KEY, configured: !!OPENAI_API_KEY });
+  res.json({ ok: !!GEMINI_API_KEY, configured: !!GEMINI_API_KEY });
 });
 
 // Génération d'image à partir d'un texte (couvertures, illustrations).
@@ -650,9 +645,9 @@ app.post("/api/image/generate", auth, async (req, res) => {
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
   const n = Math.min(Math.max(Number(req.body && req.body.n) || 1, 1), 4);
   // Compatible gpt-image-1 (défaut) ET dall-e-3 (alternative si l'organisation OpenAI n'est pas
-  // vérifiée pour gpt-image-1 : il suffit de poser OPENAI_IMAGE_MODEL=dall-e-3 sur le serveur).
-  const isDalle = /dall-e/i.test(OPENAI_IMAGE_MODEL);
-  const body = { model: OPENAI_IMAGE_MODEL, prompt: prompt.slice(0, 4000), n: isDalle ? 1 : n };
+  // vérifiée pour gpt-image-1 : il suffit de poser GEMINI_IMAGE_MODEL=dall-e-3 sur le serveur).
+  const isDalle = false;
+  const body = { model: GEMINI_IMAGE_MODEL, prompt: prompt.slice(0, 4000), n: isDalle ? 1 : n };
   if (isDalle) body.response_format = "b64_json"; // DALL·E renvoie une URL par défaut ; on force le base64 exploitable.
   const ar = String((req.body && req.body.aspect_ratio) || "").toLowerCase();
   const szReq = req.body && req.body.size;
@@ -662,9 +657,9 @@ app.post("/api/image/generate", auth, async (req, res) => {
   else { const s = sizeFromAspect(ar); if (s !== "auto") size = s; }
   if (size) body.size = size;
   // gpt-image-1 : qualité économique par défaut (grosse différence de coût). DALL·E garde sa qualité standard.
-  if (!isDalle) body.quality = String((req.body && req.body.quality) || OPENAI_IMAGE_QUALITY);
+  if (!isDalle) body.quality = String((req.body && req.body.quality) || 'medium');
   try {
-    const data = await openaiImageJson("/images/generations", body);
+    const data = await geminiImageJson("/images/generations", body);
     const images = imagesToUrls(data);
     if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
     await incUsage(req.user.email);
@@ -683,11 +678,11 @@ app.post("/api/image/edit", auth, async (req, res) => {
   const quota = AI_QUOTA[req.user.plan] ?? 0;
   const used = await getUsage(req.user.email);
   if (used >= quota) return res.status(429).json({ error: `Quota IA mensuel atteint (${quota}). Il se réinitialise le mois prochain.` });
-  const fields = { model: OPENAI_EDIT_MODEL, prompt: prompt.slice(0, 2000), image };
+  const fields = { model: GEMINI_IMAGE_MODEL, prompt: prompt.slice(0, 2000), image };
   const sz = req.body && req.body.size; if (sz && /^\d+x\d+$/.test(String(sz))) fields.size = String(sz);
   const mask = req.body && req.body.mask; if (mask) fields.mask = String(mask);
   try {
-    const data = await openaiImageEdit(fields);
+    const data = await geminiImageEdit(fields);
     const images = imagesToUrls(data);
     if (!images.length) return res.status(502).json({ error: "Aucune image n'a pu être générée." });
     await incUsage(req.user.email);
@@ -696,7 +691,7 @@ app.post("/api/image/edit", auth, async (req, res) => {
 });
 
 app.post("/api/copilot", auth, async (req, res) => {
-  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
+  if (!GEMINI_API_KEY) return res.status(503).json({ error: "Readix Copilot n’est pas configuré sur le serveur." });
   const message = String((req.body && req.body.message) || "").trim();
   const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-16) : [];
   const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 50000);
@@ -750,21 +745,7 @@ Page actuelle : ${page}
 ${documentContext ? "CONTEXTE FOURNI PAR READIX :\n" + documentContext : "Aucun contenu de document supplémentaire n’a été ajouté à cette demande."}`;
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1800,
-        system,
-        messages: [
-          ...historyForModel,
-          { role: "user", content: ((currentAttachments.length ? "PIÈCES JOINTES À CETTE QUESTION :\n" + currentAttachments.map(a => `--- ${a.name}${a.page ? ` — page ${a.page}` : ""} ---\n${a.text}`).join("\n\n") + "\n\n" : "") + message).slice(0, 60000) }
-        ]
-      })
-    });
-    if (!r.ok) throw new Error("Erreur IA : " + (await r.text()));
-    const data = await r.json();
+    const data = await geminiMessage({max_tokens:1800,system,messages:[...historyForModel,{role:'user',content:((currentAttachments.length?'PIÈCES JOINTES À CETTE QUESTION :\n'+currentAttachments.map(a=>`--- ${a.name}${a.page?` — page ${a.page}`:''} ---\n${a.text}`).join('\n\n')+'\n\n':'')+message).slice(0,60000)}]});
     const answer = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
     await incUsage(req.user.email);
     res.json({ answer, used: used + 1, quota });
@@ -824,7 +805,7 @@ function buildImageBlocks(attachments) {
 }
 async function handleCopilotAction(req, res) {
   console.log("[COPILOT ACTION]", req.method, req.path, "user=", req.user?.email, "plan=", req.user?.plan);
-  if (!ANTHROPIC_API_KEY) return res.status(503).json({ error:"Readix Copilot n’est pas configuré sur le serveur (ANTHROPIC_API_KEY manquante)." });
+  if (!GEMINI_API_KEY) return res.status(503).json({ error:"Readix Copilot n’est pas configuré sur le serveur (GEMINI_API_KEY manquante)." });
   const message = String((req.body && req.body.message) || "").trim();
   const history = Array.isArray(req.body && req.body.history) ? req.body.history.slice(-12) : [];
   const documentContext = String((req.body && req.body.documentContext) || "").slice(0, 45000);
@@ -890,7 +871,7 @@ ${atts.length?"PIÈCES JOINTES :\n"+atts.map(a=>`--- ${a.name}${a.page?` — pag
       const userContent=imageBlocks.length
         ? [...imageBlocks,{type:"text",text:message.slice(0,10000)}]
         : message.slice(0,10000);
-      data=await anthropicMessage({model:ANTHROPIC_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:userContent}]});
+      data=await geminiMessage({model:GEMINI_FAST_MODEL,max_tokens:4096,system:actionSystem,messages:[...hist,{role:"user",content:userContent}]});
     } catch(e) {
       console.error("[COPILOT ACTION]", e.message);
       return res.status(502).json({error:e.message});
@@ -908,7 +889,7 @@ app.post("/api/copilot/action/", auth, handleCopilotAction);
 app.post("/api/copilot/actions", auth, handleCopilotAction);
 
 app.post("/api/ai/:feature", auth, async (req, res) => {
-  console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!ANTHROPIC_API_KEY);
+  console.log("[AI] feature=" + req.params.feature, "user=" + req.user.email, "plan=" + req.user.plan, "keyPresent=" + !!GEMINI_API_KEY);
   const feature = req.params.feature;
   const system = AI_PROMPTS[feature];
   if (!system) return res.status(501).json({ error: `« ${feature} » nécessite un service dédié (voir README).` });
@@ -928,7 +909,7 @@ app.post("/api/ai/:feature", auth, async (req, res) => {
     if (question) userContent += `\n\nQuestion : ${question}`;
     if (target) userContent += `\n\nLangue cible : ${target}`;
     console.log("[AI] reçu: textLen=" + text.length + (question ? " (question)" : ""));
-    const answer = await callAnthropic(system, userContent.slice(0, 60000));
+    const answer = await callGemini(system, userContent.slice(0, 60000));
     console.log("[AI] réponse: len=" + (answer ? answer.length : 0));
     await incUsage(req.user.email); // on compte l'opération réussie
     res.json({ answer, used: used + 1, quota });
@@ -948,7 +929,7 @@ initDb()
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Readix serveur démarré sur ${CLIENT_URL} (port ${PORT})`);
       if (!DATABASE_URL) console.log("⚠️  DATABASE_URL absente : comptes désactivés.");
-      if (!ANTHROPIC_API_KEY) console.log("⚠️  ANTHROPIC_API_KEY absente : fonctions IA indisponibles.");
+      if (!GEMINI_API_KEY) console.log("⚠️  GEMINI_API_KEY absente : fonctions IA indisponibles.");
       if (!stripe) console.log("⚠️  Stripe non configuré : paiement désactivé.");
     });
   });
