@@ -11654,14 +11654,16 @@ function rx553Compose(operations,doc,required=[]){
  // du contact décoratif légitime (filets fins, séparateurs, encadrements).
  const shapes=ops.filter(o=>o.tool==='add_rectangle'||o.tool==='add_ellipse');
  const imgs=ops.filter(o=>o.tool==='add_image');
- const isRule=sh=>Math.min(sh.w,sh.h)<=3; // filet fin (≤ 3 mm) : jamais bloquant
- const textMaskLim=tx=>Math.max(4,0.25*tx.w*tx.h); // masquage réel = > 25 % de l'aire du bloc texte
+ const isRule=sh=>Math.min(sh.w,sh.h)<=5; // filet (≤ 5 mm) : jamais bloquant, jamais déplacé
+ const textMaskLim=tx=>Math.max(4,0.25*tx.w*tx.h); // masquage réel = > 25 % de l aire du bloc texte
+ const glyphBox=tx=>({page:tx.page,x:tx.x,y:tx.y+0.2*tx.h,w:tx.w,h:0.6*tx.h}); // zone réellement occupée par les glyphes (le padding de la boîte ne compte pas)
+ const imgCore=im=>({page:im.page,x:im.x+0.1*im.w,y:im.y+0.1*im.h,w:0.8*im.w,h:0.8*im.h}); // centre de l illustration : les bandes de cadre en bordure ne comptent pas
  for(let pass=0;pass<8;pass++){
   let moved=false;
   for(const sh of shapes){
    if(isRule(sh))continue; // un filet ne se déplace pas : il est légitime par nature
    for(const tx of texts){if(sh.page!==tx.page)continue;
-    if(rx56Overlap(sh,tx)>textMaskLim(tx)){
+    if(rx56Overlap(sh,glyphBox(tx))>textMaskLim(tx)){
      const cand=tx.y+tx.h+2;
      if(cand+sh.h<=H-safe){sh.y=cand;moved=true}
      else if(tx.x+tx.w+2+sh.w<=W-safe){sh.x=tx.x+tx.w+2;moved=true}
@@ -11669,7 +11671,7 @@ function rx553Compose(operations,doc,required=[]){
     }
    }
    for(const im of imgs){if(sh.page!==im.page)continue;
-    if(rx56Overlap(sh,im)>0.05*im.w*im.h){
+    if(rx56Overlap(sh,imgCore(im))>0.05*im.w*im.h){
      const cand=im.y+im.h+2;
      if(cand+sh.h<=H-safe){sh.y=cand;moved=true}
      else if(im.x+im.w+2+sh.w<=W-safe){sh.x=im.x+im.w+2;moved=true}
@@ -11680,10 +11682,10 @@ function rx553Compose(operations,doc,required=[]){
  }
  for(const sh of shapes){if(isRule(sh))continue;
   for(const tx of texts){if(sh.page!==tx.page)continue;
-   if(rx56Overlap(sh,tx)>textMaskLim(tx))blocking.push('Forme masquant un titre : déplacer ou réduire la forme près de « '+tx.text.slice(0,30)+' »');
+   if(rx56Overlap(sh,glyphBox(tx))>textMaskLim(tx))blocking.push('Forme masquant un titre : déplacer ou réduire la forme près de « '+tx.text.slice(0,30)+' »');
   }
  }
- for(const sh of shapes)for(const im of imgs)if(sh.page===im.page&&rx56Overlap(sh,im)>0.30*im.w*im.h)blocking.push('Forme obstruant l’illustration (plus de 30 % de la zone image)');
+ for(const sh of shapes)for(const im of imgs)if(sh.page===im.page&&rx56Overlap(sh,imgCore(im))>0.30*im.w*im.h)blocking.push('Forme obstruant l’illustration (plus de 30 % de la zone centrale)');
  for(const sh of shapes)if(!inside(sh))blocking.push('Forme décorative hors zone sûre');
  // Phase 56 — ordre des calques canonique : fond < image < formes < textes.
  for(const o of ops)o.zRank=o.tool==='set_page_background'?0:o.tool==='add_image'?1:o.tool==='add_text'?3:2;
