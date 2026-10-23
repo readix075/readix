@@ -11459,6 +11459,61 @@ function rx556ResizeOperations(operations,source,target){
 }
 // Phase 54 — Passerelle IA documentaire. Opérations explicites, validation et aperçu avant application.
 const RX54_CAPABILITIES=Object.freeze(['add_text','add_rectangle','add_ellipse','set_page_background','add_image']);
+
+// ============================================================
+// Phase 56 — Moteur PAO corrigé : images réelles, validation honnête,
+// typographie lisible, collisions généralisées, empreinte aperçu/appliqué.
+// ============================================================
+function rx56NormalizeImageSrc(raw){
+ const s=String(raw||'').replace(/\s+/g,'');
+ const m=/^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/i.exec(s);
+ if(!m)return null;
+ const mime=m[1].toLowerCase().replace('image/jpg','image/jpeg');
+ const b64=m[2];
+ if(b64.length<64||b64.length>20000000)return null;
+ try{if(atob(b64.slice(0,96)).length<48)return null;}catch(_e){return null;} // Phase 56.1 : seuil compatible petites images valides (padding base64)
+ return 'data:'+mime+';base64,'+b64;
+}
+function rx56VerifyImageDecodes(src,timeoutMs){
+ return new Promise(function(res){
+  let done=false;const finish=v=>{if(done)return;done=true;clearTimeout(t);res(v)};
+  const t=setTimeout(()=>finish(false),timeoutMs||9000);
+  try{const img=new Image();
+   img.onload=()=>finish(img.naturalWidth>0&&img.naturalHeight>0);
+   img.onerror=()=>finish(false);
+   img.src=src;}catch(_e){finish(false)}
+ });
+}
+function rx56NeedsIllustration(prompt){
+ return /couverture|illustration|affiche|photo|portrait|sc[eè]ne|paysage|univers|cosmos|plan[eè]te|astronom|galax|rue|ville|personnage|silhouette|architecture|r[eé]verb/i.test(String(prompt||''));
+}
+function rx56StableStringify(v){
+ if(Array.isArray(v))return '['+v.map(rx56StableStringify).join(',')+']';
+ if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+rx56StableStringify(v[k])).join(',')+'}';
+ return JSON.stringify(v);
+}
+function rx56Fingerprint(ops){
+ let h=0x811c9dc5;const s=rx56StableStringify(ops);
+ for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}
+ return 'fp56-'+h.toString(16);
+}
+function rx56Overlap(a,b){const w=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);const h=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);return (w>0&&h>0)?w*h:0;}
+// SEUL adaptateur plan Gemini → objets natifs, partagé par l'aperçu ET l'application.
+function rx56OpsToItems(ops,s,opts){
+ opts=opts||{};const items=[],px=v=>mmPx(v,s),FP=opts.fingerprint||'';
+ for(const op of ops){
+  if(op.tool==='set_page_background')continue;
+  const it={id:(opts.idPrefix||'')+'obj'+(s.nextItemId++),type:op.tool==='add_image'?'frame':op.tool==='add_text'?'text':op.tool==='add_ellipse'?'ellipse':'rect',
+   layerId:s.activeLayer,x:px(op.x),y:px(op.y),w:px(op.w),h:px(op.h),
+   fill:op.tool==='add_text'?'transparent':op.color,stroke:'transparent',strokeWidth:0,rot:0,opacity:1,rx55Generated:true,rx56Fingerprint:FP};
+  if(op.tool==='add_image')Object.assign(it,{imageSrc:op.imageSrc,fit:'cover',imageScale:100,imageX:50,imageY:50,imageOpacity:1,fill:'transparent',stroke:'transparent',strokeWidth:0,rx552Image:true,zRank:1});
+  if(op.tool==='add_text')Object.assign(it,{text:op.text,fontFamily:op.fontFamily,fontSize:op.fontSize,bold:op.bold,letterSpacing:op.letterSpacing,lineHeight:1.14,textColor:op.color,textAlign:op.align,textInset:0,zRank:3});
+  if(op.tool==='add_rectangle'||op.tool==='add_ellipse')it.zRank=2;
+  items.push(it);
+ }
+ items.sort((a,b)=>(a.zRank||0)-(b.zRank||0));
+ return items.map((it,i)=>(it.z=i+1,it));
+}
 function rx54Validate(plan){
  if(!plan||!Array.isArray(plan.operations)||!plan.operations.length||plan.operations.length>50)throw Error('La proposition ne contient pas de composition valide.');
  return plan.operations.map(raw=>{
@@ -11471,7 +11526,7 @@ function rx54Validate(plan){
   if(op.x<0||op.y<0||op.w<=0||op.h<=0||op.x+op.w>600||op.y+op.h>600)throw Error('Un objet dépasse les dimensions autorisées');
   if(raw.tool==='add_image'){op.imageSrc=String(raw.imageSrc||'');if(op.imageSrc&&!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(op.imageSrc))throw Error('Image IA invalide (PNG, JPEG ou WebP attendu)');return op;}
   if(raw.tool==='add_text'){
-   if(String(raw.text||'').length>1200)throw Error('Texte supérieur à 1200 caractères : répartissez-le en plusieurs blocs.');op.text=String(raw.text||'');op.fontSize=Math.max(7,Math.min(100,n('fontSize',18)));
+   if(String(raw.text||'').length>1200)throw Error('Texte supérieur à 1200 caractères : répartissez-le en plusieurs blocs.');op.text=String(raw.text||'');op.fontSize=Math.max(12,Math.min(100,n('fontSize',18))); // Phase 56 : lisibilité minimale garantie
    op.align=['left','center','right'].includes(raw.align)?raw.align:'left';
    op.fontFamily=['Georgia','Arial','Times New Roman','Verdana'].includes(raw.fontFamily)?raw.fontFamily:'Georgia';
    op.bold=raw.bold===true;op.letterSpacing=Math.max(-1,Math.min(8,n('letterSpacing',0)));
@@ -11564,13 +11619,19 @@ function rx553Compose(operations,doc,required=[]){
   o.x=Math.max(safe,Math.min(o.x,W-safe-12));o.y=Math.max(safe,Math.min(o.y,H-safe-6));
   o.w=Math.max(12,Math.min(o.w,W-safe-o.x));o.h=Math.max(6,Math.min(o.h,H-safe-o.y));
   const old=o.fontSize;
-  // Préserver la taille quand une zone plus large est disponible.
-  if(!fit(o)){o.w=Math.max(o.w,W-safe-o.x);}
-  for(let f=o.fontSize;f>=12&&!fit(o);f--)o.fontSize=f-1;
+  // Phase 56 — ajustement progressif fondé sur la mesure réelle (Canvas + audit DOM en amont).
+  if(o.fontSize<12){issues.push('Taille relevée pour lisibilité : « '+o.text.slice(0,28)+' » ('+o.fontSize+' → 12 px)');o.fontSize=12;}
+  if(!fit(o)){o.w=Math.max(o.w,W-safe-o.x);}          // 1. élargir le cadre jusqu'à la zone sûre
+  if(!fit(o)&&o.letterSpacing>0)o.letterSpacing=0;   // 2. neutraliser l'espacement des caractères
+  for(let f=o.fontSize;f>12&&!fit(o);f--)o.fontSize=f-1; // 3. réduire modérément (plancher 12 px)
   o.fontSize=Math.max(12,o.fontSize);
-  if(!fit(o)){
+  if(!fit(o)){                                       // 4. agrandir le cadre en hauteur si possible
    const need=measure(o,o.fontSize)/Math.max(.01,px(1));
    if(Number.isFinite(need)&&o.y+need<=H-safe)o.h=Math.max(o.h,need);
+  }
+  if(!fit(o)){                                       // 5. remonter le bloc (les collisions seront résolues ensuite)
+   const need=measure(o,o.fontSize)/Math.max(.01,px(1));
+   if(Number.isFinite(need)&&need<=H-2*safe){o.y=safe;o.h=Math.max(o.h,need);}
   }
   if(!fit(o)||!inside(o))blocking.push('Texte non ajustable : « '+o.text.slice(0,48)+' »');
   else if(old!==o.fontSize)issues.push('Taille adaptée : « '+o.text.slice(0,28)+' » ('+old+' → '+o.fontSize+' px)');
@@ -11589,6 +11650,34 @@ function rx553Compose(operations,doc,required=[]){
   }
   if(!moved)break;
  }
+ // Phase 56 — collisions formes/titres/illustrations : aucun masquage accidentel.
+ const shapes=ops.filter(o=>o.tool==='add_rectangle'||o.tool==='add_ellipse');
+ const imgs=ops.filter(o=>o.tool==='add_image');
+ for(let pass=0;pass<8;pass++){
+  let moved=false;
+  for(const sh of shapes){
+   for(const tx of texts){if(sh.page!==tx.page)continue;
+    if(rx56Overlap(sh,tx)>4){
+     const cand=tx.y+tx.h+2;
+     if(cand+sh.h<=H-safe){sh.y=cand;moved=true}
+     else if(tx.x+tx.w+2+sh.w<=W-safe){sh.x=tx.x+tx.w+2;moved=true}
+    }
+   }
+   for(const im of imgs){if(sh.page!==im.page)continue;
+    if(rx56Overlap(sh,im)>0.05*im.w*im.h){
+     const cand=im.y+im.h+2;
+     if(cand+sh.h<=H-safe){sh.y=cand;moved=true}
+     else if(im.x+im.w+2+sh.w<=W-safe){sh.x=im.x+im.w+2;moved=true}
+    }
+   }
+  }
+  if(!moved)break;
+ }
+ for(const sh of shapes)for(const tx of texts)if(sh.page===tx.page&&rx56Overlap(sh,tx)>4)blocking.push('Forme masquant un titre : déplacer ou réduire la forme près de « '+tx.text.slice(0,30)+' »');
+ for(const sh of shapes)for(const im of imgs)if(sh.page===im.page&&rx56Overlap(sh,im)>0.30*im.w*im.h)blocking.push('Forme obstruant l’illustration (plus de 30 % de la zone image)');
+ for(const sh of shapes)if(!inside(sh))blocking.push('Forme décorative hors zone sûre');
+ // Phase 56 — ordre des calques canonique : fond < image < formes < textes.
+ for(const o of ops)o.zRank=o.tool==='set_page_background'?0:o.tool==='add_image'?1:o.tool==='add_text'?3:2;
  for(let i=0;i<texts.length;i++)for(let j=i+1;j<texts.length;j++){
   const a=texts[i],b=texts[j];if(a.page===b.page&&intersects(a,b))blocking.push('Chevauchement : « '+a.text.slice(0,22)+' » / « '+b.text.slice(0,22)+' »');
  }
@@ -11608,28 +11697,24 @@ function rx54Apply(t,stage,plan){
    // Le fond est désormais une propriété native de la page, conservée dans le .rxd.
    for(let i=list.length-1;i>=0;i--)if(list[i].rx55PageBackground)list.splice(i,1);
   }else{
-   const item={id:'obj'+staged.nextItemId++,type:op.tool==='add_image'?'frame':op.tool==='add_text'?'text':op.tool==='add_ellipse'?'ellipse':'rect',layerId:staged.activeLayer,x:px(op.x),y:px(op.y),w:px(op.w),h:px(op.h),z:list.length+1,fill:op.tool==='add_text'?'transparent':op.color,stroke:'transparent',strokeWidth:0,rot:0,opacity:1,rx55Generated:true};
-   if(op.tool==='add_image')Object.assign(item,{imageSrc:op.imageSrc,fit:'cover',fill:'transparent',stroke:'transparent',strokeWidth:0,rx552Image:true});
-  if(op.tool==='add_text')Object.assign(item,{text:op.text,fontFamily:op.fontFamily,fontSize:op.fontSize,bold:op.bold,letterSpacing:op.letterSpacing,lineHeight:1.14,textColor:op.color,textAlign:op.align,textInset:0});
-   if(op.tool==='add_image'){list.unshift(item);list.forEach((entry,i)=>entry.z=i+1)}else list.push(item);
+   // Phase 56 — adaptateur unique partagé avec l'aperçu ; l'image n'est plus plaquée sous les formes.
+   const items=rx56OpsToItems([op],staged,{fingerprint:plan.fingerprint||''});
+   const base=list.length;items.forEach((it,i)=>it.z=base+i+1);list.push(...items);
   }
  }
  t.idState=staged;dirty(t);render(t,stage);
 }
 function rx55Escape(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function rx55Preview(ops,s){
- // Phase 55.1 : aperçu construit avec le MÊME renderer que l'éditeur, pas une maquette HTML approximative.
+function rx55Preview(ops,s,fp){
+ // Phase 56 : l'aperçu et l'application passent par le MÊME adaptateur rx56OpsToItems
+ // (positions, couleurs, typographies, images et ordre des calques strictement identiques).
  const snapshot=JSON.parse(JSON.stringify(s));
  snapshot.pageBackgrounds=snapshot.pageBackgrounds||{};
  snapshot.pageItems=snapshot.pageItems||{};
  const n=s.current,arr=snapshot.pageItems[n]=[];
- const px=v=>mmPx(v,snapshot);
  for(const op of ops.filter(o=>o.page===n)){
   if(op.tool==='set_page_background'){snapshot.pageBackgrounds[n]=op.color;continue}
-  const item={id:'preview-'+arr.length,type:op.tool==='add_image'?'frame':op.tool==='add_text'?'text':op.tool==='add_ellipse'?'ellipse':'rect',layerId:snapshot.activeLayer,x:px(op.x),y:px(op.y),w:px(op.w),h:px(op.h),z:arr.length+1,fill:op.tool==='add_text'?'transparent':op.color,stroke:'transparent',strokeWidth:0,rot:0,opacity:1};
-  if(op.tool==='add_image')Object.assign(item,{imageSrc:op.imageSrc,fit:'cover',fill:'transparent',stroke:'transparent',strokeWidth:0,rx552Image:true});
-  if(op.tool==='add_text')Object.assign(item,{text:op.text,fontFamily:op.fontFamily,fontSize:op.fontSize,bold:op.bold,letterSpacing:op.letterSpacing,lineHeight:1.14,textColor:op.color,textAlign:op.align,textInset:0,rx55Generated:true});
-  if(op.tool==='add_image'){arr.unshift(item);arr.forEach((entry,i)=>entry.z=i+1)}else arr.push(item);
+  arr.push(...rx56OpsToItems([op],snapshot,{idPrefix:'preview-',fingerprint:fp||''}));
  }
  snapshot.selected=null;snapshot.selectedIds=[];snapshot.showMargins=false;snapshot.showGrid=false;snapshot.showBaselineGrid=false;
  const W=px(s.width),H=px(s.height),scale=Math.min(325/W,390/H,1);
@@ -11653,22 +11738,43 @@ function rx54Open(t,stage,root){
  dlg.querySelectorAll('[data-rx55-example]').forEach(b=>b.onclick=()=>{dlg.querySelector('[data-rx54-prompt]').value=b.dataset.rx55Example;dlg.querySelector('[data-rx54-prompt]').focus()});
  const refreshFormat=()=>{
   if(!sourceOperations||!sourceSize)return;
-  const s=ensure(t),target=rx556FormatDimensions(formatSelect.value,sourceSize);
+  const s=ensure(t),target=rx556FormatDimensions(formatSelect.value,sourceSize),promptText=dlg.querySelector('[data-rx54-prompt]').value;
   const candidate=rx556ResizeOperations(sourceOperations,sourceSize,target);
   const virtual={...s,width:target.width,height:target.height};
-  const checked=rx555Compose(candidate,virtual,rx554Required(dlg.querySelector('[data-rx54-prompt]').value));
-  if(checked.operations.some(o=>o.tool==='add_image'&&!o.imageSrc))checked.blocking.push('Illustration manquante : réessayez la génération avant application');
-  proposed={operations:checked.operations,target,blocking:[...checked.blocking],prompt:dlg.querySelector('[data-rx54-prompt]').value};
-  preview.innerHTML=rx55Preview(checked.operations,virtual);
+  const checked=rx555Compose(candidate,virtual,rx554Required(promptText));
+  // Phase 56 — une couverture exigeant une illustration ne peut être « prête » sans image réelle.
+  const needsIllustration=rx56NeedsIllustration(promptText);
+  const imageOps=checked.operations.filter(o=>o.tool==='add_image');
+  if(needsIllustration&&!imageOps.length)checked.blocking.push('Illustration obligatoire : le plan ne réserve aucune zone d’image — régénérez la proposition');
+  else if(imageOps.some(o=>!o.imageSrc))checked.blocking.push('Illustration manquante : générez ou régénérez l’illustration avant application');
+  proposed={operations:checked.operations,target,blocking:[...new Set(checked.blocking)],prompt:promptText,fingerprint:rx56Fingerprint(checked.operations)};
+  preview.innerHTML=rx55Preview(checked.operations,virtual,proposed.fingerprint);
   if(checked.issues.length||checked.blocking.length){const info=document.createElement('div');info.className='rx553-diagnostics';info.textContent='Contrôle de composition : '+[...checked.blocking,...checked.issues].join(' · ');preview.appendChild(info)}
   const count=checked.operations.filter(o=>o.tool!=='set_page_background').length;
-  summary.textContent=count+' objets éditables · '+target.width+' × '+target.height+' mm · page '+s.current;
-  status.textContent=checked.blocking.length?'Révision nécessaire : '+checked.blocking.slice(0,3).join(' · '):(imageWarning?'Maquette prête sans illustration : '+imageWarning:'Maquette prête : contrôles essentiels satisfaits.');
+  summary.textContent=count+' objets éditables · '+target.width+' × '+target.height+' mm · page '+s.current+' · version '+proposed.fingerprint;
+  const imageMissing=needsIllustration&&imageOps.length>0&&imageOps.some(o=>!o.imageSrc);
+  status.textContent=checked.blocking.length?'Correction nécessaire : '+checked.blocking.slice(0,3).join(' · '):(imageMissing?'Illustration manquante':'Prêt à appliquer — contrôles essentiels satisfaits');
   apply.disabled=!!checked.blocking.length;
-  apply.title=checked.blocking.length?checked.blocking.join(' · '):'Appliquer la maquette validée';
+  apply.title=apply.disabled?checked.blocking.join(' · '):'Appliquer la maquette validée (version '+proposed.fingerprint+')';
+  // Phase 56 — action corrective visible : régénérer UNIQUEMENT l'illustration.
+  let regen=dlg.querySelector('[data-rx56-regen]');
+  if(imageMissing&&!regen){regen=document.createElement('button');regen.className='rx55-primary';regen.setAttribute('data-rx56-regen','');regen.style.marginLeft='8px';regen.textContent='↻ Régénérer l’illustration';generate.parentNode.insertBefore(regen,generate.nextSibling);
+   regen.onclick=async()=>{regen.disabled=true;try{const src=await fetchIllustration(dlg.querySelector('[data-rx54-prompt]').value.trim());for(const op of sourceOperations)if(op.tool==='add_image')op.imageSrc=src;imageWarning='';refreshFormat();}catch(e){imageWarning=e.message;refreshFormat();}finally{regen.disabled=false}};}
+  if(regen)regen.style.display=imageMissing?'':'none';
  };
  formatSelect.onchange=refreshFormat;
  dlg.querySelector('[data-rx54-prompt]').addEventListener('input',()=>{if(sourceOperations){apply.disabled=true;apply.title='Brief modifié : générez une nouvelle proposition';status.textContent='Brief modifié : générez une nouvelle proposition avant application.';}});
+ const fetchIllustration=async(promptText)=>{
+  const tok=typeof getToken==='function'?getToken():localStorage.getItem('readix_token');
+  if(!tok)throw Error('Connectez-vous pour utiliser la création IA.');
+  const ir=await fetch('/api/readox/layout/illustration',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+tok},body:JSON.stringify({prompt:promptText})});
+  const idata=await ir.json();
+  if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
+  const normalized=rx56NormalizeImageSrc(idata.imageSrc);
+  if(!normalized)throw Error('Réponse image Gemini invalide (PNG, JPEG ou WebP attendu)');
+  if(!(await rx56VerifyImageDecodes(normalized)))throw Error('Image générée illisible : décodage impossible');
+  return normalized;
+ };
  generate.onclick=async()=>{
   proposed=null;sourceOperations=null;sourceSize=null;imageWarning='';apply.disabled=true;const prompt=dlg.querySelector('[data-rx54-prompt]').value.trim();
   if(!prompt){status.textContent='Décrivez votre projet pour commencer.';return}
@@ -11683,11 +11789,8 @@ function rx54Open(t,stage,root){
    if(imageOps.length){
     status.textContent='Création de l’illustration par Gemini…';
     try{
-    const ir=await fetch('/api/readox/layout/illustration',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({prompt})});
-    const idata=await ir.json();
-    if(!ir.ok)throw Error(idata.error||'Génération d’image indisponible');
-    if(!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(String(idata.imageSrc||'')))throw Error('Format image Gemini invalide');
-    for(const op of imageOps)op.imageSrc=idata.imageSrc;
+    const src=await fetchIllustration(prompt);
+    for(const op of imageOps)op.imageSrc=src;
     }catch(imageError){imageWarning=imageError.message;for(const op of imageOps)op.imageSrc='';}
    }
    sourceSize={width:s.width,height:s.height};sourceOperations=operations;
@@ -11701,7 +11804,8 @@ function rx54Open(t,stage,root){
   const virtual={...current,width:target.width,height:target.height};
   if(proposed.prompt!==dlg.querySelector('[data-rx54-prompt]').value)throw Error('Le brief a changé : générez une nouvelle proposition avant application.');
   if(proposed.blocking.length)throw Error('Application bloquée : '+proposed.blocking[0]);
-  const finalCheck={operations:proposed.operations}; // Appliquer exactement le plan affiché et validé, sans recalcul divergent.
+  const finalCheck={operations:proposed.operations,fingerprint:rx56Fingerprint(proposed.operations)}; // Appliquer exactement le plan affiché et validé, sans recalcul divergent.
+  if(finalCheck.fingerprint!==proposed.fingerprint)throw Error('La proposition affichée a été modifiée : régénérez avant application.');
   if(resized){current.width=target.width;current.height=target.height;}
   rx54Apply(t,stage,{operations:finalCheck.operations});toast('Maquette appliquée : chaque objet reste éditable.','ok');dlg.remove()}catch(e){status.textContent=e.message}};
 }
