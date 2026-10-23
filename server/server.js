@@ -472,13 +472,31 @@ app.post('/api/readox/layout/plan',auth,async(req,res)=>{
  const schema={type:'object',additionalProperties:false,required:['operations'],properties:{operations:{type:'array',maxItems:50,items:{type:'object',additionalProperties:false,required:['tool','page','x','y','w','h','text','fontSize','color','align','fontFamily','bold','letterSpacing'],properties:{tool:{type:'string',enum:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']},page:{type:'integer',minimum:1,maximum:pages},x:{type:'number'},y:{type:'number'},w:{type:'number'},h:{type:'number'},text:{type:'string'},fontSize:{type:'number'},color:{type:'string'},align:{type:'string',enum:['left','center','right']},fontFamily:{type:'string',enum:['Georgia','Arial','Times New Roman','Verdana']},bold:{type:'boolean'},letterSpacing:{type:'number'}}}}}};
  try{
   const systemPrompt='Outils PAO réellement disponibles et leur rôle : '+JSON.stringify(READOX_PAO_TOOLS)+'. Ne demande jamais un outil absent. Préserve intégralement les titres et noms. Tu es un directeur artistique expert en couvertures de livres et magazines. Génère une composition éditoriale sophistiquée, équilibrée et professionnelle, pas un simple bandeau. Réponds uniquement en JSON selon le schéma. Coordonnées en millimètres, document '+width+' x '+height+' mm, '+pages+' pages. Travaille sur la page '+(Number(doc.current)||1)+'. Utilise set_page_background pour le fond intégral, add_image pour UNE illustration photographique ou artistique principale sans texte, add_rectangle et add_ellipse pour des motifs abstraits, formes architecturales, orbites et accents, add_text pour la typographie. Utilise exactement une opération add_image pour réserver une grande zone visuelle, sans recouvrir les textes. Produis 8 à 20 objets bien composés avec hiérarchie, espaces négatifs, contrastes, et nom d’auteur si fourni; ne fabrique pas de nom réel si absent (utilise AUTEUR). Évite tout chevauchement des textes, respecte une marge de sécurité de 12 mm. Le titre doit être grand et lisible, avec un sous-titre si pertinent. Tous les objets doivent rester indépendants et éditables. Pour CHAQUE opération remplis tous les champs requis: tool,page,x,y,w,h,text,fontSize,color,align,fontFamily,bold,letterSpacing. Pour set_page_background et formes, utilise x=0,y=0,w=1,h=1,text="",fontSize=12,align="left",fontFamily="Georgia",bold=false,letterSpacing=0. Pour les formes text="". Couleurs #RRGGBB. L’image de add_image sera générée séparément par le service d’images Gemini : n’ajoute pas de texte dans cette image. Garde les titres comme add_text éditables. Ne dépasse jamais les limites de la page.';
-  const data=await geminiRequest(GEMINI_LAYOUT_MODEL,[{role:'user',parts:[{text:prompt}]}],{
-    systemInstruction:{parts:[{text:systemPrompt}]},
-    generationConfig:{responseMimeType:'application/json',maxOutputTokens:8192}
-  });
-  const plan=JSON.parse(geminiText(data).replace(/^```(?:json)?\s*|\s*```$/g,'').trim());
-  if(!Array.isArray(plan.operations)||plan.operations.length>50||plan.operations.some(o=>!['add_text','add_rectangle','add_ellipse','set_page_background','add_image'].includes(o.tool)||o.page<1||o.page>pages||!/^#[0-9a-f]{6}$/i.test(o.color)||[o.x,o.y,o.w,o.h].some(n=>!Number.isFinite(n))||(o.tool!=='set_page_background'&&(o.x<0||o.y<0||o.w<=0||o.h<=0||o.x+o.w>width||o.y+o.h>height))))return res.status(502).json({error:'Plan IA non conforme aux capacités de Readox.'});
-  return res.json({ok:true,plan,capabilities:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']});
+  // Phase 56 — boucle de réparation bornée (3 tentatives max) : validation déterministe,
+  // rapport structuré renvoyé à Gemini, jamais de boucle infinie, jamais de plan « prêt » sans illustration requise.
+  const needsIllustration=/couverture|illustration|affiche|photo|portrait|sc[eè]ne|paysage|univers|cosmos|plan[eè]te|astronom|galax|rue|ville|personnage|silhouette|architecture|r[eé]verb/i.test(prompt);
+  const validatePlan=(plan)=>{
+   if(!plan||!Array.isArray(plan.operations)||!plan.operations.length||plan.operations.length>50)return 'structure JSON invalide (operations manquant, vide ou > 50)';
+   for(const o of plan.operations){if(!o||!['add_text','add_rectangle','add_ellipse','set_page_background','add_image'].includes(o.tool)||o.page<1||o.page>pages||!/^#[0-9a-f]{6}$/i.test(o.color)||[o.x,o.y,o.w,o.h].some(n=>!Number.isFinite(n))||(o.tool!=='set_page_background'&&(o.x<0||o.y<0||o.w<=0||o.h<=0||o.x+o.w>width||o.y+o.h>height)))return 'opération hors capacités, couleur invalide ou objet hors page';}
+   if(needsIllustration&&!plan.operations.some(o=>o.tool==='add_image'))return 'le brief exige une illustration : ajoute exactement une opération add_image (grande zone visuelle, sans texte incrusté)';
+   return null;
+  };
+  let plan=null,lastError='';
+  for(let attempt=0;attempt<3&&!plan;attempt++){
+   try{
+    const extra=attempt?'\n\nRAPPORT DE VALIDATION — le plan précédent a été rejeté : '+lastError+'. Corrige EXACTEMENT ce point en respectant le schéma.':'';
+    const data=await geminiRequest(GEMINI_LAYOUT_MODEL,[{role:'user',parts:[{text:prompt+extra}]}],{
+     systemInstruction:{parts:[{text:systemPrompt}]},
+     generationConfig:{responseMimeType:'application/json',maxOutputTokens:8192}
+    });
+    const candidate=JSON.parse(geminiText(data).replace(/^```(?:json)?\s*|\s*```$/g,'').trim());
+    const err=validatePlan(candidate);
+    if(err){lastError=err;continue;}
+    plan=candidate;
+   }catch(e){lastError=e.message;if(attempt===2)throw e;}
+  }
+  if(!plan)return res.status(502).json({error:'Plan IA non conforme après vérifications : '+lastError});
+  return res.json({ok:true,plan,illustrationRequired:needsIllustration,capabilities:['add_text','add_rectangle','add_ellipse','set_page_background','add_image']});
  }catch(e){return res.status(502).json({error:'Plan IA indisponible : '+e.message});}
 });
 
@@ -491,9 +509,18 @@ app.post('/api/readox/layout/illustration',auth,async(req,res)=>{
  try{
   const body={model:GEMINI_IMAGE_MODEL,size:'1024x1536',quality:'medium',n:1,prompt:'Illustration éditoriale haut de gamme pour couverture de livre ou magazine. '+prompt+'. Illustration seule, sans aucun texte, sans lettres, sans logo, sans signature, sans typographie. Composition artistique soignée, image de haute qualité. La typographie sera ajoutée séparément comme objets éditables.'};
   const data=await geminiImageJson('/images/generations',body);
-  const b64=data?.data?.[0]?.b64_json;
-  if(typeof b64!=='string'||b64.length<100||b64.length>15000000)return res.status(502).json({error:'Image absente ou trop volumineuse.'});
-  return res.json({ok:true,imageSrc:'data:'+(data?.data?.[0]?.mime_type||'image/png')+';base64,'+b64,model:body.model});
+  // Phase 56 — validation de la réalité binaire : magic bytes PNG / JPEG / WebP, MIME réaligné sur les octets.
+  const rawB64=(typeof data?.data?.[0]?.b64_json==='string'?data.data[0].b64_json:'').replace(/\s+/g,'');
+  if(rawB64.length<100||rawB64.length>15000000)return res.status(502).json({error:'Image absente ou trop volumineuse.'});
+  let bytes;try{bytes=Buffer.from(rawB64,'base64');}catch(_e){return res.status(502).json({error:'Données image non décodables (base64 invalide).'});}
+  if(!bytes||bytes.length<200)return res.status(502).json({error:'Image décodée vide ou trop petite.'});
+  const mg=bytes.subarray(0,12);
+  const isPng=mg[0]===0x89&&mg[1]===0x50&&mg[2]===0x4e&&mg[3]===0x47;
+  const isJpg=mg[0]===0xff&&mg[1]===0xd8&&mg[2]===0xff;
+  const isWebp=mg.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP';
+  if(!isPng&&!isJpg&&!isWebp)return res.status(502).json({error:'Données binaires invalides : l’image décodée n’est ni PNG, ni JPEG, ni WebP.'});
+  const finalMime=isPng?'image/png':isJpg?'image/jpeg':'image/webp';
+  return res.json({ok:true,imageSrc:'data:'+finalMime+';base64,'+bytes.toString('base64'),mime:finalMime,bytes:bytes.length,model:body.model});
  }catch(e){return res.status(502).json({error:'Illustration indisponible : '+e.message});}
 });
 
