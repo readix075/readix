@@ -11650,17 +11650,22 @@ function rx553Compose(operations,doc,required=[]){
   }
   if(!moved)break;
  }
- // Phase 56 — collisions formes/titres/illustrations : aucun masquage accidentel.
+ // Phase 56.2 — collisions formes/titres/illustrations : distinguer le MASQUAGE RÉEL
+ // du contact décoratif légitime (filets fins, séparateurs, encadrements).
  const shapes=ops.filter(o=>o.tool==='add_rectangle'||o.tool==='add_ellipse');
  const imgs=ops.filter(o=>o.tool==='add_image');
+ const isRule=sh=>Math.min(sh.w,sh.h)<=3; // filet fin (≤ 3 mm) : jamais bloquant
+ const textMaskLim=tx=>Math.max(4,0.25*tx.w*tx.h); // masquage réel = > 25 % de l'aire du bloc texte
  for(let pass=0;pass<8;pass++){
   let moved=false;
   for(const sh of shapes){
+   if(isRule(sh))continue; // un filet ne se déplace pas : il est légitime par nature
    for(const tx of texts){if(sh.page!==tx.page)continue;
-    if(rx56Overlap(sh,tx)>4){
+    if(rx56Overlap(sh,tx)>textMaskLim(tx)){
      const cand=tx.y+tx.h+2;
      if(cand+sh.h<=H-safe){sh.y=cand;moved=true}
      else if(tx.x+tx.w+2+sh.w<=W-safe){sh.x=tx.x+tx.w+2;moved=true}
+     else if(tx.y-sh.h-2>=safe){sh.y=tx.y-sh.h-2;moved=true} // placer au-dessus du texte
     }
    }
    for(const im of imgs){if(sh.page!==im.page)continue;
@@ -11673,7 +11678,11 @@ function rx553Compose(operations,doc,required=[]){
   }
   if(!moved)break;
  }
- for(const sh of shapes)for(const tx of texts)if(sh.page===tx.page&&rx56Overlap(sh,tx)>4)blocking.push('Forme masquant un titre : déplacer ou réduire la forme près de « '+tx.text.slice(0,30)+' »');
+ for(const sh of shapes){if(isRule(sh))continue;
+  for(const tx of texts){if(sh.page!==tx.page)continue;
+   if(rx56Overlap(sh,tx)>textMaskLim(tx))blocking.push('Forme masquant un titre : déplacer ou réduire la forme près de « '+tx.text.slice(0,30)+' »');
+  }
+ }
  for(const sh of shapes)for(const im of imgs)if(sh.page===im.page&&rx56Overlap(sh,im)>0.30*im.w*im.h)blocking.push('Forme obstruant l’illustration (plus de 30 % de la zone image)');
  for(const sh of shapes)if(!inside(sh))blocking.push('Forme décorative hors zone sûre');
  // Phase 56 — ordre des calques canonique : fond < image < formes < textes.
