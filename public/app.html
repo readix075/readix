@@ -11712,6 +11712,7 @@ function rx55Preview(ops,s,fp){
  snapshot.pageBackgrounds=snapshot.pageBackgrounds||{};
  snapshot.pageItems=snapshot.pageItems||{};
  const n=s.current,arr=snapshot.pageItems[n]=[];
+ const px=v=>mmPx(v,snapshot); // Phase 56.1 : restauré — utilisé par le calcul du viewport ci-dessous
  for(const op of ops.filter(o=>o.page===n)){
   if(op.tool==='set_page_background'){snapshot.pageBackgrounds[n]=op.color;continue}
   arr.push(...rx56OpsToItems([op],snapshot,{idPrefix:'preview-',fingerprint:fp||''}));
