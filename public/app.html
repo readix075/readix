@@ -5280,7 +5280,7 @@ function renderDocumentStudioHome(stage){
   stage.querySelector('[data-ds="indesign"]').onclick=openReadixInDesign;
   stage.querySelector('[data-ds="book"]').onclick=function(){ if(window.openBookAIStudio) openBookAIStudio(); else if(window.openBookStudio) openBookStudio(); };
 }
-function openReadixWordTab(){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();}
+function openReadixWordTab(docHTML){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=docHTML||defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();}
 function openReadixInDesign(){const t=createTab("Document InDesign.rxd");t.tool="indesign";t.idTool="select";APP.tool="indesign";if(window.ReadixInDesign&&ReadixInDesign.ensure)ReadixInDesign.ensure(t);pushHist({tool:"indesign",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
 window.openReadixWordTab=openReadixWordTab;window.openReadixInDesign=openReadixInDesign;
 function openTool(id){
@@ -10324,7 +10324,399 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     var b = t.book || (t.book = (W("bookDefault") ? window.bookDefault() : { title: "", parts: [] }));
     if (!b.ai) b.ai = { intent: "", line: "rythme", illusStyle: "aquarelle", exact: true, status: "idle", plan: null, content: {}, current: 0, stop: false, _open: {} };
     if (!b.ai._open) b.ai._open = {};
+    rx57RestoreBook(t, b.ai);
     return b.ai;
+  }
+
+  /* ---------------- Phase 56-Livre : ponts natifs Word / InDesign + brouillon reprenable ---------------- */
+  // Phase 56-Livre Lot 2 — stockage double : index léger localStorage (synchrone)
+  // + contenu complet IndexedDB (images incluses, > 5 Mo tolérées).
+  var rx57Store = {
+    open: function() {
+      return new Promise(function(res) {
+        if (typeof indexedDB === "undefined") return res(null);
+        try {
+          var rq = indexedDB.open("readox_books", 1);
+          rq.onupgradeneeded = function() { rq.result.createObjectStore("books"); };
+          rq.onsuccess = function() { res(rq.result); };
+          rq.onerror = function() { res(null); };
+        } catch (e) { res(null); }
+      });
+    },
+    set: function(k, obj) {
+      return this.open().then(function(db) {
+        if (!db) return false;
+        return new Promise(function(res) {
+          try {
+            var tx = db.transaction("books", "readwrite");
+            tx.objectStore("books").put(obj, k);
+            tx.oncomplete = function() { res(true); };
+            tx.onerror = function() { res(false); };
+          } catch (e) { res(false); }
+        });
+      });
+    },
+    get: function(k) {
+      return this.open().then(function(db) {
+        if (!db) return null;
+        return new Promise(function(res) {
+          try {
+            var rq = db.transaction("books").objectStore("books").get(k);
+            rq.onsuccess = function() { res(rq.result || null); };
+            rq.onerror = function() { res(null); };
+          } catch (e) { res(null); }
+        });
+      });
+    }
+  };
+  function rx57SaveBook(t, ai) {
+    try {
+      localStorage.setItem("rx57_book_" + t.id, JSON.stringify({
+        v: 2, savedAt: Date.now(), intent: ai.intent, line: ai.line,
+        illusStyle: ai.illusStyle, exact: ai.exact, plan: ai.plan, current: ai.current,
+        content: (function() {
+          var c = {};
+          Object.keys(ai.content || {}).forEach(function(k) {
+            var cc = ai.content[k] || {};
+            c[k] = { status: cc.status, blocks: (cc.blocks || []).map(function(b) {
+              return b.type === "img" ? Object.assign({}, b, { src: "" }) : b;
+            }) };
+          });
+          return c;
+        })()
+      }));
+    } catch (e) { /* quota : l index léger ne devrait jamais saturer */ }
+    if (ai.plan) rx57Store.set("rx57_full_" + t.id, {
+      plan: ai.plan, content: ai.content, intent: ai.intent, line: ai.line,
+      illusStyle: ai.illusStyle, exact: ai.exact, current: ai.current, savedAt: Date.now()
+    });
+  }
+  function rx57RestoreBook(t, ai) {
+    try {
+      if (ai.plan) return false;
+      var raw = localStorage.getItem("rx57_book_" + t.id);
+      if (!raw) return false;
+      var d = JSON.parse(raw);
+      if (!d || !d.plan || !d.plan.chapters) return false;
+      ai.intent = d.intent; ai.line = d.line; ai.illusStyle = d.illusStyle; ai.exact = d.exact;
+      ai.plan = d.plan; ai.content = d.content || {}; ai.current = d.current || 0;
+      ai.status = "paused";
+      // Hydratation asynchrone des images lourdes depuis IndexedDB, sans bloquer l ouverture.
+      rx57Store.get("rx57_full_" + t.id).then(function(full) {
+        try {
+          if (full && full.content) {
+            Object.keys(full.content).forEach(function(k) {
+              if (ai.content[k] && full.content[k]) {
+                ai.content[k].status = full.content[k].status || ai.content[k].status;
+                ai.content[k].blocks = full.content[k].blocks || ai.content[k].blocks;
+              }
+            });
+          }
+        } catch (e) {}
+      });
+      toast("Brouillon restauré (" + new Date(d.savedAt).toLocaleString() + ") — reprise sans refaire les chapitres terminés.", "ok");
+      return true;
+    } catch (e) { return false; }
+  }
+  function rx57MissingChapters(ai) {
+    if (!ai.plan || !ai.plan.chapters) return [];
+    return ai.plan.chapters.filter(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      return !c || c.status !== "done";
+    });
+  }
+  function rx57BookToWordHTML(ai) {
+    var esc = function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); };
+    var h = "<h1>" + esc(ai.plan.title) + "</h1>";
+    if (ai.plan.subtitle) h += "<h2>" + esc(ai.plan.subtitle) + "</h2>";
+    if (ai.plan.author) h += "<p><b>" + esc(ai.plan.author) + "</b></p><hr>";
+    ai.plan.chapters.forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      h += "<h1>" + esc(ch.title) + "</h1>";
+      if (!c || c.status !== "done") { h += "<p><i>[Chapitre non rédigé]</i></p>"; return; }
+      (c.blocks || []).forEach(function(b) {
+        if (b.type === "h") h += "<h2>" + esc(b.text) + "</h2>";
+        else if (b.type === "p") h += "<p>" + esc(b.text) + "</p>";
+        else if (b.type === "img" && b.src) h += "<figure><img src=\"" + b.src + "\">" + (b.caption ? "<figcaption>" + esc(b.caption) + "</figcaption>" : "") + "</figure>";
+      });
+    });
+    return "<div class=\"rx57-book\" data-rx57-key=\"" + rx57BookKey(ai) + "\">" + h + "</div>";
+  }
+  function rx57BlocksToHTML(blocks) {
+    var esc = function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); };
+    return blocks.map(function(b){ return b.type === "h" ? "<h3>" + esc(b.text) + "</h3>" : "<p>" + esc(b.text) + "</p>"; }).join("");
+  }
+  // Pagination déterministe (Lot 2) : estimateur exporté pour les tests + répartition par page.
+  function rx57EstBlock(b, widthPx, fsPx, linePx) {
+    if (b.type === "img") return Math.round(widthPx * (b.layout === "full" ? 0.62 : 0.45));
+    var charsPerLine = Math.max(8, Math.floor(widthPx / (fsPx * 0.52)));
+    var lines = Math.max(1, Math.ceil(String(b.text || "").length / charsPerLine));
+    return lines * linePx + (b.type === "h" ? Math.round(linePx * 0.6) : 0);
+  }
+  function rx57PaginateBlocks(blocks, bodyHPx, widthPx, fsPx, linePx) {
+    var pages = [], cur = [], used = 0;
+    (blocks || []).forEach(function(b) {
+      var need = rx57EstBlock(b, widthPx, fsPx, linePx);
+      if (cur.length && used + need > bodyHPx) { pages.push(cur); cur = []; used = 0; }
+      cur.push(b); used += need;
+    });
+    if (cur.length) pages.push(cur);
+    return pages.length ? pages : [[]];
+  }
+  // Gabarit v1 (Lot 2) : titres courants + folios, recto = page impaire.
+  // Fonction PURE (descripteurs en mm) — le constructeur les matérialise en objets natifs.
+  function rx57ChromeItems(pageNo, total, recto, bookTitle, chapterTitle, W, H, mg) {
+    var esc = function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); };
+    var items = [];
+    var bodyW = W - mg.left - mg.right;
+    var headY = Math.max(4, mg.top / 2 - 3);
+    var footY = H - Math.max(4, mg.bottom / 2) - 4;
+    if (recto) {
+      if (chapterTitle) items.push({ x: mg.left, y: headY, w: bodyW, h: 5, html: "<p style=\"font-size:9px\"><i>" + esc(chapterTitle) + "</i></p>", fs: 9, align: "right", color: "#666666" });
+      items.push({ x: mg.left, y: footY, w: bodyW, h: 5, html: "<p style=\"font-size:10px\">" + pageNo + "</p>", fs: 10, align: "right", color: "#1a1a1a" });
+    } else {
+      if (bookTitle) items.push({ x: mg.left, y: headY, w: bodyW, h: 5, html: "<p style=\"font-size:9px\"><i>" + esc(bookTitle) + "</i></p>", fs: 9, align: "left", color: "#666666" });
+      items.push({ x: mg.left, y: footY, w: bodyW, h: 5, html: "<p style=\"font-size:10px\">" + pageNo + "</p>", fs: 10, align: "left", color: "#1a1a1a" });
+    }
+    return items;
+  }
+  // Lot 3 — mesure DOM réelle des blocs quand le navigateur est disponible (repli : estimateur).
+  function rx57MeasureBlocks(blocks, widthPx, fsPx) {
+    if (typeof document === "undefined" || !document.body) return null;
+    try {
+      var esc = function(s){ return String(s==null?"":s); };
+      var host = document.createElement("div");
+      host.style.cssText = "position:absolute;left:-99999px;top:0;width:" + widthPx + "px;font-family:Georgia;font-size:" + fsPx + "px;line-height:1.3;visibility:hidden;";
+      (blocks || []).forEach(function(b) {
+        if (b.type === "img") return;
+        var d = document.createElement(b.type === "h" ? "h3" : "p");
+        d.style.margin = "0"; d.style.fontSize = fsPx + "px"; d.style.lineHeight = "1.3";
+        if (b.type === "h") d.style.fontWeight = "bold";
+        d.textContent = esc(b.text);
+        host.appendChild(d);
+      });
+      document.body.appendChild(host);
+      var heights = [], ki = 0;
+      for (var i = 0; i < (blocks || []).length; i++) {
+        if (blocks[i].type === "img") { heights.push(rx57EstBlock(blocks[i], widthPx, fsPx, 0)); continue; }
+        var h = host.children[ki] ? host.children[ki].offsetHeight : 0; ki++;
+        if (!h) { try { host.remove(); } catch (e) {} return null; }
+        heights.push(h);
+      }
+      host.remove();
+      return heights;
+    } catch (e) { return null; }
+  }
+  function rx57PaginateMeasured(blocks, bodyHPx, widthPx, fsPx, linePx) {
+    var heights = rx57MeasureBlocks(blocks, widthPx, fsPx);
+    if (!heights) return rx57PaginateBlocks(blocks, bodyHPx, widthPx, fsPx, linePx); // repli estimateur (Node/tests)
+    var pages = [], cur = [], used = 0;
+    (blocks || []).forEach(function(b, i) {
+      var need = heights[i];
+      if (cur.length && used + need > bodyHPx) { pages.push(cur); cur = []; used = 0; }
+      cur.push(b); used += need;
+    });
+    if (cur.length) pages.push(cur);
+    return pages.length ? pages : [[]];
+  }
+  // Lot 3 — clé de livre (FNV-1a) : base de la synchronisation Word/InDesign (§19) au Lot 4.
+  function rx57BookKey(ai) {
+    var s2 = JSON.stringify([(ai.plan && ai.plan.title) || "",
+      ((ai.plan && ai.plan.chapters) || []).map(function(c){ return c.id; }),
+      Object.keys(ai.content || {}).map(function(k){ var c = ai.content[k]; return k + ":" + (c && c.status); })]);
+    var h = 0x811c9dc5;
+    for (var i = 0; i < s2.length; i++) { h ^= s2.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return "bk56-" + h.toString(16);
+  }
+  // Lot 3 — pages maîtresses à l état : gabarit stocké dans idState, réapplicable après
+  // tout changement (format, marges, pages ajoutées). Idempotent : purge puis repose.
+  function rx57PaintChrome(s, mg) {
+    if (!s.masters || !s.masters.bookTitle) return 0;
+    var applied = 0, px = function(v){ return Math.round(v * 96 / 25.4); };
+    var ranges = s.rx57ChRanges || [];
+    for (var n = 2; n <= (s.pages || 1); n++) {
+      var arr = s.pageItems[n] || (s.pageItems[n] = []);
+      s.pageItems[n] = arr.filter(function(it){ return !it.rx57Master; });
+      var recto = (n % 2) === 1;
+      var cr = null;
+      for (var i = 0; i < ranges.length; i++) { if (n >= ranges[i].from && n <= ranges[i].to) { cr = ranges[i]; break; } }
+      var zBase = s.pageItems[n].length;
+      var layerId = s.activeLayer || (s.layers && s.layers.length ? s.layers[0].id : "L1");
+      rx57ChromeItems(n, s.pages, recto, s.masters.bookTitle, cr ? cr.title : "", s.width, s.height, mg).forEach(function(cd, k) {
+        s.pageItems[n].push({ id: "obj" + (++s.nextItemId), type: "text", layerId: layerId,
+          x: px(cd.x), y: px(cd.y), w: px(cd.w), h: px(cd.h), z: zBase + k + 1,
+          text: "", html: cd.html, fontFamily: "Georgia", fontSize: cd.fs, bold: false, letterSpacing: 0,
+          lineHeight: 1.3, textColor: cd.color, textAlign: cd.align, textInset: 0, fill: "transparent",
+          stroke: "transparent", strokeWidth: 0, rot: 0, opacity: 1, rx57Book: true, rx57Master: true });
+      });
+      applied++;
+    }
+    return applied;
+  }
+  // Lot 4 — synchronisation Word/InDesign (§19) : détection par clé, anti-duplication, dérive.
+  function rx57FindBookTab(key, tool) {
+    if (!key || typeof APP === "undefined" || !APP.tabs) return null;
+    for (var i = 0; i < APP.tabs.length; i++) {
+      var tb = APP.tabs[i];
+      if (tool === "word" && tb.tool === "docstudio" && tb.doc && tb.doc.indexOf('data-rx57-key="' + key + '"') >= 0) return tb;
+      if (tool === "indesign" && tb.idState && tb.idState.rx57BookKey === key) return tb;
+    }
+    return null;
+  }
+  function rx57FindBookTabByTitle(title, exceptKey, tool) {
+    if (!title || typeof APP === "undefined" || !APP.tabs) return null;
+    for (var i = 0; i < APP.tabs.length; i++) {
+      var tb = APP.tabs[i];
+      if (tool !== "indesign" || !tb.idState) continue;
+      if (tb.idState.masters && tb.idState.masters.bookTitle === title && tb.idState.rx57BookKey !== exceptKey) return tb;
+    }
+    return null;
+  }
+  function rx57ActivateBookTab(tb) {
+    try { if (typeof switchTab === "function") { switchTab(tb.id); return true; } } catch (e) {}
+    return false;
+  }
+  // Hook appelé par le moteur InDesign après ajout/dup/suppression de page.
+  function rx57AfterPageChange(t, s) {
+    try { if (s && s.masters && s.masters.bookTitle) rx57PaintChrome(s, s.margins); } catch (e) {}
+  }
+  // Lot 5 — Registre des capacités du pont (§15) : versionné, figé, injectable dans les prompts IA.
+  var RX57_BOOK_CAPABILITIES = Object.freeze({
+    version: "56.7-lot5",
+    tools: Object.freeze([
+      { id: "chapter_opening_page", label: "Page d ouverture de chapitre (titre natif)" },
+      { id: "chained_text_frames", label: "Cadres de texte chaînés (nextFrameId/flowFrom)" },
+      { id: "independent_image_frames", label: "Cadres image indépendants avec légendes" },
+      { id: "master_chrome", label: "Pages maîtresses : titres courants + folios (recto/verso)" },
+      { id: "auto_pagination", label: "Pagination automatique par mesure réelle (repli estimateur)" },
+      { id: "native_cover", label: "Couverture native (titre, sous-titre, auteur)" },
+      { id: "word_structured_transfer", label: "Transfert Word structuré (H1/H2, figures, styles)" }
+    ])
+  });
+  // Lot 5 — Validation niveau livre (§16) + autocorrection bornée (§17) :
+  // bloquant (transfert refusé) vs avertissement (transfert autorisé, signalé).
+  function rx57ValidateBook(ai) {
+    var blocking = [], warnings = [];
+    if (!ai || !ai.plan) return { ok: false, blocking: ["Plan de livre absent"], warnings: [] };
+    if (!String(ai.plan.title || "").trim()) blocking.push("Titre du livre absent");
+    if (!ai.plan.chapters || !ai.plan.chapters.length) blocking.push("Aucun chapitre dans le plan");
+    var miss = rx57MissingChapters(ai);
+    if (miss.length) warnings.push(miss.length + " chapitre(s) non rédigé(s) : " + miss.slice(0, 3).map(function(c){ return c.title; }).join(", ") + (miss.length > 3 ? "…" : ""));
+    // Texte brut par chapitre
+    var plain = {};
+    (ai.plan.chapters || []).forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      if (!c || c.status !== "done" || !c.blocks) return;
+      plain[ch.id] = c.blocks.filter(function(b){ return b.type === "h" || b.type === "p"; }).map(function(b){ return b.text || ""; }).join(" ");
+    });
+    var ids = Object.keys(plain);
+    // Répétitions (§4) : deux chapitres quasi identiques (Jaccard sur mots ≥ 0,9)
+    function norm(s){ return String(s).toLowerCase().replace(/[^a-zàâäéèêëîïôöùûüç0-9\s]/gi, " ").replace(/\s+/g, " ").trim(); }
+    function words(s){ var o = {}; norm(s).split(" ").forEach(function(w){ if (w) o[w] = 1; }); return o; }
+    for (var i = 0; i < ids.length; i++) for (var j = i + 1; j < ids.length; j++) {
+      var A = words(plain[ids[i]]), B2 = words(plain[ids[j]]);
+      var inter = 0, uni = 0, w;
+      for (w in A) { if (B2[w]) inter++; }
+      for (w in A) { uni++; if (!B2[w]) {} } 
+      for (w in B2) { if (!A[w]) uni++; }
+      var jac = uni ? inter / uni : 0;
+      if (jac >= 0.9) blocking.push("Chapitres en double détectés (similarité " + Math.round(jac * 100) + " %) : « " + ids[i] + " » / « " + ids[j] + " » — régénérez l un des deux");
+    }
+    // Illustrations illisibles (§16) : format data-URI contrôlé
+    var bad = 0, total = 0;
+    (ai.plan.chapters || []).forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      if (!c || !c.blocks) return;
+      c.blocks.forEach(function(b) {
+        if (b.type !== "img" || !b.src) return;
+        total++;
+        var ok = false;
+        if (typeof rx56NormalizeImageSrc === "function") ok = !!rx56NormalizeImageSrc(b.src);
+        else ok = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i.test(String(b.src).replace(/\s+/g, ""));
+        if (!ok) bad++;
+      });
+    });
+    if (bad) blocking.push(bad + " illustration(s) illisible(s) sur " + total + " — régénérez les images");
+    // Chapitres anormalement courts (avertissement)
+    ids.forEach(function(id) {
+      if (String(plain[id] || "").trim().length < 100) warnings.push("Chapitre très court : « " + id + " » (" + String(plain[id] || "").trim().length + " caractères)");
+    });
+    return { ok: blocking.length === 0, blocking: blocking, warnings: warnings };
+  }
+  function rx57BookToInDesign(t, stage, ai) {
+    openReadixInDesign();
+    var tab = APP.tabs[APP.tabs.length - 1];
+    var s = ReadixInDesign.ensure(tab);
+    var mg = s.margins || { top: 20, right: 18, bottom: 20, left: 18 };
+    var px = function(v){ return Math.round(v * 96 / 25.4); };
+    s.pageItems = s.pageItems || {}; s.pageBackgrounds = s.pageBackgrounds || {};
+    if (!s.layers || !s.layers.length) s.layers = [{ id: "L1", name: "Calque 1" }];
+    s.activeLayer = s.layers[0].id;
+    var nid = function(){ return "obj" + (++s.nextItemId); };
+    var pageArr = function(n){ return s.pageItems[n] || (s.pageItems[n] = []); };
+    var zc = 0;
+    function addText(n, x, y, w, h, html, opts) {
+      var it = { id: nid(), type: "text", layerId: s.activeLayer, x: px(x), y: px(y), w: px(w), h: px(h),
+        z: ++zc, text: "", html: html, fontFamily: "Georgia", fontSize: (opts && opts.fs) || 16,
+        bold: !!(opts && opts.bold), letterSpacing: 0, lineHeight: 1.3, textColor: (opts && opts.color) || "#1a1a1a",
+        textAlign: (opts && opts.align) || "left", textInset: 0, fill: "transparent", stroke: "transparent",
+        strokeWidth: 0, rot: 0, opacity: 1, rx57Book: true };
+      pageArr(n).push(it); return it;
+    }
+    function addImage(n, x, y, w, h, src, caption) {
+      var it = { id: nid(), type: "frame", layerId: s.activeLayer, x: px(x), y: px(y), w: px(w), h: px(h),
+        z: ++zc, imageSrc: src, fit: "cover", imageScale: 100, imageX: 50, imageY: 50, imageOpacity: 1,
+        fill: "transparent", stroke: "transparent", strokeWidth: 0, rot: 0, opacity: 1,
+        rx552Image: true, rx57Book: true, caption: caption || "" };
+      pageArr(n).push(it); return it;
+    }
+    s.pages = Math.max(s.pages || 1, 1); s.current = 1;
+    // 1) Couverture native
+    addText(1, mg.left, 60, s.width - mg.left - mg.right, 40,
+      "<h1 style=\"font-size:44px\">" + ai.plan.title + "</h1>", { fs: 44, bold: true, align: "center" });
+    if (ai.plan.subtitle) addText(1, mg.left, 105, s.width - mg.left - mg.right, 16,
+      "<h2>" + ai.plan.subtitle + "</h2>", { fs: 18, align: "center", color: "#444444" });
+    if (ai.plan.author) addText(1, mg.left, s.height - mg.bottom - 20, s.width - mg.left - mg.right, 12,
+      "<p><b>" + ai.plan.author + "</b></p>", { fs: 14, align: "center", color: "#444444" });
+    // 2) Chapitres paginés : cadres chaînés (nextFrameId/flowFrom) + images indépendantes
+    var fsPx = 16, linePx = Math.round(fsPx * 1.3);
+    var chRanges = [];
+    ai.plan.chapters.forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      var blocks = (c && c.status === "done" && c.blocks) ? c.blocks.slice() : [{ type: "p", text: "[Chapitre non rédigé]" }];
+      s.pages += 1; var pg = s.pages; s.current = pg;
+      chRanges.push({ from: pg, to: pg, title: ch.title });
+      addText(pg, mg.left, mg.top, s.width - mg.left - mg.right, 22,
+        "<h2 style=\"font-size:28px\">" + ch.title + "</h2>", { fs: 28, bold: true });
+      var bodyY = mg.top + 30, bodyH = s.height - bodyY - mg.bottom;
+      var bodyW = s.width - mg.left - mg.right;
+      var slices = rx57PaginateMeasured(blocks, px(bodyH), px(bodyW), fsPx, linePx);
+      var prevFrame = null;
+      slices.forEach(function(slice, k) {
+        var p = (k === 0) ? pg : (s.pages += 1, s.pages);
+        var texts = slice.filter(function(b){ return b.type !== "img"; });
+        var imgs  = slice.filter(function(b){ return b.type === "img" && b.src; });
+        var fh = (k === 0) ? bodyH : s.height - mg.top - mg.bottom;
+        var f = addText(p, mg.left, (k === 0) ? bodyY : mg.top, bodyW, fh, rx57BlocksToHTML(texts), { fs: fsPx });
+        f.text = texts.map(function(b){ return b.text || ""; }).join("\n\n");
+        if (prevFrame) { prevFrame.nextFrameId = f.id; f.flowFrom = prevFrame.id; }
+        prevFrame = f;
+        var iy = ((k === 0) ? bodyY : mg.top) + Math.round(fh * 0.55);
+        imgs.forEach(function(b) {
+          var iw = (b.layout === "full") ? bodyW : Math.round(bodyW * 0.6);
+          addImage(p, mg.left + (bodyW - iw) / 2, Math.min(iy, s.height - mg.bottom - 60), iw, 55, b.src, b.caption);
+        });
+        chRanges[chRanges.length - 1].to = s.pages;
+      });
+    });
+    // Lot 3 : gabarit à l état (pages maîtresses réapplicables) + clé de livre.
+    s.rx57ChRanges = chRanges;
+    s.masters = { bookTitle: ai.plan.title };
+    s.rx57BookKey = rx57BookKey(ai);
+    rx57PaintChrome(s, mg);
+    s.current = 1;
+    try { renderView(); updateHeader(); } catch (e) {}
+    toast("Livre mis en page dans Readox InDesign : " + s.pages + " pages, " + ai.plan.chapters.length + " chapitres, chaînage actif.", "ok");
   }
 
   /* ---------------- Prompts ---------------- */
@@ -10412,6 +10804,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     }
     if (!acc.length) { ai.content[cid] = { status: "error", blocks: [], error: "réponse vide — reprenez ce chapitre." }; return false; }
     ai.content[cid] = { status: "done", blocks: acc };
+    rx57SaveBook(t, ai);
     paint(t, stage);
     return true;
   }
@@ -10961,6 +11354,34 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         var bDoc = E("button", "rxbai-btn block", "📝 Télécharger en Word");
         bDoc.onclick = function () { exportBook(t, stage, "docx", bDoc); };
         pad3.appendChild(bDoc);
+        var miss = rx57MissingChapters(ai).length;
+        var bW = E("button", "rxbai-btn block", "🅦 Ouvrir dans Readox Word" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
+        bW.onclick = function () {
+          var v = rx57ValidateBook(ai);
+          if (!v.ok) { toast("Transfert Word bloqué : " + v.blocking[0], "err"); return; }
+          if (v.warnings.length) toast(v.warnings[0], "warn");
+          var key = rx57BookKey(ai);
+          var existing = rx57FindBookTab(key, "word");
+          if (existing) { rx57ActivateBookTab(existing); toast("Document Word déjà ouvert — version identique (" + key + ").", "ok"); return; }
+          openReadixWordTab(rx57BookToWordHTML(ai));
+        };
+        pad3.appendChild(bW);
+        var bI = E("button", "rxbai-btn block", "🅟 Mettre en page dans Readox InDesign" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
+        bI.onclick = function () {
+          var v = rx57ValidateBook(ai);
+          if (!v.ok) { toast("Mise en page bloquée : " + v.blocking[0], "err"); return; }
+          if (v.warnings.length) toast(v.warnings[0], "warn");
+          var key = rx57BookKey(ai);
+          var existing = rx57FindBookTab(key, "indesign");
+          if (existing) {
+            if (typeof confirm === "function" && !confirm("Une mise en page InDesign identique existe déjà (" + key + ").\nRégénérer va remplacer son contenu. Continuer ?")) { rx57ActivateBookTab(existing); return; }
+            try { APP.tabs.splice(APP.tabs.indexOf(existing), 1); } catch (e) {}
+          } else if (rx57FindBookTabByTitle(ai.plan.title, key, "indesign")) {
+            toast("Dérive détectée : une autre version de « " + ai.plan.title + " » est ouverte dans InDesign — régénération conseillée.", "warn");
+          }
+          rx57BookToInDesign(t, stage, ai);
+        };
+        pad3.appendChild(bI);
         pad3.appendChild(E("div", "rxbai-fine", "Document Studio conserve les illustrations et permet de tout retoucher."));
         var again = E("button", "rxbai-btn ghost block", "Régénérer le plan");
         again.onclick = function () { ai.plan = null; ai.status = "idle"; ai.content = {}; paint(t, stage); };
@@ -11910,7 +12331,7 @@ root.querySelectorAll('[data-flow-act]').forEach(b=>b.onclick=()=>{const it=sele
  else if(act==='up'&&pos<ordered.length-1){[ordered[pos],ordered[pos+1]]=[ordered[pos+1],ordered[pos]]}
  else if(act==='down'&&pos>0){[ordered[pos],ordered[pos-1]]=[ordered[pos-1],ordered[pos]]}
  ordered.forEach((obj,index)=>{obj.z=index+1});
- }dirty(t);render(t,stage)});root.querySelectorAll('[data-page-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.pageAct;if(a==='add'){s.pages++;s.current=s.pages;s.pageItems[s.current]=s.pageItems[s.current]||[]}else if(a==='dup'){const src=s.current,target=src+1;for(let n=s.pages;n>=target;n--){s.pageItems[n+1]=s.pageItems[n]||[]}const groupMap={};const copies=(s.pageItems[src]||[]).map(o=>{const c=JSON.parse(JSON.stringify(o));c.id='obj'+(s.nextItemId++);if(c.groupId){groupMap[c.groupId]=groupMap[c.groupId]||('grp'+Date.now()+Math.random().toString(36).slice(2));c.groupId=groupMap[c.groupId]}return c});s.pageItems[target]=copies;s.pages++;s.current=target;s.selected=null;s.selectedIds=[]}else if(a==='del'){if(s.pages===1)return toast('Le document doit conserver au moins une page.','warn');const del=s.current;for(let n=del;n<s.pages;n++)s.pageItems[n]=s.pageItems[n+1]||[];delete s.pageItems[s.pages];s.pages--;s.current=Math.min(del,s.pages);s.selected=null;s.selectedIds=[]}dirty(t);render(t,stage)});root.querySelectorAll('[data-go-page]').forEach(b=>b.onclick=()=>{s.current=+b.dataset.goPage;render(t,stage);setTimeout(()=>stage.querySelector(`[data-page-no="${s.current}"]`)?.scrollIntoView({block:'center'}),0)});
+ }dirty(t);render(t,stage)});root.querySelectorAll('[data-page-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.pageAct;if(a==='add'){s.pages++;s.current=s.pages;s.pageItems[s.current]=s.pageItems[s.current]||[]}else if(a==='dup'){const src=s.current,target=src+1;for(let n=s.pages;n>=target;n--){s.pageItems[n+1]=s.pageItems[n]||[]}const groupMap={};const copies=(s.pageItems[src]||[]).map(o=>{const c=JSON.parse(JSON.stringify(o));c.id='obj'+(s.nextItemId++);if(c.groupId){groupMap[c.groupId]=groupMap[c.groupId]||('grp'+Date.now()+Math.random().toString(36).slice(2));c.groupId=groupMap[c.groupId]}return c});s.pageItems[target]=copies;s.pages++;s.current=target;s.selected=null;s.selectedIds=[]}else if(a==='del'){if(s.pages===1)return toast('Le document doit conserver au moins une page.','warn');const del=s.current;for(let n=del;n<s.pages;n++)s.pageItems[n]=s.pageItems[n+1]||[];delete s.pageItems[s.pages];s.pages--;s.current=Math.min(del,s.pages);s.selected=null;s.selectedIds=[]}try{if(typeof rx57AfterPageChange==='function')rx57AfterPageChange(t,s)}catch(_){}dirty(t);render(t,stage)});root.querySelectorAll('[data-go-page]').forEach(b=>b.onclick=()=>{s.current=+b.dataset.goPage;render(t,stage);setTimeout(()=>stage.querySelector(`[data-page-no="${s.current}"]`)?.scrollIntoView({block:'center'}),0)});
 root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{const k=b.dataset.view;if(k==='rulers')s.showRulers=!s.showRulers;if(k==='grid')s.showGrid=!s.showGrid;if(k==='margins')s.showMargins=!s.showMargins;if(k==='baseline')s.showBaselineGrid=!s.showBaselineGrid;dirty(t);render(t,stage)});
 root.querySelectorAll('[data-prop]').forEach(el=>el.onchange=()=>{const k=el.dataset.prop;if(k==='format'){s.format=el.value;if(FORMATS[s.format]){[s.width,s.height]=FORMATS[s.format];if(s.orientation==='Paysage')[s.width,s.height]=[s.height,s.width]}}else if(k==='orientation'){if(el.value!==s.orientation){s.orientation=el.value;[s.width,s.height]=[s.height,s.width]}}else if(k==='facing')s.facing=el.checked;else if(k==='width'||k==='height'){s[k]=Math.max(20,num(el.value,s[k]));s.format='Personnalisé'}else if(k==='columns')s.columns=Math.max(1,Math.min(12,Math.round(num(el.value,1))));else if(k==='gutter')s.gutter=Math.max(0,num(el.value,s.gutter));else if(k==='mTop')s.margins.top=Math.max(0,num(el.value));else if(k==='mBottom')s.margins.bottom=Math.max(0,num(el.value));else if(k==='mInside')s.margins.inside=Math.max(0,num(el.value));else if(k==='mOutside')s.margins.outside=Math.max(0,num(el.value));else if(k==='bleed')Object.keys(s.bleed).forEach(x=>s.bleed[x]=Math.max(0,num(el.value)));else if(k==='slug')Object.keys(s.slug).forEach(x=>s.slug[x]=Math.max(0,num(el.value)));dirty(t);render(t,stage)});}
 function menuAction(name,root,t,stage){const s=ensure(t);root.querySelectorAll('.rxid-menu-pop').forEach(x=>x.remove());const defs={
