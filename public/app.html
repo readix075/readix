@@ -1140,7 +1140,7 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxw-wm{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .rxw-pageborder{position:absolute;pointer-events:none;z-index:0}
 
-.rxw-ed img{max-width:100%;height:auto;}.rxw-ed figure{margin:8px 0;text-align:center;}
+.rxw-ed img{max-width:100%;height:auto;max-height:22cm;}.rxw-ed figure{margin:8px 0;text-align:center;break-inside:avoid;}
 </style>
   <style id="readix-indesign-embedded-css">
 /* Readix InDesign — Phase 1 foundation. Namespaced: no impact on existing Readix tools. */
@@ -2091,10 +2091,11 @@ const sInput=h('input','',{type:'search',placeholder:'Rechercher dans le documen
 const sCount=h('span','rxw-scount');const sPrev=h('button','rxw-snav',{type:'button',title:'Occurrence précédente (Maj+Entrée)'});sPrev.innerHTML=I.up;const sNext=h('button','rxw-snav',{type:'button',title:'Occurrence suivante (Entrée)'});sNext.innerHTML=I.down;
 search.append(sInput,sCount,sPrev,sNext);
 const winctl=h('div','rxw-winctl');
+const bAI=h('button','rxw-aibtn',{type:'button',title:'IA Créative — pilotage automatique ou assisté','data-rxai-word':'1'});bAI.textContent='✦ IA Créative';
 const bMin=h('button','',{type:'button',title:tip('min'),'aria-label':'Réduire','data-tool':'min'});bMin.innerHTML=I.min;
 const bMax=h('button','',{type:'button',title:tip('max'),'aria-label':'Agrandir','data-tool':'max'});bMax.innerHTML=I.max;
 const bClose=h('button','rxw-close',{type:'button',title:tip('close'),'aria-label':'Fermer','data-tool':'close'});bClose.innerHTML=I.close;
-winctl.append(bMin,bMax,bClose);titlebar.append(logo,docTitle,h('span','rxw-tflex'),search,winctl);
+winctl.append(bAI,bMin,bMax,bClose);titlebar.append(logo,docTitle,h('span','rxw-tflex'),search,winctl);
 
 /* 2. Barre de menus */
 const menubar=h('div','rxw-menubar',{role:'menubar'});
@@ -3443,6 +3444,9 @@ RWE.mount=mount;RWE.importFile=importAny;RWE.htmlToDocx=htmlToDocx;RWE.version='
 window.ReadixWordEngine=RWE;
 })();
 
+
+/* API documentée pour l IA Créative (pilotage par commandes, jamais par clics simulés) */
+try{window.RXW_API={get ed(){return ed},layout:function(){layout()},getHTML:function(){return ed.innerHTML},setHTML:function(html){ed.innerHTML=sanitizeHTML(html,true);ensureBlocks();layout()},getMeta:function(){return normMeta(host.getMeta())},selText:function(){var s=ed.ownerDocument.getSelection();return s?s.toString():''},focus:function(){ed.focus()}};}catch(e){}
 </script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -10280,6 +10284,336 @@ body.rx-shell.rx-home .rx-right { display: flex; }
 
 @media (prefers-reduced-motion:reduce){.rxbai *{animation:none!important}}
 </style>
+<script id="readix-ai-creative">
+/* ============================================================
+   READOX IA CRÉATIVE — panneau commun + pilotes natifs
+   Word AI Controller / InDesign AI Controller + passerelle Gemini
+   Feuille de route 2026-10-24 · build RXAI 1.0 (56.13)
+   Principe : commandes typées → validation → outils natifs →
+   vérification → aperçu → application transactionnelle (annulable).
+   L édition manuelle reste active en permanence (aucun mode exclusif).
+   ============================================================ */
+var RXAI_BUILD = "1.0-56.13";
+var RXAI_HISTORY = [];
+function rxaiToast(m, k) { try { toast(m, k); } catch (e) {} }
+function rxaiEsc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+/* ---------------- PILOTE WORD (outils natifs du moteur Word) ---------------- */
+function rxwRange() {
+  var api = window.RXW_API; if (!api) return null;
+  var sel = api.ed.ownerDocument.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  var r = sel.getRangeAt(0);
+  if (r.collapsed) return null;
+  return r;
+}
+function rxwExec(cmd, val) {
+  var api = window.RXW_API; if (!api) return "RXW_API absente";
+  api.focus();
+  try { api.ed.ownerDocument.execCommand(cmd, false, val || null); api.layout(); return null; }
+  catch (e) { return "execCommand " + cmd + " : " + e.message; }
+}
+function rxwSpan(prop, val) {
+  var r = rxwRange(); if (!r) return "Aucune sélection";
+  try {
+    var doc = r.startContainer.ownerDocument;
+    var span = doc.createElement("span"); span.style[prop] = val;
+    span.appendChild(r.extractContents());
+    r.insertNode(span);
+    window.RXW_API.layout();
+    return null;
+  } catch (e) { return e.message; }
+}
+var RXAI_WORD_TOOLS = [
+  { id: "set_font_size", label: "Taille du texte", params: { pt: "number 8..72" }, limits: { pt: [8, 72] },
+    run: function (p) { return rxwSpan("fontSize", Math.max(8, Math.min(72, +p.pt || 16)) + "pt"); } },
+  { id: "set_font_family", label: "Police", params: { family: "string" },
+    run: function (p) { return rxwSpan("fontFamily", String(p.family || "Georgia")); } },
+  { id: "set_bold", label: "Gras", params: {}, run: function () { return rxwExec("bold"); } },
+  { id: "set_italic", label: "Italique", params: {}, run: function () { return rxwExec("italic"); } },
+  { id: "set_alignment", label: "Alignement", params: { align: "left|center|right|justify" },
+    run: function (p) { var m = { left: "justifyLeft", center: "justifyCenter", right: "justifyRight", justify: "justifyFull" }; return rxwExec(m[p.align] || "justifyLeft"); } },
+  { id: "set_line_height", label: "Interligne", params: { value: "number 1..3" },
+    run: function (p) { return rxwSpan("lineHeight", String(Math.max(1, Math.min(3, +p.value || 1.3)))); } },
+  { id: "set_color", label: "Couleur du texte", params: { color: "#rrggbb" },
+    run: function (p) { if (!/^#[0-9a-fA-F]{6}$/.test(p.color || "")) return "Couleur invalide"; return rxwSpan("color", p.color); } },
+  { id: "apply_style", label: "Style de bloc (titre/paragraphe)", params: { style: "h1|h2|h3|p" },
+    run: function (p) { return rxwExec("formatBlock", (p.style || "p").toUpperCase().replace("P", "p")); } },
+  { id: "insert_page_break", label: "Saut de page (marqueur éditable)", params: {},
+    run: function () {
+      var api = window.RXW_API; if (!api) return "RXW_API absente";
+      var doc = api.ed.ownerDocument, d = doc.createElement("div");
+      d.className = "rxw-pbrk"; d.setAttribute("contenteditable", "false");
+      d.setAttribute("data-pgbrk", "1"); d.textContent = "— Saut de page —";
+      var sel = doc.getSelection();
+      if (sel && sel.rangeCount) { var r = sel.getRangeAt(0); r.deleteContents(); r.insertNode(d); }
+      else api.ed.appendChild(d);
+      api.layout(); return null; } },
+  { id: "set_margins", label: "Marges du document (cm)", params: { top: "cm", right: "cm", bottom: "cm", left: "cm" },
+    run: function (p) {
+      try { var m = window.RXW_API.getMeta(); ["top", "right", "bottom", "left"].forEach(function (k) { if (+p[k] > 0) m[k] = +p[k]; });
+        if (window.RXW_API.setMeta) { window.RXW_API.setMeta(m); return null; }
+        return "Modification des marges nécessite RXW_API.setMeta (non exposé) — appliquez via Mise en page."; }
+      catch (e) { return e.message; } } },
+  { id: "rewrite_selection", label: "Réécrire la sélection (Gemini)", params: { instruction: "string" },
+    run: function (p) {
+      var api = window.RXW_API; if (!api) return "RXW_API absente";
+      var txt = api.selText(); if (!txt) return "Aucune sélection";
+      return aiGenerate("Texte : « " + txt.slice(0, 3000) + " »\nConsigne : " + p.instruction + "\nRéponds UNIQUEMENT avec le texte réécrit, sans commentaire.", "Tu es un rédacteur éditorial francophone.", 1500)
+        .then(function (out) {
+          var t = String(out || "").trim(); if (!t) return "Réponse Gemini vide";
+          var r = rxwRange(); if (!r) return "Sélection perdue";
+          r.deleteContents(); r.insertNode(r.startContainer.ownerDocument.createTextNode(t));
+          api.layout(); return null;
+        }); } }
+];
+
+/* ---------------- PILOTE INDESIGN (outils natifs du moteur PAO) ---------------- */
+function rxIdState() {
+  try {
+    var t = APP.tabs.filter(function (x) { return x.idState; });
+    t = t.find(function (x) { return x.active; }) || t[t.length - 1];
+    if (!t) return null;
+    return { t: t, s: ReadixInDesign.ensure(t) };
+  } catch (e) { return null; }
+}
+function rxIdFind(s, id) {
+  for (var n = 1; n <= (s.pages || 1); n++) { var arr = s.pageItems[n] || []; for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i]; }
+  return null;
+}
+function rxIdRefresh() { try { renderView(); updateHeader(); } catch (e) {} }
+var RXAI_ID_TOOLS = [
+  { id: "list_context", label: "Lire le contexte (pages/objets)", params: {}, run: function () {
+      var c = rxIdState(); if (!c) return "Pas de document InDesign actif";
+      var it = 0, tx = 0, im = 0;
+      Object.keys(c.s.pageItems || {}).forEach(function (n) { (c.s.pageItems[n] || []).forEach(function (o) { it++; if (o.type === "text") tx++; if (o.type === "frame") im++; }); });
+      return null; } },
+  { id: "add_page", label: "Ajouter une page", params: {}, run: function () {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; c.s.pages = (c.s.pages || 1) + 1; c.s.current = c.s.pages; c.s.pageItems[c.s.pages] = c.s.pageItems[c.s.pages] || []; rxIdRefresh(); return null; } },
+  { id: "move_item", label: "Déplacer un objet (mm)", params: { id: "string", x: "mm", y: "mm" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      o.x = Math.round((+p.x || 0) * 96 / 25.4); o.y = Math.round((+p.y || 0) * 96 / 25.4); rxIdRefresh(); return null; } },
+  { id: "resize_item", label: "Redimensionner un objet (mm)", params: { id: "string", w: "mm", h: "mm" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      if (+p.w > 0) o.w = Math.round(+p.w * 96 / 25.4); if (+p.h > 0) o.h = Math.round(+p.h * 96 / 25.4); rxIdRefresh(); return null; } },
+  { id: "set_fill", label: "Fond d un objet", params: { id: "string", color: "#rrggbb" }, run: function (p) {
+      if (!/^#[0-9a-fA-F]{6}$/.test(p.color || "")) return "Couleur invalide";
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      o.fill = p.color; rxIdRefresh(); return null; } },
+  { id: "set_text_color", label: "Couleur du texte d un bloc", params: { id: "string", color: "#rrggbb" }, run: function (p) {
+      if (!/^#[0-9a-fA-F]{6}$/.test(p.color || "")) return "Couleur invalide";
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      o.textColor = p.color; rxIdRefresh(); return null; } },
+  { id: "bring_to_front", label: "Premier plan", params: { id: "string" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      var mx = 0; Object.keys(c.s.pageItems).forEach(function (n) { (c.s.pageItems[n] || []).forEach(function (q) { mx = Math.max(mx, q.z || 0); }); });
+      o.z = mx + 1; rxIdRefresh(); return null; } },
+  { id: "send_to_back", label: "Arrière-plan", params: { id: "string" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; var o = rxIdFind(c.s, p.id); if (!o) return "Objet introuvable : " + p.id;
+      var mn = 9999; Object.keys(c.s.pageItems).forEach(function (n) { (c.s.pageItems[n] || []).forEach(function (q) { mn = Math.min(mn, q.z || 1); }); });
+      o.z = mn - 1; rxIdRefresh(); return null; } },
+  { id: "align_items", label: "Aligner plusieurs objets", params: { ids: "array<string>", align: "left|centerX|right|top|centerY|bottom" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif";
+      var os = (p.ids || []).map(function (id) { return rxIdFind(c.s, id); }).filter(Boolean);
+      if (os.length < 2) return "Au moins deux objets requis";
+      var px = function (v) { return Math.round(v * 96 / 25.4); };
+      if (p.align === "left") { var m1 = Math.min.apply(null, os.map(function (o) { return o.x; })); os.forEach(function (o) { o.x = m1; }); }
+      if (p.align === "right") { var m2 = Math.max.apply(null, os.map(function (o) { return o.x + o.w; })); os.forEach(function (o) { o.x = m2 - o.w; }); }
+      if (p.align === "centerX") { var cx = os.reduce(function (a, o) { return a + o.x + o.w / 2; }, 0) / os.length; os.forEach(function (o) { o.x = Math.round(cx - o.w / 2); }); }
+      if (p.align === "top") { var m3 = Math.min.apply(null, os.map(function (o) { return o.y; })); os.forEach(function (o) { o.y = m3; }); }
+      if (p.align === "bottom") { var m4 = Math.max.apply(null, os.map(function (o) { return o.y + o.h; })); os.forEach(function (o) { o.y = m4 - o.h; }); }
+      if (p.align === "centerY") { var cy = os.reduce(function (a, o) { return a + o.y + o.h / 2; }, 0) / os.length; os.forEach(function (o) { o.y = Math.round(cy - o.h / 2); }); }
+      rxIdRefresh(); return null; } },
+  { id: "set_columns", label: "Nombre de colonnes (document)", params: { n: "1..4" }, run: function (p) {
+      var c = rxIdState(); if (!c) return "Pas de document actif"; c.s.columns = Math.max(1, Math.min(4, +p.n || 1)); rxIdRefresh(); return null; } }
+];
+function rxaiRegistry(engine) { return engine === "word" ? RXAI_WORD_TOOLS : RXAI_ID_TOOLS; }
+
+/* ---------------- VALIDATION DES COMMANDES ---------------- */
+function rxaiValidate(engine, op) {
+  if (!op || typeof op !== "object") return { ok: false, err: "opération mal formée" };
+  var t = rxaiRegistry(engine).find(function (x) { return x.id === op.tool; });
+  if (!t) return { ok: false, err: "outil inconnu : " + op.tool };
+  var p = op.params || {};
+  if (t.limits) { for (var k in t.limits) { if (p[k] != null && (isNaN(+p[k]) || +p[k] < t.limits[k][0] || +p[k] > t.limits[k][1])) return { ok: false, err: t.id + "." + k + " hors limites " + t.limits[k].join("..") }; } }
+  if (t.id === "set_alignment" && ["left", "center", "right", "justify"].indexOf(p.align) < 0) return { ok: false, err: "align invalide" };
+  if ((t.id === "set_color" || t.id === "set_fill" || t.id === "set_text_color") && !/^#[0-9a-fA-F]{6}$/.test(p.color || "")) return { ok: false, err: "couleur invalide" };
+  if (engine === "indesign" && t.id !== "add_page" && t.id !== "list_context" && t.id !== "set_columns") {
+    if (!p.id && !(p.ids || []).length) return { ok: false, err: t.id + " : id manquant" }; }
+  // (le test RXW_API se fait à l exécution : rxwExec/rxwSpan renvoient une erreur propre si absente)
+  return { ok: true, tool: t };
+}
+
+/* ---------------- CONTEXTE DOCUMENTAIRE INTELLIGENT ---------------- */
+function rxaiContext(engine) {
+  if (engine === "word") {
+    var api = window.RXW_API;
+    if (!api) return { error: "RXW_API absente" };
+    var m = api.getMeta();
+    return { engine: "word", paper: m.paper || "A4", margins_cm: { top: m.mt, right: m.mr, bottom: m.mb, left: m.ml },
+      blocks: api.ed.children.length, words: (api.ed.textContent || "").split(/\s+/).length,
+      selection: api.selText().slice(0, 400) };
+  }
+  var c = rxIdState();
+  if (!c) return { error: "Pas de document InDesign actif" };
+  var items = [];
+  Object.keys(c.s.pageItems || {}).forEach(function (n) {
+    (c.s.pageItems[n] || []).forEach(function (o) { items.push({ id: o.id, type: o.type, page: +n, x_mm: Math.round(o.x / 3.78), y_mm: Math.round(o.y / 3.78), w_mm: Math.round(o.w / 3.78), h_mm: Math.round(o.h / 3.78) }); });
+  });
+  return { engine: "indesign", pages: c.s.pages, width_mm: c.s.width, height_mm: c.s.height, columns: c.s.columns, items: items.slice(0, 60) };
+}
+
+/* ---------------- PASSERELLE GEMINI (plan structuré) ---------------- */
+function rxaiParsePlan(engine, raw) {
+  var m = /\{[\s\S]*\}/.exec(String(raw || ""));
+  if (!m) return { ops: [], errors: ["Réponse non JSON : " + String(raw || "").slice(0, 140)] };
+  var plan = null;
+  try { plan = JSON.parse(m[0]); } catch (e) { return { ops: [], errors: ["JSON invalide : " + e.message] }; }
+  var out = { ops: [], errors: [] };
+  (plan.ops || []).forEach(function (o) { var v = rxaiValidate(engine, o); if (v.ok) out.ops.push(o); else out.errors.push(v.err); });
+  if (!out.ops.length && !out.errors.length) out.errors.push("Plan vide");
+  return out;
+}
+async function rxaiPlan(engine, prompt, mode) {
+  var ctx = rxaiContext(engine);
+  if (ctx.error) return { ops: [], errors: [ctx.error] };
+  var reg = rxaiRegistry(engine);
+  var sys = "Tu es le planificateur IA de l éditeur Readox " + engine.toUpperCase() + ". " +
+    "Réponds UNIQUEMENT avec un JSON : {\"ops\":[{\"tool\":\"id\",\"params\":{...}}]}. " +
+    "Outils autorisés : " + reg.map(function (t) { return t.id + "(" + JSON.stringify(t.params) + ")"; }).join(" ; ") + ". " +
+    "Mode " + mode + ". Ne réécris aucun contenu sauf si l outil rewrite_selection est demandé. " +
+    "Contexte document : " + JSON.stringify(ctx).slice(0, 1800);
+  try {
+    var raw = await aiGenerate(prompt, sys, 1600);
+    return rxaiParsePlan(engine, raw);
+  } catch (e) { return { ops: [], errors: ["Passerelle Gemini : " + e.message] }; }
+}
+
+/* ---------------- EXÉCUTION + VÉRIFICATION ---------------- */
+function rxaiSnapshot(engine) {
+  if (engine === "word") { var api = window.RXW_API; return api ? api.getHTML() : null; }
+  var c = rxIdState(); return c ? JSON.stringify(c.s) : null;
+}
+function rxaiRestore(engine, snap) {
+  if (snap == null) return false;
+  try {
+    if (engine === "word") { window.RXW_API.setHTML(snap); return true; }
+    var c = rxIdState(); if (!c) return false;
+    c.t.idState = JSON.parse(snap); rxIdRefresh(); return true;
+  } catch (e) { return false; }
+}
+async function rxaiExecute(engine, ops) {
+  var results = [];
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i], v = rxaiValidate(engine, op);
+    if (!v.ok) { results.push({ op: op, ok: false, error: v.err }); continue; }
+    try {
+      var r = v.tool.run(op.params || {});
+      if (r && typeof r.then === "function") r = await r;
+      results.push({ op: op, ok: r == null, error: r || null, summary: v.tool.label });
+    } catch (e) { results.push({ op: op, ok: false, error: e.message }); }
+  }
+  return results;
+}
+function rxaiVerify(engine, before) {
+  if (engine === "word") {
+    var api = window.RXW_API; if (!api) return "RXW_API absente";
+    var after = api.getHTML();
+    var strip = function (h) { return h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); };
+    var lost = strip(before.html).length - strip(after).length;
+    return { ok: lost <= 0, textLost: Math.max(0, lost), note: lost > 0 ? "Perte de texte détectée (" + lost + " car.)" : "Texte intégral conservé" };
+  }
+  var c = rxIdState(); if (!c) return { ok: false, note: "Document fermé" };
+  var b = JSON.parse(before.state), a = c.s;
+  var count = function (s) { var n = 0; Object.keys(s.pageItems || {}).forEach(function (k) { n += (s.pageItems[k] || []).length; }); return n; };
+  return { ok: count(a) >= count(b), objectsBefore: count(b), objectsAfter: count(a), pages: a.pages,
+    note: count(a) >= count(b) ? "Objets conservés, " + a.pages + " pages" : "DES OBJETS ONT DISPARU" };
+}
+
+/* ---------------- PANNEAU COMMUN ---------------- */
+function rxaiOpen(engine) {
+  var old = document.getElementById("rxai-panel"); if (old) old.remove();
+  var root = document.createElement("div"); root.id = "rxai-panel"; root.className = "rxai-panel";
+  root.innerHTML =
+    '<div class="rxai-head"><b>✦ IA Créative — ' + (engine === "word" ? "Readox Word" : "Readox InDesign") + '</b>' +
+    '<span class="rxai-build">' + RXAI_BUILD + '</span><button class="rxai-x" title="Fermer">×</button></div>' +
+    '<div class="rxai-modes"><button data-m="IA automatique" class="on">IA automatique</button><button data-m="IA assistée">IA assistée</button>' +
+    '<span class="rxai-hint">édition manuelle toujours active</span></div>' +
+    '<div class="rxai-ctx"></div>' +
+    '<textarea class="rxai-prompt" rows="4" placeholder="Décrivez la modification… (ex. « Sélectionne les titres et centre-les en 20 pt »)"></textarea>' +
+    '<div class="rxai-actions"><button class="rxai-run">⚙ Exécuter</button><button class="rxai-apply" disabled>✔ Appliquer</button><button class="rxai-undo" disabled>↶ Annuler</button></div>' +
+    '<div class="rxai-status"></div><div class="rxai-preview"></div><div class="rxai-hist"><b>Historique</b><ul></ul></div>';
+  document.body.appendChild(root);
+  var mode = "IA automatique", snapshot = null, lastResults = null;
+  var $ = function (q) { return root.querySelector(q); };
+  root.querySelector(".rxai-x").onclick = function () { root.remove(); };
+  root.querySelectorAll(".rxai-modes button").forEach(function (b) {
+    b.onclick = function () { mode = b.dataset.m; root.querySelectorAll(".rxai-modes button").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); };
+  });
+  function status(m, k) { $(".rxai-status").textContent = m; $(".rxai-status").className = "rxai-status " + (k || ""); }
+  function renderHist() {
+    $(" .rxai-hist ul"); var ul = root.querySelector(".rxai-hist ul"); ul.innerHTML = "";
+    RXAI_HISTORY.slice(-8).reverse().forEach(function (h) {
+      var li = document.createElement("li");
+      li.textContent = new Date(h.ts).toLocaleTimeString() + " · " + h.engine + " · " + h.mode + " · " + h.prompt.slice(0, 60) + " → " + (h.applied ? "appliqué" : "refusé");
+      ul.appendChild(li);
+    });
+  }
+  function renderCtx() { var c = rxaiContext(engine); $(".rxai-ctx").textContent = c.error ? ("⚠ " + c.error) : ("Document : " + (engine === "word" ? (c.paper + " · " + c.words + " mots · sélection " + (c.selection ? c.selection.length + " car." : "vide")) : (c.pages + " pages · " + (c.items ? c.items.length : 0) + " objets"))); }
+  renderCtx(); renderHist();
+  $(".rxai-run").onclick = async function () {
+    var prompt = $(".rxai-prompt").value.trim();
+    if (!prompt) { status("Décrivez d abord la modification demandée.", "err"); return; }
+    status("Planification Gemini en cours…");
+    var plan = await rxaiPlan(engine, prompt, mode);
+    var pv = $(".rxai-preview"); pv.innerHTML = "";
+    if (plan.errors.length) { var d = document.createElement("div"); d.className = "rxai-err"; d.textContent = "⚠ " + plan.errors.join(" | "); pv.appendChild(d); }
+    plan.ops.forEach(function (o, i) {
+      var r = rxaiValidate(engine, o);
+      var row = document.createElement("div"); row.className = "rxai-op";
+      row.textContent = (i + 1) + ". " + o.tool + " " + JSON.stringify(o.params || {});
+      if (!r.ok) { row.className += " bad"; row.textContent += " — " + r.err; }
+      pv.appendChild(row);
+    });
+    if (!plan.ops.length) { status("Aucune opération valide — rien n a été modifié.", "err"); $(".rxai-apply").disabled = true; return; }
+    snapshot = rxaiSnapshot(engine);
+    lastResults = plan.ops;
+    status(plan.ops.length + " opération(s) prête(s). Vérifiez l aperçu puis Appliquer.", "ok");
+    $(".rxai-apply").disabled = false;
+  };
+  $(".rxai-apply").onclick = async function () {
+    if (!lastResults) return;
+    status("Application…");
+    var results = await rxaiExecute(engine, lastResults);
+    var verif = rxaiVerify(engine, engine === "word" ? { html: snapshot } : { state: snapshot });
+    var okN = results.filter(function (r) { return r.ok; }).length;
+    var lines = results.map(function (r, i) { return (i + 1) + ". " + r.op.tool + " : " + (r.ok ? "OK" : "ÉCHEC (" + r.error + ")"); });
+    var allOk = okN === results.length && (verif.ok !== false);
+    status("[" + RXAI_BUILD + "] " + okN + "/" + results.length + " opérations réussies. " + (verif.note || ""), allOk ? "ok" : "err");
+    var pv = $(".rxai-preview"); pv.innerHTML = "";
+    lines.forEach(function (l) { var d = document.createElement("div"); d.className = "rxai-op"; d.textContent = l; pv.appendChild(d); });
+    RXAI_HISTORY.push({ ts: Date.now(), engine: engine, mode: mode, prompt: $(".rxai-prompt").value.trim(), applied: allOk, results: results });
+    renderHist();
+    $(".rxai-undo").disabled = false;
+    renderCtx();
+  };
+  $(".rxai-undo").onclick = function () {
+    if (snapshot == null) return;
+    var ok = rxaiRestore(engine, snapshot);
+    status(ok ? "Modifications annulées — document restauré." : "Échec de la restauration.", ok ? "ok" : "err");
+  };
+  return root;
+}
+
+/* ---------------- CÂBLAGE (délégation — aucun clic simulé) ---------------- */
+document.addEventListener("click", function (e) {
+  var bw = e.target && e.target.closest ? e.target.closest("[data-rxai-word]") : null;
+  if (bw) { rxaiOpen("word"); return; }
+  var bi = e.target && e.target.closest ? e.target.closest("[data-rxai-open]") : null;
+  if (bi) { rxaiOpen("indesign"); }
+});
+</script>
+
 <script id="readix-book-ai">/* ============================================================
    READIX BOOK AI ENGINE — Studio Livre IA
    Additif : un studio où l'auteur décrit un livre, et Readix
@@ -10702,7 +11036,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     toast("[" + RX57_BUILD + "] Integrite " + (ok ? "OK" : "INCOMPLETE") + " : " + dst.paragraphs + " paragraphes, " + dst.chars + " caracteres, images " + dst.images + "/" + src.images + ", " + s.pages + " pages", ok ? "ok" : "err");
     return report;
   }
-  var RX57_BUILD = "56.11-lot8";
+  var RX57_BUILD = "56.12-lot9";
   function rx57PreloadImages(ai) {
     var urls = [];
     (ai.plan.chapters || []).forEach(function(ch) {
@@ -10764,7 +11098,11 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         "<h2 style=\"font-size:28px\">" + ch.title + "</h2>", { fs: 28, bold: true });
       var bodyY = mg.top + 30, bodyH = s.height - bodyY - mg.bottom;
       var bodyW = s.width - mg.left - mg.right;
-      var slices = rx57PaginateMeasured(blocks, Math.floor(px(bodyH) * 0.92), px(bodyW), fsPx, linePx); // Lot 7 : hauteur utile -8 %
+      var __budget = Math.floor(px(bodyH) * 0.92); // Lot 7 : hauteur utile -8 %
+      var slices = rx57PaginateBlocks(blocks, __budget, px(bodyW), fsPx, linePx); // Lot 9 : estimateur déterministe instrumenté (le mesuré DOM reste en secours interne via rx57PaginateMeasured)
+      var __rawH = blocks.reduce(function(a, b) { return a + rx57EstBlock(b, px(bodyW), fsPx, linePx); }, 0);
+      try { window.__rx57LastBuild = { chapter: ch.id, blocks: blocks.length, rawH: __rawH, budget: __budget, slices: slices.length, pages: s.pages }; } catch (e) {}
+      if (typeof console !== "undefined") console.info("[rx57] chapitre " + ch.id + " : " + blocks.length + " blocs, hauteur " + __rawH + "px / budget " + __budget + "px → " + slices.length + " tranche(s)");
       var prevFrame = null;
       slices.forEach(function(slice, k) {
         var p = (k === 0) ? pg : (s.pages += 1, s.pages);
@@ -11430,29 +11768,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         bDoc.onclick = function () { exportBook(t, stage, "docx", bDoc); };
         pad3.appendChild(bDoc);
         var miss = rx57MissingChapters(ai).length;
-        if (!ai._layoutMode) ai._layoutMode = "Auto";
-        var modeRow = E("div", "rxbai-modes", "");
-        ["Auto", "Assistée", "Manuel"].forEach(function(md) {
-          var bm = E("button", "rxbai-btn" + (ai._layoutMode === md ? " active" : ""), md);
-          bm.onclick = function() { ai._layoutMode = md; modeRow.querySelectorAll("button").forEach(function(x){ x.classList.remove("active"); }); bm.classList.add("active"); toast("Mode de mise en page : " + md, "ok"); };
-          modeRow.appendChild(bm);
-        });
-        pad3.appendChild(modeRow);
-        function rx57ModeGate(kind) {
-          if (ai._layoutMode === "Manuel") { toast("Mode Manuel : " + kind + " ouvert à vide — collez votre contenu puis composez librement.", "ok"); return "manuel"; }
-          if (ai._layoutMode === "Assistée") {
-            var v = rx57ValidateBook(ai);
-            var msg = kind + " — validation : " + (v.ok ? "aucun blocage" : "BLOQUÉ : " + v.blocking.join(" | ")) + (v.warnings.length ? " — avertissements : " + v.warnings.join(" | ") : "");
-            if (v.ok) { if (typeof confirm === "function" && !confirm(msg + "\nContinuer ?")) return "stop"; }
-            else { toast(msg, "err"); return "stop"; }
-          }
-          return "go";
-        }
         var bW = E("button", "rxbai-btn block", "🅦 Ouvrir dans Readox Word" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
         bW.onclick = function () {
-          var gate = rx57ModeGate("Transfert Word");
-          if (gate === "manuel") { openReadixWordTab(); return; }
-          if (gate === "stop") return;
           var v = rx57ValidateBook(ai);
           if (!v.ok) { toast("Transfert Word bloqué : " + v.blocking[0], "err"); return; }
           if (v.warnings.length) toast(v.warnings[0], "warn");
@@ -11464,9 +11781,6 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         pad3.appendChild(bW);
         var bI = E("button", "rxbai-btn block", "🅟 Mettre en page dans Readox InDesign" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
         bI.onclick = async function () {
-          var gate = rx57ModeGate("Mise en page InDesign");
-          if (gate === "manuel") { openReadixInDesign(); return; }
-          if (gate === "stop") return;
           await rx57PreloadImages(ai); // Lot 8 : décoder les images AVANT de mesurer et placer
           var v = rx57ValidateBook(ai);
           if (!v.ok) { toast("Mise en page bloquée : " + v.blocking[0], "err"); return; }
@@ -11894,7 +12208,8 @@ function rx41ScrollRestore(t,stage){
  const panel=root.querySelector('[data-panel-body]'),v=state.tabs[active];
  if(panel&&v){const side=root.querySelector('.rxid-props');if(side)side.scrollTop=v.top;panel.scrollLeft=v.left;}
 }
-function render(t,stage){rx41ScrollCapture(t,stage);const previousCanvas=stage.querySelector('.rxid-canvas');if(previousCanvas){t._idViewport={left:previousCanvas.scrollLeft,top:previousCanvas.scrollTop};}const s=ensure(t),active=t.idTool||'select';if(!t.idHistory)t.idHistory=[];if(!t.idRedo)t.idRedo=[];try{const snap=docSnapshot(s);if(t.idHistory[t.idHistory.length-1]!==snap){t.idHistory.push(snap);if(t.idHistory.length>60)t.idHistory.shift()}}catch(e){}stage.classList.remove('empty');stage.innerHTML=`<div class="rxid" data-rxid-root><div class="rxid-top"><div class="rxid-brand"><b>Readox</b><sup>InDesign</sup><em>R2026</em></div><div class="rxid-menu"><button type="button" data-id-undo title="Annuler (Ctrl+Z)">↶ Annuler</button><button type="button" data-id-redo title="Rétablir (Ctrl+Y)">↷ Rétablir</button>${['Fichier','Édition','Mise en page','Texte','Objet','Tableau','Affichage','Fenêtre','Aide'].map(x=>`<button data-menu="${x}">${x}</button>`).join('')}</div><div class="rxid-topright"><span>☁ ${t.dirty?'Modifié':'Enregistré'}</span><select data-id-zoom>${[25,50,67,75,85,100,125,150,200,300,400].map(z=>`<option ${z===s.zoom?'selected':''}>${z}%</option>`).join('')}</select><button data-top-action="workspace" title="Espace de travail">Essentials⌄</button><button data-top-action="search" title="Rechercher dans le document">⌕</button><button type="button" data-rx54-open title="Assistant de création IA">✦ IA Créative</button></div></div>
+function render(t,stage){rx41ScrollCapture(t,stage);const previousCanvas=stage.querySelector('.rxid-canvas');if(previousCanvas){t._idViewport={left:previousCanvas.scrollLeft,top:previousCanvas.scrollTop};}const s=ensure(t),active=t.idTool||'select';if(!t.idHistory)t.idHistory=[];if(!t.idRedo)t.idRedo=[];try{const snap=docSnapshot(s);if(t.idHistory[t.idHistory.length-1]!==snap){t.idHistory.push(snap);if(t.idHistory.length>60)t.idHistory.shift()}}catch(e){}stage.classList.remove('empty');stage.innerHTML=`<div class="rxid" data-rxid-root><div class="rxid-top"><div class="rxid-brand"><b>Readox</b><sup>InDesign</sup><em>R2026</em></div><div class="rxid-menu"><button type="button" data-id-undo title="Annuler (Ctrl+Z)">↶ Annuler</button><button type="button" data-id-redo title="Rétablir (Ctrl+Y)">↷ Rétablir</button>${['Fichier','Édition','Mise en page','Texte','Objet','Tableau','Affichage','Fenêtre','Aide'].map(x=>`<button data-menu="${x}">${x}</button>`).join('')}</div><div class="rxid-topright"><span>☁ ${t.dirty?'Modifié':'Enregistré'}</span><select data-id-zoom>${[25,50,67,75,85,100,125,150,200,300,400].map(z=>`<option ${z===s.zoom?'selected':''}>${z}%</option>`).join('')}</select><button data-top-action="workspace" title="Espace de travail">Essentials⌄</button><button data-top-action="search" title="Rechercher dans le document">⌕</button><button type="button" data-rxai-open title="IA Créative — pilotage automatique ou assisté">✦ IA Créative</button>
+<button type="button" data-rx54-open title="Assistant de composition de couverture">🎨 Couverture IA</button></div></div>
 <button type="button" class="rx54-fixed-launcher" data-rx54-open aria-label="Ouvrir IA Créative" title="IA Créative — assistant de mise en page">✦ IA Créative</button>
 <div class="rxid-control"><b data-id-context>${TOOL_NAMES[active]}</b><label>X <input data-ctx="x" value="${selectedItem(s)?mmVal(selectedItem(s).x,s):50} mm"></label><label>Y <input data-ctx="y" value="${selectedItem(s)?mmVal(selectedItem(s).y,s):50} mm"></label><label>L <input data-ctx="w" value="${selectedItem(s)?mmVal(selectedItem(s).w,s):s.width} mm"></label><label>H <input data-ctx="h" value="${selectedItem(s)?mmVal(selectedItem(s).h,s):s.height} mm"></label><button data-ctx-action="proportion" title="Conserver les proportions">🔗</button><button data-ctx-action="lock" title="Verrouiller/déverrouiller l’objet">🔒</button><label>Rotation <input data-ctx="rot" value="${selectedItem(s)?(selectedItem(s).rot||0):0}°"></label><button data-ctx-action="fill" title="Couleur de fond">◩</button><button data-ctx-action="stroke" title="Couleur du contour">□</button><select data-ctx="strokeWidth"><option>1 pt</option><option>2 pt</option><option>3 pt</option><option>5 pt</option></select><span class="rxid-control-spacer"></span><button data-id-import-image title="Importer une image et créer automatiquement un cadre">🖼 Importer image</button><button data-id-import-project title="Importer un projet Readix InDesign .rxd">⇩ Importer .rxd</button><button data-id-tools-catalog title="Afficher tous les outils et toutes les options disponibles">☷ Tous les outils</button><button data-id-new>Nouveau document</button></div>
 <div class="rxid-doc-tabs"><div class="rxid-doc-tab">${esc(t.name||'Document InDesign.rxd')} ${t.dirty?'*':''}<span data-doc-close title="Fermer l’onglet">×</span></div></div><div class="rxid-body"><aside class="rxid-tools">${TOOLS.map(a=>a[0]==='sep'?'<div class="rxid-sep"></div>':`<button class="rxid-tool ${a[0]===active?'on':''}" data-id-tool="${a[0]}" title="${a[2]}">${a[1]}</button>`).join('')}<div class="rxid-colorstack"><button data-color-action="default" title="Couleurs par défaut">◧</button><button data-color-action="swap" title="Permuter fond/contour">⇄</button><button data-color-action="none" title="Aucun fond">∅</button></div></aside>
