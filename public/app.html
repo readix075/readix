@@ -1141,6 +1141,40 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxw-pageborder{position:absolute;pointer-events:none;z-index:0}
 
 .rxw-ed img{max-width:100%;height:auto;max-height:22cm;}.rxw-ed figure{margin:8px 0;text-align:center;break-inside:avoid;}
+
+/* === Thème maquette 56.14 : refonte aérée (couche additive, aucune fonction retirée) === */
+.rxid{--rbg:#f4f6fb;--rpanel:#ffffff;--rline:#e4e8f2;--rtext:#1c2740;--rsub:#6b7690;--raccent:#5b5bd6}
+.rxid-top{background:var(--rpanel)!important;border-bottom:1px solid var(--rline);box-shadow:0 1px 8px rgba(20,30,60,.06);padding:6px 14px!important}
+.rxid-menu button,.rxid-topright button,.rxid-topright select{border-radius:8px;padding:5px 9px;margin:0 1px}
+.rxid-brand b{font-size:16px}.rxid-brand sup{color:var(--raccent);font-weight:700}
+.rxid-tools{background:var(--rpanel)!important;border-right:1px solid var(--rline);padding:10px 7px!important;gap:7px!important}
+.rxid-tool{width:40px;height:40px;border-radius:10px;font-size:15px}
+.rxid-tool:hover{background:#eef0ff}.rxid-tool.on{background:var(--raccent)!important;color:#fff;box-shadow:0 2px 8px rgba(91,91,214,.35)}
+.rxid-body{gap:0!important}
+.rxid-canvas{background:var(--rbg)!important}
+.rxid-stage{background:var(--rbg)!important;padding:34px!important}
+.rxid-spread{margin:0 auto 34px!important;filter:drop-shadow(0 6px 18px rgba(20,30,60,.14))}
+.rxid-props,.rxid-leftpanel{background:var(--rpanel)!important;border-color:var(--rline)!important;resize:horizontal;overflow:auto;min-width:190px;max-width:480px}
+.rxid-leftpanel{border-right:1px solid var(--rline)}
+.rxid-ptabs{display:flex;gap:2px;padding:7px 8px 0;border-bottom:1px solid var(--rline);background:#fbfcff}
+.rxid-ptabs button{border:none;background:none;padding:7px 11px;border-radius:8px 8px 0 0;color:var(--rsub);font-size:12.5px}
+.rxid-ptabs button.on{background:#fff;color:var(--raccent);font-weight:700;box-shadow:inset 0 -2px 0 var(--raccent)}
+.rxid-status{background:var(--rpanel)!important;border-top:1px solid var(--rline);color:var(--rsub);padding:5px 14px!important}
+.rxid-control,.rxid-pagectl{background:var(--rpanel)!important;border-bottom:1px solid var(--rline);padding:6px 14px!important;gap:10px!important;flex-wrap:wrap}
+.rxid-pagectl{display:none;align-items:center}
+.rxid.page-mode .rxid-pagectl{display:flex}
+.rxid.page-mode .rxid-control{display:none}
+.rxid-pagectl label{font-size:12px;color:var(--rsub);display:flex;align-items:center;gap:4px}
+.rxid-pagectl input,.rxid-pagectl select{border:1px solid var(--rline);border-radius:7px;padding:4px 6px;width:76px}
+.rxid-pagectl button{border:1px solid var(--rline);background:#fff;border-radius:8px;padding:5px 10px}
+.rxid-pagectl button.primary{background:var(--raccent);color:#fff;border-color:var(--raccent)}
+.rxpage-handles{position:absolute;inset:0;pointer-events:none;z-index:40}
+.rxpage-handles .rxh{position:absolute;width:12px;height:12px;background:#fff;border:2px solid var(--raccent);border-radius:3px;pointer-events:auto;touch-action:none}
+.rxpage-handles .rxh.c{border-radius:50%}
+.rxpage-ghost{position:absolute;border:2px dashed var(--raccent);background:rgba(91,91,214,.08);pointer-events:none;display:none;z-index:39;font-size:11px;color:var(--raccent);padding:2px 5px}
+.rxid-hint{font-size:11px;color:var(--rsub)}
+@media(max-width:1100px){.rxid-leftpanel{max-width:230px}}
+
 </style>
   <style id="readix-indesign-embedded-css">
 /* Readix InDesign — Phase 1 foundation. Namespaced: no impact on existing Readix tools. */
@@ -12182,7 +12216,7 @@ function renderPages(s){let arr=[];if(!s.facing){for(let i=1;i<=s.pages;i++)arr.
 function rx41ScrollCapture(t,stage){
  const root=stage.querySelector('[data-rxid-root]');if(!root)return;
  const state=t._rx41Scroll||(t._rx41Scroll={tabs:{}});
- for(const [key,selector] of [['tools','.rxid-tools'],['props','.rxid-props'],['canvas','.rxid-canvas'],['control','.rxid-control']]){
+ for(const [key,selector] of [['tools','.rxid-tools'],['left','.rxid-leftpanel'],['props','.rxid-props'],['canvas','.rxid-canvas'],['control','.rxid-control']]){
   const el=root.querySelector(selector);if(el)state[key]={top:el.scrollTop,left:el.scrollLeft};
  }
  const active=root.querySelector('[data-panel].on');
@@ -12197,24 +12231,34 @@ function rx41ScrollRestore(t,stage){
  const button=root.querySelector('[data-panel="'+active+'"]');
  if(button&&active!=='props'){
   root.querySelectorAll('[data-panel]').forEach(b=>b.classList.toggle('on',b===button));
-  const body=root.querySelector('[data-panel-body]');
   const s=ensure(t);
-  body.innerHTML=active==='pages'?pagesHTML(s):active==='layers'?layersHTML(s):active==='tools'?toolsHTML(s):propsHTML(s);
+  const isLeft=['pages','layers','ressources'].includes(active);
+  const body=root.querySelector(isLeft?'[data-panel-body-left]':'[data-panel-body]');
+  body.innerHTML=active==='pages'?pagesHTML(s):active==='layers'?layersHTML(s):active==='ressources'?ressourcesHTML(s):active==='tools'?toolsHTML(s):active==='styles'?stylesPanelHTML(t,s):active==='ia'?iaPanelHTML():active==='hist'?histPanelHTML(t):propsHTML(s);
   bindPanel(t,stage,root);
  }
- for(const [key,selector] of [['tools','.rxid-tools'],['props','.rxid-props'],['control','.rxid-control']]){
+ for(const [key,selector] of [['tools','.rxid-tools'],['left','.rxid-leftpanel'],['props','.rxid-props'],['control','.rxid-control']]){
   const el=root.querySelector(selector),v=state[key];if(el&&v){el.scrollTop=v.top;el.scrollLeft=v.left;}
  }
  const panel=root.querySelector('[data-panel-body]'),v=state.tabs[active];
  if(panel&&v){const side=root.querySelector('.rxid-props');if(side)side.scrollTop=v.top;panel.scrollLeft=v.left;}
 }
-function render(t,stage){rx41ScrollCapture(t,stage);const previousCanvas=stage.querySelector('.rxid-canvas');if(previousCanvas){t._idViewport={left:previousCanvas.scrollLeft,top:previousCanvas.scrollTop};}const s=ensure(t),active=t.idTool||'select';if(!t.idHistory)t.idHistory=[];if(!t.idRedo)t.idRedo=[];try{const snap=docSnapshot(s);if(t.idHistory[t.idHistory.length-1]!==snap){t.idHistory.push(snap);if(t.idHistory.length>60)t.idHistory.shift()}}catch(e){}stage.classList.remove('empty');stage.innerHTML=`<div class="rxid" data-rxid-root><div class="rxid-top"><div class="rxid-brand"><b>Readox</b><sup>InDesign</sup><em>R2026</em></div><div class="rxid-menu"><button type="button" data-id-undo title="Annuler (Ctrl+Z)">↶ Annuler</button><button type="button" data-id-redo title="Rétablir (Ctrl+Y)">↷ Rétablir</button>${['Fichier','Édition','Mise en page','Texte','Objet','Tableau','Affichage','Fenêtre','Aide'].map(x=>`<button data-menu="${x}">${x}</button>`).join('')}</div><div class="rxid-topright"><span>☁ ${t.dirty?'Modifié':'Enregistré'}</span><select data-id-zoom>${[25,50,67,75,85,100,125,150,200,300,400].map(z=>`<option ${z===s.zoom?'selected':''}>${z}%</option>`).join('')}</select><button data-top-action="workspace" title="Espace de travail">Essentials⌄</button><button data-top-action="search" title="Rechercher dans le document">⌕</button><button type="button" data-rxai-open title="IA Créative — pilotage automatique ou assisté">✦ IA Créative</button>
+function render(t,stage){rx41ScrollCapture(t,stage);const previousCanvas=stage.querySelector('.rxid-canvas');if(previousCanvas){t._idViewport={left:previousCanvas.scrollLeft,top:previousCanvas.scrollTop};}const s=ensure(t),active=t.idTool||'select';if(!t.idHistory)t.idHistory=[];if(!t.idRedo)t.idRedo=[];try{const snap=docSnapshot(s);if(t.idHistory[t.idHistory.length-1]!==snap){t.idHistory.push(snap);if(t.idHistory.length>60)t.idHistory.shift()}}catch(e){}stage.classList.remove('empty');stage.innerHTML=`<div class="rxid${t.pageSelected&&t.idTool==='page'?' page-mode':''}" data-rxid-root><div class="rxid-top"><div class="rxid-brand"><b>Readox</b><sup>InDesign</sup><em>R2026</em></div><div class="rxid-menu"><button type="button" data-id-undo title="Annuler (Ctrl+Z)">↶ Annuler</button><button type="button" data-id-redo title="Rétablir (Ctrl+Y)">↷ Rétablir</button>${['Fichier','Édition','Mise en page','Texte','Objet','Tableau','Affichage','Fenêtre','Aide'].map(x=>`<button data-menu="${x}">${x}</button>`).join('')}</div><div class="rxid-topright"><span>☁ ${t.dirty?'Modifié':'Enregistré'}</span><select data-id-zoom>${[25,50,67,75,85,100,125,150,200,300,400].map(z=>`<option ${z===s.zoom?'selected':''}>${z}%</option>`).join('')}</select><button data-top-action="workspace" title="Espace de travail">Essentials⌄</button><button data-top-action="search" title="Rechercher dans le document">⌕</button><button type="button" data-rxai-open title="IA Créative — pilotage automatique ou assisté">✦ IA Créative</button>
 <button type="button" data-rx54-open title="Assistant de composition de couverture">🎨 Couverture IA</button></div></div>
 <button type="button" class="rx54-fixed-launcher" data-rx54-open aria-label="Ouvrir IA Créative" title="IA Créative — assistant de mise en page">✦ IA Créative</button>
 <div class="rxid-control"><b data-id-context>${TOOL_NAMES[active]}</b><label>X <input data-ctx="x" value="${selectedItem(s)?mmVal(selectedItem(s).x,s):50} mm"></label><label>Y <input data-ctx="y" value="${selectedItem(s)?mmVal(selectedItem(s).y,s):50} mm"></label><label>L <input data-ctx="w" value="${selectedItem(s)?mmVal(selectedItem(s).w,s):s.width} mm"></label><label>H <input data-ctx="h" value="${selectedItem(s)?mmVal(selectedItem(s).h,s):s.height} mm"></label><button data-ctx-action="proportion" title="Conserver les proportions">🔗</button><button data-ctx-action="lock" title="Verrouiller/déverrouiller l’objet">🔒</button><label>Rotation <input data-ctx="rot" value="${selectedItem(s)?(selectedItem(s).rot||0):0}°"></label><button data-ctx-action="fill" title="Couleur de fond">◩</button><button data-ctx-action="stroke" title="Couleur du contour">□</button><select data-ctx="strokeWidth"><option>1 pt</option><option>2 pt</option><option>3 pt</option><option>5 pt</option></select><span class="rxid-control-spacer"></span><button data-id-import-image title="Importer une image et créer automatiquement un cadre">🖼 Importer image</button><button data-id-import-project title="Importer un projet Readix InDesign .rxd">⇩ Importer .rxd</button><button data-id-tools-catalog title="Afficher tous les outils et toutes les options disponibles">☷ Tous les outils</button><button data-id-new>Nouveau document</button></div>
+<div class="rxid-pagectl"><b>Page ${s.current} / ${s.pages}</b>
+<label>Format <select data-pg-format><option value="">Personnalisé</option><option value="210x297" selected>A4 (210 × 297 mm)</option><option value="148x210">A5 (148 × 210 mm)</option><option value="297x420">A3 (297 × 420 mm)</option><option value="215.9x279.4">Letter (215,9 × 279,4 mm)</option><option value="127x203">Livre 5×8 pouces (127 × 203 mm)</option><option value="152x229">Livre 6×9 pouces (152 × 229 mm)</option></select></label>
+<label>L <input data-pg="w" value="${s.width}"> mm</label><label>H <input data-pg="h" value="${s.height}"> mm</label>
+<label><input type="checkbox" data-pg-lock checked> 🔗 proportions</label>
+<label>Ancrage <select data-pg-anchor><option value="tl">haut-gauche</option><option value="tr">haut-droit</option><option value="bl">bas-gauche</option><option value="br">bas-droit</option><option value="c" selected>centre</option></select></label>
+<label><input type="checkbox" data-pg-all> toutes les pages</label>
+<button class="primary" data-pg-apply>↔ Redimensionner page et contenu</button>
+<span class="rxid-hint">12 poignées sur la page · zoom ≠ dimension réelle · Annuler/Rétablir actifs</span></div>
 <div class="rxid-doc-tabs"><div class="rxid-doc-tab">${esc(t.name||'Document InDesign.rxd')} ${t.dirty?'*':''}<span data-doc-close title="Fermer l’onglet">×</span></div></div><div class="rxid-body"><aside class="rxid-tools">${TOOLS.map(a=>a[0]==='sep'?'<div class="rxid-sep"></div>':`<button class="rxid-tool ${a[0]===active?'on':''}" data-id-tool="${a[0]}" title="${a[2]}">${a[1]}</button>`).join('')}<div class="rxid-colorstack"><button data-color-action="default" title="Couleurs par défaut">◧</button><button data-color-action="swap" title="Permuter fond/contour">⇄</button><button data-color-action="none" title="Aucun fond">∅</button></div></aside>
 <main class="rxid-canvas"><div class="rxid-ruler-x" style="display:${s.showRulers?'flex':'none'}">${Array.from({length:Math.floor(s.width/25)+1},(_,i)=>`<span>${i*25}</span>`).join('')}</div><div class="rxid-ruler-y" style="display:${s.showRulers?'flex':'none'}">${Array.from({length:Math.floor(s.height/25)+1},(_,i)=>`<span>${i*25}</span>`).join('')}</div><div class="rxid-stage" data-id-stage>${renderPages(s)}</div></main>
-<aside class="rxid-props"><div class="rxid-ptabs"><button class="on" data-panel="props">Propriétés</button><button data-panel="tools">Outils</button><button data-panel="pages">Pages</button><button data-panel="layers">Calques</button></div><div data-panel-body>${propsHTML(s)}</div></aside></div><div class="rxid-status"><span>Page <b data-current>${s.current}</b> sur <b>${s.pages}</b></span><span data-id-status>Outil : ${TOOL_NAMES[active]}</span><span>${s.format} · ${s.orientation} · ${s.columns} colonne${s.columns>1?'s':''} · ${s.margins.top} mm</span><span>Readox InDesign R2026 · Phase 40</span></div></div>`;bind(t,stage);rx27RestoreViewport(t,stage);rx41ScrollRestore(t,stage);}
+<aside class="rxid-leftpanel"><div class="rxid-ptabs"><button data-panel="pages">Pages</button><button data-panel="layers">Calques</button><button data-panel="ressources">Ressources</button></div><div data-panel-body-left></div></aside>
+<aside class="rxid-props"><div class="rxid-ptabs"><button class="on" data-panel="props">Propriétés</button><button data-panel="tools">Outils</button><button data-panel="styles">Styles</button><button data-panel="ia">IA</button><button data-panel="hist">Historique</button></div><div data-panel-body>${propsHTML(s)}</div></aside></div><div class="rxid-status"><span>Page <b data-current>${s.current}</b> sur <b>${s.pages}</b></span><span data-id-status>Outil : ${TOOL_NAMES[active]}</span><span>${s.format} · ${s.orientation} · ${s.columns} colonne${s.columns>1?'s':''} · ${s.margins.top} mm</span><span>Readox InDesign R2026 · Phase 40</span></div></div>`;bind(t,stage);rx27RestoreViewport(t,stage);rx41ScrollRestore(t,stage);}
 function rx27RestoreViewport(t,stage){
  const canvas=stage.querySelector('.rxid-canvas');if(!canvas)return;
  const center=()=>Math.max(0,(canvas.scrollWidth-canvas.clientWidth)/2);
@@ -12765,7 +12809,140 @@ function showModal(root,t,stage){if(root.querySelector('[data-id-modal]'))return
 window.ReadixInDesign={version:'34.1',render,renderHome,ensure,toolDefinitions:TOOL_DEFS};
 })();
 
-  </script>
+  
+/* ================= 56.14 : refonte maquette + redimensionnement proportionnel de page ================= */
+function rxR2(v){return Math.round(v*100)/100}
+/* Transformation PURE et testable : page + contenu proportionnel, textes chaînés préservés. */
+function rxPageTransform(s,opts){
+  opts=opts||{};
+  var newW=+opts.newW||0,newH=+opts.newH||0;
+  if(!(newW>20&&newH>20))return{ok:false,err:'dimensions invalides (min 20 mm)'};
+  if(newW>3000||newH>3000)return{ok:false,err:'dimensions hors limites (max 3000 mm)'};
+  var W0=s.width,H0=s.height,sx=newW/W0,sy=newH/H0;
+  var out=JSON.parse(JSON.stringify(s));
+  out.width=rxR2(newW);out.height=rxR2(newH);
+  if(out.margins){['top','bottom'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sy)});['left','right','inside','outside'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sx)})}
+  if(+out.gutter>0)out.gutter=rxR2(out.gutter*sx);
+  var ax=String(opts.anchor||'c');
+  var axH=ax.indexOf('r')>=0?'r':(ax==='c'?'c':'l');
+  var axV=ax.indexOf('b')>=0?'b':(ax==='c'?'c':'t');
+  function mapX(x){ if(axH==='r')return rxR2(newW-(W0-x)*sx); if(axH==='c')return rxR2((newW-W0*sx)/2+x*sx); return rxR2(x*sx) }
+  function mapY(y){ if(axV==='b')return rxR2(newH-(H0-y)*sy); if(axV==='c')return rxR2((newH-H0*sy)/2+y*sy); return rxR2(y*sy) }
+  var pages=opts.all?Object.keys(out.pageItems||{}):[String(opts.page||out.current||1)];
+  var f=(sx+sy)/2,items=0;
+  pages.forEach(function(n){(out.pageItems[n]||[]).forEach(function(it){
+    it.x=mapX(it.x);it.y=mapY(it.y);it.w=rxR2(it.w*sx);it.h=rxR2(it.h*sy);
+    if(it.type==='text'&&+it.fontSize>0)it.fontSize=Math.max(6,rxR2(it.fontSize*f));
+    if(+it.strokeWidth>0)it.strokeWidth=Math.max(0.25,rxR2(it.strokeWidth*f));
+    if(+it.rx>0)it.rx=rxR2(it.rx*f);
+    /* chaînage conservé par identité : flowFrom / nextFrameId inchangés — texte intégral */
+    items++;
+  })});
+  return{ok:true,state:out,factors:{sx:rxR2(sx),sy:rxR2(sy)},items:items,pages:pages.length,
+    note:items+' objets × ['+rxR2(sx)+' ; '+rxR2(sy)+'] sur '+pages.length+' page(s) — ancrage neutre à l échelle de la page (facteur = ratio, identité géométrique)'};
+}
+/* Panneaux Ressources / Styles / IA / Historique (onglets droits) */
+function ressourcesHTML(s){
+  var rows=[];var k=0;
+  Object.keys(s.pageItems||{}).forEach(function(n){(s.pageItems[n]||[]).forEach(function(o){
+    if(o.type==='frame'&&o.imageSrc){k++;rows.push('<div class="rxid-res"><img src="'+o.imageSrc+'" style="width:64px;height:44px;object-fit:cover;border-radius:4px"> <span>Page '+n+' · '+(o.caption||o.id)+'</span></div>')}
+  })});
+  return '<div style="padding:10px;font-size:12px">'+(k?rows.join(''):'Aucune ressource image dans ce document.')+'<div class="rxid-hint">Les illustrations du document sont listées ici ; elles restent éditables dans les pages.</div></div>';
+}
+function stylesPanelHTML(t,s){var ps=s.paragraphStyles||[],cs=s.characterStyles||[];var li=function(a){return a.length?a.map(function(x){return '<li>'+rxaiSafe(x.name||x)+'</li>'}).join(''):'<li class="rxid-hint">Aucun style — créez-en via le menu Styles existant.</li>'};return '<div style="padding:10px;font-size:12.5px"><b>Styles de paragraphe</b><ul>'+li(ps)+'</ul><b>Styles de caractère</b><ul>'+li(cs)+'</ul></div>'}
+function iaPanelHTML(){return '<div style="padding:12px;font-size:12.5px"><button data-rxai-open style="background:var(--raccent);color:#fff;border:none;border-radius:8px;padding:8px 14px">✦ Ouvrir IA Créative</button><p class="rxid-hint">Pilotage automatique ou assisté par commandes natives. L édition manuelle reste active.</p></div>'}
+function histPanelHTML(t){var h=(t.idHistory||[]);var rows=h.slice(-12).reverse().map(function(e,i){return '<li>'+(h.length-i)+'. '+(e.label||'Modification')+'</li>'}).join('');return '<div style="padding:10px;font-size:12.5px"><b>'+h.length+' opération(s)</b><ul>'+(rows||'<li class="rxid-hint">Aucune opération pour le moment.</li>')+'</ul><p class="rxid-hint">Annuler / Rétablir : barre supérieure (ou raccourcis existants).</p></div>'}
+function rxaiSafe(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+/* ---- sélection de page + 12 poignées + aperçu en temps réel ---- */
+function rxPageEl(root,n){var st=root.querySelector('[data-id-stage]');if(!st)return null;
+  var els=st.querySelectorAll('.rxid-sheet');if(els.length>=n)return els[n-1];
+  var sp=st.querySelectorAll('.rxid-spread');var c=0;
+  for(var i=0;i<sp.length;i++){var pp=sp[i].children;for(var j=0;j<pp.length;j++){c++;if(c===n)return pp[j]}}
+  return null}
+function rxPageHandles(t,stage,root){
+  var s=ensure(t);
+  /* clic sur le fond avec l outil Page : sélectionne la page elle-même */
+  var cv=root.querySelector('.rxid-canvas');
+  if(cv&&!cv.__rxpg){cv.__rxpg=1;cv.addEventListener('pointerdown',function(e){
+    if(t.idTool!=='page')return;
+    if(e.target.closest&&e.target.closest('[data-item-id]'))return;
+    t.pageSelected=true;s.selected=null;s.selectedIds=[];
+    try{render(t,stage)}catch(_){}
+  })}
+  if(!(t.pageSelected&&t.idTool==='page'))return;
+  var pel=rxPageEl(root,s.current);if(!pel)return;
+  var stg=root.querySelector('[data-id-stage]');
+  var pr=pel.getBoundingClientRect(),sr=stg.getBoundingClientRect();
+  var X=pr.left-sr.left,Y=pr.top-sr.top,W=pr.width,H=pr.height;
+  var kx=W/s.width,ky=H/s.height;
+  var ov=document.createElement('div');ov.className='rxpage-handles';
+  var ghost=document.createElement('div');ghost.className='rxpage-ghost';stg.appendChild(ghost);
+  /* 12 poignées : 4 coins + 4 milieux + 4 intermédiaires (25 %/75 % haut et bas) */
+  var hs=[['tl',0,0,'nwse',1],['tm',.5,0,'ns',0],['tr',1,0,'nesw',1],['rm',1,.5,'ew',0],['br',1,1,'nwse',1],['bm',.5,1,'ns',0],['bl',0,1,'nesw',1],['lm',0,.5,'ew',0],['t1',.25,0,'ns',0],['t3',.75,0,'ns',0],['b1',.25,1,'ns',0],['b3',.75,1,'ns',0]];
+  var start=null;
+  function anchorSel(){var a=root.querySelector('[data-pg-anchor]');return a?a.value:'c'}
+  hs.forEach(function(hh){
+    var el=document.createElement('div');el.className='rxh'+(hh[4]?' c':'');
+    el.style.left=(X+hh[1]*W-6)+'px';el.style.top=(Y+hh[2]*H-6)+'px';el.style.cursor=hh[3]+'-resize';
+    el.addEventListener('pointerdown',function(e){
+      e.preventDefault();e.stopPropagation();
+      el.setPointerCapture(e.pointerId);
+      start={hx:hh[0],x0:e.clientX,y0:e.clientY,W:s.width,H:s.height};
+      ghost.style.display='block';
+      var lock=root.querySelector('[data-pg-lock]');lock=lock?lock.checked:true;
+      function mv(ev){
+        var dx=ev.clientX-start.x0,dy=ev.clientY-start.y0;
+        var dW=0,dH=0,hx=start.hx;
+        if(hx.indexOf('r')>=0||['rm','t1','t3','b1','b3'].indexOf(hx)>=0)dW=dx/kx;
+        if(hx.indexOf('l')>=0)dW=-dx/kx;
+        if(hx.indexOf('b')>=0||['bm','b1','b3'].indexOf(hx)>=0)dH=dy/ky;
+        if(hx.indexOf('t')>=0)dH=-dy/ky;
+        if(anchorSel()==='c'){dW*=2;dH*=2} /* ancrage centre : croissance symétrique (le facteur d échelle reste le ratio de la page — identité géométrique documentée) */
+        var nW=Math.max(20,start.W+dW),nH=Math.max(20,start.H+dH);
+        if(lock){var f=Math.max(nW/start.W,nH/start.H);nW=rxR2(start.W*f);nH=rxR2(start.H*f)}
+        var gx=X,gy=Y,gw=W*(nW/start.W),gh=H*(nH/start.H);
+        if(anchorSel()==='c'){gx=X-(gw-W)/2;gy=Y-(gh-H)/2}
+        ghost.style.left=gx+'px';ghost.style.top=gy+'px';
+        ghost.style.width=gw+'px';ghost.style.height=gh+'px';
+        ghost.textContent=rxR2(nW)+' × '+rxR2(nH)+' mm';
+        start.nW=nW;start.nH=nH;
+      }
+      function up(){
+        el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
+        ghost.style.display='none';
+        if(!start.nW)return;
+        var all=root.querySelector('[data-pg-all]');var r=rxPageTransform(s,{page:s.current,newW:start.nW,newH:start.nH,all:!!(all&&all.checked)});
+        if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
+        t.idState=r.state;
+        try{toast('Page '+s.current+' : '+r.note,'ok')}catch(_){}
+        dirty(t);render(t,stage);
+      }
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);
+    });
+    ov.appendChild(el);
+  });
+  stg.appendChild(ov);
+  /* barre de contrôles : format / bouton appliquer */
+  var fmt=root.querySelector('[data-pg-format]');
+  if(fmt&&!fmt.__rx){fmt.__rx=1;fmt.addEventListener('change',function(){
+    if(!fmt.value)return;var p=fmt.value.split('x');
+    var wi=root.querySelector('[data-pg="w"]'),hi=root.querySelector('[data-pg="h"]');
+    if(wi)wi.value=p[0];if(hi)hi.value=p[1];
+  })}
+  var ap=root.querySelector('[data-pg-apply]');
+  if(ap&&!ap.__rx){ap.__rx=1;ap.addEventListener('click',function(){
+    var wi=root.querySelector('[data-pg="w"]'),hi=root.querySelector('[data-pg="h"]');
+    var all=root.querySelector('[data-pg-all]');
+    var r=rxPageTransform(s,{page:s.current,newW:+(wi&&wi.value)||s.width,newH:+(hi&&hi.value)||s.height,all:!!(all&&all.checked)});
+    if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
+    t.idState=r.state;try{toast('Redimensionnement : '+r.note,'ok')}catch(_){}
+    dirty(t);render(t,stage);
+  })}
+}
+/* wrapper bindPanel : poignées recréées après chaque rendu */
+const __rxBindPanel=bindPanel;
+bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t,stage,root)}catch(e){}};
+</script>
 
 
 
