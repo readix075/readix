@@ -1222,7 +1222,16 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxid .rx54-fixed-launcher{position:absolute;top:101px;right:18px;z-index:15;display:flex;align-items:center;justify-content:center;min-width:124px;min-height:36px;padding:7px 12px;border:1px solid #b5a0ff;border-radius:10px;background:#6c46e9;color:#fff;font:700 12px "Segoe UI",Arial,sans-serif;box-shadow:0 5px 18px #0007;cursor:pointer}
 .rxid .rx54-fixed-launcher:hover,.rxid .rx54-fixed-launcher:focus-visible{background:#825cf8;outline:2px solid #d6c9ff;outline-offset:2px}
 @media(max-width:720px){.rxid .rx54-fixed-launcher{top:101px;right:8px;min-width:105px;font-size:11px}}
-</style></head>
+</style><style id="ripe3-styles">
+.ripe3-entry{padding:8px 0}.ripe3-launch{border:1px solid #7654de;background:#f4efff;color:#4d32a5;border-radius:9px;padding:9px 13px;cursor:pointer;font-weight:650}
+.ripe3-overlay{position:fixed;inset:0;background:#07162d99;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px}
+.ripe3-modal{background:#fff;color:#17243d;width:min(750px,96vw);max-height:92vh;overflow:auto;border-radius:16px;padding:22px;box-shadow:0 18px 60px #0005;font:14px/1.5 system-ui,sans-serif}
+.ripe3-modal header{display:flex;justify-content:space-between;align-items:center;gap:15px;font-size:18px}.ripe3-modal header button{background:transparent;border:0;font-size:25px;cursor:pointer}
+.ripe3-modal label{display:block;margin:12px 0;font-weight:600}.ripe3-modal textarea,.ripe3-modal input{display:block;box-sizing:border-box;width:100%;padding:10px;border:1px solid #bcc8dc;border-radius:8px;font:inherit;color:#14223a;background:#fff}
+.ripe3-modal input{max-width:130px}.ripe3-modal button:not([data-close]){border:0;background:#6742d8;color:white;padding:9px 13px;border-radius:8px;cursor:pointer;margin:4px}.ripe3-modal button:disabled{opacity:.45;cursor:not-allowed}
+.ripe3-chapter{border-top:1px solid #dae1ed;padding:12px 0}.ripe3-chapter p{white-space:pre-wrap}.ripe3-modal [data-status]{padding:8px 0;font-weight:600}
+</style>
+</head>
 <body>
 <header class="topbar">
   <button class="ico mob-menu" id="mobMenu" title="Menu" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
@@ -10573,7 +10582,7 @@ function rxaiOpen(engine) {
     '<span class="rxai-build">' + RXAI_BUILD + '</span><button class="rxai-x" title="Fermer">×</button></div>' +
     '<div class="rxai-modes"><button data-m="IA automatique" class="on">IA automatique</button><button data-m="IA assistée">IA assistée</button>' +
     '<span class="rxai-hint">édition manuelle toujours active</span></div>' +
-    '<div class="rxai-ctx"></div>' +
+    '<div class="rxai-ctx"></div><div class="ripe3-entry"><button type="button" class="ripe3-launch">📖 Créer un livre dans cet éditeur</button></div>' +
     '<textarea class="rxai-prompt" rows="4" placeholder="Décrivez la modification… (ex. « Sélectionne les titres et centre-les en 20 pt »)"></textarea>' +
     '<div class="rxai-actions"><button class="rxai-run">⚙ Exécuter</button><button class="rxai-apply" disabled>✔ Appliquer</button><button class="rxai-undo" disabled>↶ Annuler</button></div>' +
     '<div class="rxai-status"></div><div class="rxai-preview"></div><div class="rxai-hist"><b>Historique</b><ul></ul></div>';
@@ -10581,6 +10590,7 @@ function rxaiOpen(engine) {
   var mode = "IA automatique", snapshot = null, lastResults = null;
   var $ = function (q) { return root.querySelector(q); };
   root.querySelector(".rxai-x").onclick = function () { root.remove(); };
+  root.querySelector(".ripe3-launch").onclick = function () { ripe3Open(engine); };
   root.querySelectorAll(".rxai-modes button").forEach(function (b) {
     b.onclick = function () { mode = b.dataset.m; root.querySelectorAll(".rxai-modes button").forEach(function (x) { x.classList.remove("on"); }); b.classList.add("on"); };
   });
@@ -10637,6 +10647,923 @@ function rxaiOpen(engine) {
     status(ok ? "Modifications annulées — document restauré." : "Échec de la restauration.", ok ? "ok" : "err");
   };
   return root;
+}
+
+/* RIPE Phase 4 — composition native après approbation, jamais pendant la rédaction. */
+function ripe4Escape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function ripe4Parts(book){
+ if(!book||book.schema!=='readox.manuscript.v1'||!Array.isArray(book.chapters))throw Error('Manuscrit invalide');
+ var missing=[];var assets=new Map((book.assets||[]).map(a=>[a.id,a]));var parts=[{type:'heading',text:book.title||'Livre sans titre'}];
+ book.chapters.forEach(function(c){
+  if(!Array.isArray(c.blocks)||!c.blocks.length)throw Error('Chapitre non rédigé : '+c.title);
+  parts.push({type:'heading',text:c.title});
+  c.blocks.forEach(function(b){if(b.type==='image'){var a=assets.get(b.assetId);if(!a||a.status!=='ready'||!a.uri)missing.push(b.assetId);else parts.push({type:'image',src:a.uri,alt:b.alt||a.alt||''});}
+   else if(['paragraph','heading','quote','caption','list'].includes(b.type))parts.push({type:b.type,text:String(b.text||'')});
+  });
+ });
+ if(missing.length)throw Error('Illustrations manquantes : '+missing.join(', '));
+ return parts;
+}
+/* RIPE 6 — art direction presets: deterministic, editable native objects. */
+const RIPE6_STYLES=Object.freeze({
+ editorial:{label:'Éditorial classique',font:'Georgia',body:14,heading:25,ink:'#17283a',accent:'#34577b',align:'left',lineHeight:1.45},
+ science:{label:'Documentaire scientifique',font:'Arial',body:13,heading:24,ink:'#203346',accent:'#087e89',align:'left',lineHeight:1.5},
+ novel:{label:'Roman littéraire',font:'Georgia',body:15,heading:27,ink:'#28241f',accent:'#725840',align:'justify',lineHeight:1.65},
+ modern:{label:'Éditorial contemporain',font:'Arial',body:14,heading:29,ink:'#252b35',accent:'#6152a3',align:'left',lineHeight:1.5}
+});
+function ripe6Style(key){return RIPE6_STYLES[key]||RIPE6_STYLES.editorial;}
+function ripe6Plan(book,key){
+ var style=ripe6Style(key),chapters=book.chapters||[];
+ return {style:key in RIPE6_STYLES?key:'editorial',label:style.label,
+  chapters:chapters.map(function(c,i){return {chapterId:c.id,title:c.title,opening:i===0?'title-page':'chapter-heading',
+   illustrationSlots:(c.blocks||[]).filter(b=>b.type==='image').length};}),
+  warnings:chapters.filter(c=>!(c.blocks||[]).length).map(c=>'Chapitre vide : '+c.title)};
+}
+function ripe4ComposeWord(parts,styleKey){
+ var st=ripe6Style(styleKey);
+ return parts.map(function(b){if(b.type==='image')return '<p><img src="'+ripe4Escape(b.src)+'" alt="'+ripe4Escape(b.alt)+'" style="max-width:100%;height:auto"></p>';
+ var tag=b.type==='heading'?'h2':b.type==='quote'?'blockquote':'p';return '<'+tag+' style="font-family:'+st.font+';color:'+((b.type==='heading')?st.accent:st.ink)+';line-height:'+st.lineHeight+';text-align:'+((b.type==='heading')?'left':st.align)+'">'+ripe4Escape(b.text).replace(/\n/g,'<br>')+'</'+tag+'>';}).join('');
+}
+function ripe4Split(s,max){
+ var result=[];s=String(s||'');while(s.length>max){var cut=s.lastIndexOf(' ',max);if(cut<max*.5)cut=max;else cut+=1;result.push(s.slice(0,cut));s=s.slice(cut)}result.push(s);return result;
+}
+/* RIPE 8 — measured line wrapping when canvas is available; conservative fallback for tests. */
+function ripe8Lines(text,font,fontFamily,width){
+ var ctx=null;
+ try{if(typeof document!=='undefined'){var cv=document.createElement('canvas');ctx=cv.getContext('2d');if(ctx)ctx.font=font+'px '+fontFamily;}}catch(_){ctx=null;}
+ var measure=function(t){return ctx?ctx.measureText(t).width:t.length*font*.57;};
+ var lines=[],start=0,i=0,lastBreak=-1;
+ // Preserve every source character, including spaces and explicit newlines.
+ while(i<text.length){
+  if(text[i]==='\n'){lines.push(text.slice(start,i+1));i++;start=i;lastBreak=-1;continue;}
+  var candidate=text.slice(start,i+1);
+  if(measure(candidate)>width&&i>start){
+   var cut=lastBreak>start?lastBreak:i;
+   lines.push(text.slice(start,cut));start=cut;lastBreak=-1;
+   continue;
+  }
+  if(/\s/.test(text[i]))lastBreak=i+1;
+  i++;
+ }
+ if(start<text.length||!lines.length)lines.push(text.slice(start));
+ return lines;
+}
+function ripe8Layout(parts,styleKey,dimensions){
+ var st=ripe6Style(styleKey),W=Number(dimensions.width),H=Number(dimensions.height),zoom=Number(dimensions.zoom)||85;
+ if(!(W>50&&H>70))throw Error('Format de page invalide');
+ var px=function(mm){return mm*2.02*(zoom/85);};
+ var marginX=px(18),marginY=px(20),usableW=px(Math.max(40,W-36)),usableH=px(Math.max(40,H-40));
+ var pages=[[]],cursor=0,sourceChars=0,laidChars=0,warnings=[];
+ function nextPage(){if(pages.length>=3000)throw Error('Composition supérieure à 3000 pages');pages.push([]);cursor=0;}
+ function remaining(){return usableH-cursor;}
+ function place(item,height){
+  if(height>usableH+0.001)throw Error('Bloc trop haut pour la page');
+  if(height>remaining()+0.001&&pages[pages.length-1].length)nextPage();
+  item.x=marginX;item.y=marginY+cursor;item.w=usableW;item.h=height;
+  pages[pages.length-1].push(item);cursor+=height+px(3);
+ }
+ parts.forEach(function(part,partIndex){
+  if(part.type==='image'){
+   var imageH=Math.min(usableH*.58,usableW*.72);
+   place({type:'frame',imageSrc:part.src,fit:'contain',caption:part.alt||'',sourceIndex:partIndex},imageH);return;
+  }
+  var text=String(part.text||'');sourceChars+=text.length;
+  var heading=part.type==='heading',font=heading?st.heading:st.body;
+  var linePx=Math.max(12,font*st.lineHeight),inset=px(4),gap=px(3);
+  var lines=ripe8Lines(text,font,st.font,usableW-inset*2);
+  // Headings stay together when possible, and are not left alone at the foot of a page.
+  var lineIndex=0;
+  while(lineIndex<lines.length){
+   var minLines=heading?Math.min(lines.length-lineIndex,2):1;
+   var minHeight=minLines*linePx+inset*2;
+   if((remaining()<minHeight+(heading?linePx*2:0))&&pages[pages.length-1].length)nextPage();
+   var maxLines=Math.floor((remaining()-inset*2)/linePx);
+   if(maxLines<1){nextPage();maxLines=Math.floor((remaining()-inset*2)/linePx);}
+   if(maxLines<1)throw Error('Page trop petite pour une ligne de texte');
+   var take=Math.min(maxLines,lines.length-lineIndex);
+   if(!heading&&lines.length-lineIndex-take===1&&take>1)take--; // avoid a single orphan line
+   var chunk=lines.slice(lineIndex,lineIndex+take).join('');
+   var blockH=take*linePx+inset*2;
+   place({type:'text',text:chunk,sourceIndex:partIndex,sourceType:part.type,fontFamily:st.font,fontSize:font,lineHeight:st.lineHeight,textAlign:heading?'left':st.align,textColor:heading?st.accent:st.ink,textInset:inset},blockH);
+   laidChars+=chunk.length;lineIndex+=take;
+  }
+ });
+ if(laidChars!==sourceChars)throw Error('Perte de texte pendant la composition');
+ return {pages:pages,sourceChars:sourceChars,laidChars:laidChars,warnings:warnings,measurement:typeof document!=='undefined'?'canvas-or-fallback':'fallback'};
+}
+/* RIPE 9 — deterministic post-composition preflight; no claim of rendered-font accuracy. */
+function ripe9Audit(layout,dimensions,parts){
+ var issues=[],counts={pages:0,blocks:0,images:0,textChars:0},W=Number(dimensions.width),H=Number(dimensions.height),zoom=Number(dimensions.zoom)||85;
+ var px=function(mm){return mm*2.02*(zoom/85)};
+ var left=px(18),top=px(20),right=left+px(Math.max(40,W-36)),bottom=top+px(Math.max(40,H-40));
+ if(!layout||!Array.isArray(layout.pages))throw Error('Composition à auditer invalide');
+ counts.pages=layout.pages.length;
+ layout.pages.forEach(function(page,i){
+  if(!Array.isArray(page)){issues.push({severity:'error',page:i+1,code:'invalid-page',message:'Page non valide'});return;}
+  if(!page.length)issues.push({severity:'warning',page:i+1,code:'empty-page',message:'Page vide'});
+  page.forEach(function(b,j){
+   counts.blocks++;
+   var label='Bloc '+(j+1),nums=[b.x,b.y,b.w,b.h].map(Number);
+   if(nums.some(n=>!Number.isFinite(n))||nums[2]<=0||nums[3]<=0){issues.push({severity:'error',page:i+1,code:'invalid-geometry',message:label+' : dimensions invalides'});return;}
+   if(nums[0]<left-.1||nums[1]<top-.1||nums[0]+nums[2]>right+.1||nums[1]+nums[3]>bottom+.1)issues.push({severity:'error',page:i+1,code:'outside-printable-area',message:label+' : dépasse les marges de composition'});
+   if(b.type==='text')counts.textChars+=String(b.text||'').length;
+   if(b.type==='frame'){counts.images++;if(!b.imageSrc)issues.push({severity:'error',page:i+1,code:'missing-image',message:label+' : illustration absente'});}
+  });
+ });
+ var sourceChars=(parts||[]).filter(p=>p.type!=='image').reduce((n,p)=>n+String(p.text||'').length,0);
+ if(counts.textChars!==sourceChars)issues.push({severity:'error',page:null,code:'text-mismatch',message:'Écart de caractères : source '+sourceChars+', composition '+counts.textChars});
+ var sourceImages=(parts||[]).filter(p=>p.type==='image').length;
+ if(counts.images!==sourceImages)issues.push({severity:'error',page:null,code:'image-mismatch',message:'Illustrations : '+sourceImages+' attendues, '+counts.images+' placées'});
+ issues.push({severity:'info',page:null,code:'visual-check-required',message:'Contrôler visuellement les polices, débordements réels, césures et images avant export.'});
+ return {ok:!issues.some(x=>x.severity==='error'),counts,sourceChars,issues};
+}
+function ripe9AuditDocument(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var state=c.s,items=state.pageItems||{},pages=[];
+ for(var i=1;i<=Number(state.pages||0);i++)pages.push(items[i]||[]);
+ var parts=[]; // No source manuscript here: validate geometry and image presence, not source completeness.
+ var report=ripe9Audit({pages},state,parts);
+ report.issues=report.issues.filter(x=>x.code!=='text-mismatch'&&x.code!=='image-mismatch');
+ report.ok=!report.issues.some(x=>x.severity==='error');
+ return report;
+}
+/* RIPE 10 — conservative, reversible geometry correction proposal. No text is rewritten. */
+function ripe10Propose(state){
+ if(!state||!state.pageItems)throw Error('Document InDesign invalide');
+ var zoom=Number(state.zoom)||85,px=function(mm){return mm*2.02*(zoom/85)};
+ var left=px(18),top=px(20),right=left+px(Math.max(40,Number(state.width)-36)),bottom=top+px(Math.max(40,Number(state.height)-40));
+ var changes=[],skipped=[];
+ Object.keys(state.pageItems).forEach(function(page){(state.pageItems[page]||[]).forEach(function(b){
+  var x=Number(b.x),y=Number(b.y),w=Number(b.w),h=Number(b.h);
+  if(![x,y,w,h].every(Number.isFinite)||w<=0||h<=0){skipped.push({page:Number(page),id:b.id,reason:'Géométrie invalide'});return;}
+  if(x>=left-.1&&y>=top-.1&&x+w<=right+.1&&y+h<=bottom+.1)return;
+  if(w>right-left||h>bottom-top){skipped.push({page:Number(page),id:b.id,reason:'Bloc trop grand : correction manuelle nécessaire'});return;}
+  var nx=Math.min(Math.max(x,left),right-w),ny=Math.min(Math.max(y,top),bottom-h);
+  if(nx!==x||ny!==y)changes.push({page:Number(page),id:b.id,before:{x,y},after:{x:nx,y:ny}});
+ });});
+ return {changes,skipped};
+}
+function ripe10Apply(state,proposal){
+ if(!state||!proposal||!Array.isArray(proposal.changes))throw Error('Proposition invalide');
+ var copy=JSON.parse(JSON.stringify(state));
+ proposal.changes.forEach(function(change){
+  var b=(copy.pageItems[change.page]||[]).find(function(item){return item.id===change.id});
+  if(!b||Number(b.x)!==change.before.x||Number(b.y)!==change.before.y)throw Error('Document modifié depuis le diagnostic : recommencez le contrôle');
+  b.x=change.after.x;b.y=change.after.y;
+ });
+ return copy;
+}
+function ripe10ShowCorrection(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var proposal=ripe10Propose(c.s),old=document.getElementById('ripe10-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe10-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:15% 18%;z-index:1000000;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var h=document.createElement('h2');h.textContent='Prévisualisation des corrections RIPE';panel.appendChild(h);
+ var p=document.createElement('p');p.textContent=proposal.changes.length+' bloc(s) déplaçables dans les marges ; '+proposal.skipped.length+' problème(s) à traiter manuellement. Aucun texte, image ou dimension de bloc ne sera modifié.';panel.appendChild(p);
+ var ul=document.createElement('ul');proposal.changes.forEach(function(ch){var li=document.createElement('li');li.textContent='Page '+ch.page+' · '+ch.id+' : ('+ch.before.x.toFixed(1)+', '+ch.before.y.toFixed(1)+') → ('+ch.after.x.toFixed(1)+', '+ch.after.y.toFixed(1)+')';ul.appendChild(li)});proposal.skipped.forEach(function(sk){var li=document.createElement('li');li.textContent='Page '+sk.page+' · '+sk.id+' : '+sk.reason;ul.appendChild(li)});panel.appendChild(ul);
+ var warning=document.createElement('p');warning.textContent='Attention : le déplacement peut créer des chevauchements. Contrôlez visuellement le résultat. Aucun ajustement typographique automatique n’est effectué.';panel.appendChild(warning);
+ var close=document.createElement('button');close.textContent='Annuler';close.onclick=function(){panel.remove()};panel.appendChild(close);
+ if(proposal.changes.length){var apply=document.createElement('button');apply.textContent='Appliquer les déplacements';apply.style.marginLeft='12px';apply.onclick=function(){
+  try{var current=rxIdState();if(!current||current.t!==c.t)throw Error('Document actif différent');
+   var next=ripe10Apply(current.s,proposal);current.t.idState=next;current.t.dirty=true;rxIdRefresh();
+   try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}
+   panel.remove();ripe9ShowReport(ripe9AuditDocument());
+  }catch(e){warning.textContent=e.message||String(e);warning.style.color='#ad2736';}
+ };panel.appendChild(apply);}
+ document.body.appendChild(panel);
+}
+/* RIPE 11 — overlap diagnostics and conservative repositioning, never rewriting content. */
+function ripe11Overlap(a,b){
+ var x=Math.min(Number(a.x)+Number(a.w),Number(b.x)+Number(b.w))-Math.max(Number(a.x),Number(b.x));
+ var y=Math.min(Number(a.y)+Number(a.h),Number(b.y)+Number(b.h))-Math.max(Number(a.y),Number(b.y));
+ return Number.isFinite(x)&&Number.isFinite(y)&&x>0.5&&y>0.5;
+}
+function ripe11Analyze(state){
+ if(!state||!state.pageItems)throw Error('Document InDesign invalide');
+ var pairs=[],invalid=[];
+ Object.keys(state.pageItems).forEach(function(page){
+  var blocks=state.pageItems[page]||[];
+  blocks.forEach(function(a,i){
+   if(![a.x,a.y,a.w,a.h].every(v=>Number.isFinite(Number(v)))||Number(a.w)<=0||Number(a.h)<=0){invalid.push({page:Number(page),id:a.id});return;}
+   for(var j=i+1;j<blocks.length;j++){
+    var b=blocks[j];if(ripe11Overlap(a,b))pairs.push({page:Number(page),first:a.id,second:b.id});
+   }
+  });
+ });
+ return {pairs,invalid};
+}
+function ripe11Propose(state){
+ var audit=ripe11Analyze(state),changes=[],skipped=[];
+ var zoom=Number(state.zoom)||85,px=mm=>mm*2.02*(zoom/85);
+ var left=px(18),top=px(20),right=left+px(Math.max(40,Number(state.width)-36)),bottom=top+px(Math.max(40,Number(state.height)-40));
+ var occupied={};
+ Object.keys(state.pageItems).forEach(function(page){
+  occupied[page]=(state.pageItems[page]||[]).map(b=>({id:b.id,x:Number(b.x),y:Number(b.y),w:Number(b.w),h:Number(b.h)}));
+ });
+ var seen=new Set();
+ audit.pairs.forEach(function(pair){
+  var page=String(pair.page),id=pair.second,key=page+':'+id;
+  if(seen.has(key))return;seen.add(key);
+  var blocks=occupied[page],b=blocks.find(v=>v.id===id);
+  if(!b||![b.x,b.y,b.w,b.h].every(Number.isFinite)||b.w<=0||b.h<=0||b.w>right-left||b.h>bottom-top){skipped.push({page:pair.page,id,reason:'Dimensions incompatibles'});return;}
+  var found=null,step=8;
+  // Move only within the same page. Keep the block size, text and image intact.
+  for(var y=top;y+b.h<=bottom+.01&&!found;y+=step){
+   for(var x=left;x+b.w<=right+.01;x+=step){
+    var candidate={x,y,w:b.w,h:b.h};
+    if(blocks.every(other=>other.id===id||!ripe11Overlap(candidate,other))){found={x,y};break;}
+   }
+  }
+  if(!found){skipped.push({page:pair.page,id,reason:'Aucun emplacement libre sur cette page'});return;}
+  changes.push({page:pair.page,id,before:{x:b.x,y:b.y},after:found});b.x=found.x;b.y=found.y;
+ });
+ return {overlaps:audit.pairs,invalid:audit.invalid,changes,skipped};
+}
+function ripe11ShowCorrection(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var proposal=ripe11Propose(c.s),old=document.getElementById('ripe11-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe11-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:14% 17%;z-index:1000001;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var title=document.createElement('h2');title.textContent='RIPE — Chevauchements et repositionnement';panel.appendChild(title);
+ var info=document.createElement('p');info.textContent=proposal.overlaps.length+' chevauchement(s), '+proposal.changes.length+' déplacement(s) proposé(s), '+proposal.skipped.length+' cas sans solution automatique.';panel.appendChild(info);
+ var list=document.createElement('ul');proposal.changes.forEach(function(ch){var li=document.createElement('li');li.textContent='Page '+ch.page+' · '+ch.id+' : ('+ch.before.x.toFixed(1)+', '+ch.before.y.toFixed(1)+') → ('+ch.after.x.toFixed(1)+', '+ch.after.y.toFixed(1)+')';list.appendChild(li)});proposal.skipped.forEach(function(sk){var li=document.createElement('li');li.textContent='Page '+sk.page+' · '+sk.id+' : '+sk.reason;list.appendChild(li)});panel.appendChild(list);
+ var warning=document.createElement('p');warning.textContent='Proposition géométrique uniquement : pas de redistribution du texte entre pages, ni de mesure du débordement typographique. Sauvegardez une copie avant application.';panel.appendChild(warning);
+ var close=document.createElement('button');close.textContent='Annuler';close.onclick=function(){panel.remove()};panel.appendChild(close);
+ if(proposal.changes.length){var apply=document.createElement('button');apply.textContent='Appliquer les repositionnements';apply.style.marginLeft='12px';apply.onclick=function(){
+  try{var current=rxIdState();if(!current||current.t!==c.t)throw Error('Document actif différent');
+   var next=ripe10Apply(current.s,proposal);var remaining=ripe11Analyze(next);
+   if(remaining.pairs.length>=proposal.overlaps.length)throw Error('La correction ne réduit pas les chevauchements : aucune modification appliquée');
+   current.t.idState=next;current.t.dirty=true;rxIdRefresh();try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}panel.remove();ripe9ShowReport(ripe9AuditDocument());
+  }catch(e){warning.textContent=e.message||String(e);warning.style.color='#ad2736';}
+ };panel.appendChild(apply);}
+ document.body.appendChild(panel);
+}
+/* RIPE 12 — opt-in, non-destructive proposal for reflowing RIPE-owned manuscript blocks. */
+function ripe12Extract(state){
+ if(!state||!state.pageItems||!Number.isInteger(Number(state.pages)))throw Error('Document InDesign invalide');
+ var ordered=[],groups=[],last=null,sourceChars=0,images=0;
+ for(var page=1;page<=Number(state.pages);page++){
+  var blocks=state.pageItems[page]||[];
+  for(var i=0;i<blocks.length;i++){
+   var b=blocks[i];
+   if(!b.ripeSource||!['text','frame'].includes(b.type)||!Number.isInteger(Number(b.sourceIndex)))throw Error('Redistribution réservée aux documents RIPE sans objets ajoutés manuellement');
+   ordered.push(b);
+   if(b.type==='frame'){
+    if(!b.imageSrc)throw Error('Illustration manquante : '+b.id);
+    groups.push({type:'image',src:b.imageSrc,alt:b.caption||''});last=null;images++;continue;
+   }
+   if(!last||last.index!==Number(b.sourceIndex)){
+    last={index:Number(b.sourceIndex),part:{type:b.sourceType||'paragraph',text:''}};
+    groups.push(last.part);
+   }
+   last.part.text+=String(b.text||'');sourceChars+=String(b.text||'').length;
+  }
+ }
+ if(!ordered.length)throw Error('Aucun bloc RIPE à redistribuer');
+ return {parts:groups,sourceChars,images};
+}
+function ripe12Propose(state){
+ var original=JSON.stringify(state),extracted=ripe12Extract(state);
+ var style=state.ripeSource&&state.ripeSource.style||'editorial';
+ var layout=ripe8Layout(extracted.parts,style,state);
+ if(layout.sourceChars!==extracted.sourceChars)throw Error('Contrôle de fidélité du texte échoué');
+ var newImages=layout.pages.reduce((n,page)=>n+page.filter(b=>b.type==='frame').length,0);
+ if(newImages!==extracted.images)throw Error('Contrôle des illustrations échoué');
+ var qa=ripe9Audit(layout,state,extracted.parts);
+ if(!qa.ok)throw Error('Contrôle qualité de la redistribution échoué');
+ var next=JSON.parse(original),items={},id=Number(next.nextItemId)||1;
+ layout.pages.forEach(function(page,i){items[i+1]=page.map(function(b,j){return Object.assign({id:'obj'+id++,layerId:next.activeLayer||'layer1',rot:0,z:j+1,fill:'transparent',stroke:'transparent',strokeWidth:0,ripeSource:true},b);});});
+ next.pageItems=items;next.pages=layout.pages.length;next.current=Math.min(Math.max(1,Number(next.current)||1),next.pages);next.nextItemId=id;next.selected=null;next.selectedIds=[];
+ next.ripeSource=Object.assign({},next.ripeSource||{},{layout:'ripe12-reflow',sourceChars:extracted.sourceChars,preflight:qa});
+ return {before:original,after:next,oldPages:Number(state.pages),newPages:next.pages,sourceChars:extracted.sourceChars,images:extracted.images,qa};
+}
+function ripe12Apply(state,proposal){
+ if(!proposal||JSON.stringify(state)!==proposal.before)throw Error('Document modifié depuis la prévisualisation : recommencez');
+ return JSON.parse(JSON.stringify(proposal.after));
+}
+function ripe12ShowReflow(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var proposal=ripe12Propose(c.s),old=document.getElementById('ripe12-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe12-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:16% 17%;z-index:1000002;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var heading=document.createElement('h2');heading.textContent='RIPE — Redistribution des pages';panel.appendChild(heading);
+ var info=document.createElement('p');info.textContent=proposal.oldPages+' pages actuelles → '+proposal.newPages+' pages proposées · '+proposal.sourceChars+' caractères · '+proposal.images+' illustrations.';panel.appendChild(info);
+ var warning=document.createElement('p');warning.textContent='La redistribution reconstruit les blocs RIPE et leurs identifiants. Elle ne s’applique pas aux documents modifiés avec des objets manuels. Sauvegardez une copie avant de confirmer. Le rendu typographique réel doit encore être vérifié.';panel.appendChild(warning);
+ var cancel=document.createElement('button');cancel.textContent='Annuler';cancel.onclick=function(){panel.remove()};panel.appendChild(cancel);
+ var apply=document.createElement('button');apply.textContent='Confirmer la redistribution';apply.style.marginLeft='12px';apply.onclick=function(){
+  try{var current=rxIdState();if(!current||current.t!==c.t)throw Error('Document actif différent');
+   var next=ripe12Apply(current.s,proposal);current.t.idState=next;current.t.dirty=true;rxIdRefresh();try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}panel.remove();ripe9ShowReport(ripe9AuditDocument());
+  }catch(e){warning.textContent=e.message||String(e);warning.style.color='#ad2736';}
+ };panel.appendChild(apply);document.body.appendChild(panel);
+}
+/* RIPE 13 — browser-rendered text overflow audit. Read-only; never mutates document. */
+function ripe13MeasureBlock(block){
+ if(!block||block.type!=='text')return null;
+ if(typeof document==='undefined'||!document.createElement||!document.body)return {status:'unavailable',reason:'Mesure DOM indisponible'};
+ var w=Number(block.w),h=Number(block.h),inset=Number(block.textInset)||0;
+ if(!(w>0&&h>0)||w<=2*inset)return {status:'invalid',reason:'Cadre invalide'};
+ var probe=document.createElement('div');
+ probe.setAttribute('aria-hidden','true');
+ probe.style.cssText='position:fixed!important;left:-100000px!important;top:0!important;visibility:hidden!important;pointer-events:none!important;z-index:-1!important;box-sizing:border-box!important;overflow:visible!important;';
+ probe.style.width=w+'px';probe.style.padding=inset+'px';probe.style.fontFamily=block.fontFamily||'Arial';
+ probe.style.fontSize=(Number(block.fontSize)||14)+'px';probe.style.lineHeight=String(Number(block.lineHeight)||1.5);
+ probe.style.whiteSpace='pre-wrap';probe.style.overflowWrap='break-word';probe.style.wordBreak='normal';
+ probe.textContent=String(block.text||'');
+ document.body.appendChild(probe);
+ try{
+  var required=Math.max(probe.scrollHeight,probe.getBoundingClientRect().height);
+  if(!Number.isFinite(required))return {status:'unavailable',reason:'Mesure DOM invalide'};
+  return {status:required>h+1?'overflow':'ok',requiredHeight:Math.ceil(required),availableHeight:h,excess:Math.max(0,Math.ceil(required-h))};
+ }finally{probe.remove();}
+}
+function ripe13Audit(state){
+ if(!state||!state.pageItems)throw Error('Document InDesign invalide');
+ var issues=[],measured=0,unavailable=0;
+ for(var page=1;page<=Number(state.pages||0);page++){
+  (state.pageItems[page]||[]).forEach(function(b){
+   if(b.type!=='text')return;
+   var result=ripe13MeasureBlock(b);
+   if(result.status==='unavailable'){unavailable++;return;}
+   measured++;
+   if(result.status==='overflow')issues.push({page,id:b.id,code:'rendered-text-overflow',excess:result.excess,requiredHeight:result.requiredHeight,availableHeight:result.availableHeight});
+   if(result.status==='invalid')issues.push({page,id:b.id,code:'invalid-text-frame'});
+  });
+ }
+ return {ok:issues.length===0&&unavailable===0,issues,measured,unavailable,scope:'DOM offscreen estimate; verify against actual editor rendering'};
+}
+function ripe13ShowAudit(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var report=ripe13Audit(c.s),old=document.getElementById('ripe13-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe13-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:13% 16%;z-index:1000003;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var heading=document.createElement('h2');heading.textContent='RIPE — Audit typographique rendu';panel.appendChild(heading);
+ var info=document.createElement('p');info.textContent=report.measured+' blocs mesurés · '+report.issues.length+' anomalies · '+report.unavailable+' mesures indisponibles';panel.appendChild(info);
+ var note=document.createElement('p');note.textContent='Mesure DOM hors écran : les styles exacts du moteur InDesign peuvent différer. Audit en lecture seule, aucune correction automatique.';panel.appendChild(note);
+ report.issues.slice(0,100).forEach(function(issue){var p=document.createElement('p');p.textContent='Page '+issue.page+' · '+issue.id+' · '+issue.code+(issue.excess?' · dépassement estimé '+issue.excess+' px':'');panel.appendChild(p)});
+ if(report.issues.length>100){var more=document.createElement('p');more.textContent=(report.issues.length-100)+' anomalies supplémentaires';panel.appendChild(more)}
+ var close=document.createElement('button');close.textContent='Fermer';close.onclick=function(){panel.remove()};panel.appendChild(close);document.body.appendChild(panel);
+}
+/* RIPE 14 — conservative assisted expansion. Never moves other blocks or edits text. */
+function ripe14Propose(state,report){
+ if(!state||!state.pageItems||!report||!Array.isArray(report.issues))throw Error('Audit typographique requis');
+ var before=JSON.stringify(state),after=JSON.parse(before),changes=[],blocked=[];
+ report.issues.forEach(function(issue){
+  if(issue.code!=='rendered-text-overflow'){blocked.push({page:issue.page,id:issue.id,reason:'Cadre invalide'});return;}
+  var blocks=after.pageItems[issue.page]||[],b=blocks.find(function(x){return x.id===issue.id});
+  if(!b||b.type!=='text'||b.locked){blocked.push({page:issue.page,id:issue.id,reason:'Bloc absent ou verrouillé'});return;}
+  var old=Number(b.h),needed=Math.ceil(Number(issue.requiredHeight)+2),limit=Number(after.height)*2.02*(Number(after.zoom||85)/85);
+  if(!Number.isFinite(limit)||limit<=0)limit=Number(after.height);
+  if(!Number.isFinite(needed)||needed<=old||!Number.isFinite(Number(b.y))){blocked.push({page:issue.page,id:issue.id,reason:'Mesure invalide'});return;}
+  var proposed={x:Number(b.x),y:Number(b.y),w:Number(b.w),h:needed};
+  if(proposed.y+needed>limit-8||blocks.some(function(other){return other!==b&&ripe11Overlap(proposed,other)})){
+   blocked.push({page:issue.page,id:issue.id,reason:'Espace insuffisant ou chevauchement : redistribution manuelle nécessaire'});return;
+  }
+  b.h=needed;changes.push({page:issue.page,id:issue.id,from:old,to:needed});
+ });
+ return {before,after,changes,blocked};
+}
+function ripe14Apply(state,proposal){
+ if(!proposal||JSON.stringify(state)!==proposal.before)throw Error('Document modifié depuis la prévisualisation : recommencez');
+ return JSON.parse(JSON.stringify(proposal.after));
+}
+function ripe14ShowCorrection(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var report=ripe13Audit(c.s);if(report.unavailable)throw Error('Mesure typographique indisponible : correction refusée');
+ var proposal=ripe14Propose(c.s,report),old=document.getElementById('ripe14-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe14-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:15% 17%;z-index:1000004;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var title=document.createElement('h2');title.textContent='RIPE — Corrections typographiques assistées';panel.appendChild(title);
+ var summary=document.createElement('p');summary.textContent=proposal.changes.length+' agrandissements proposés · '+proposal.blocked.length+' anomalies non corrigibles automatiquement.';panel.appendChild(summary);
+ proposal.changes.slice(0,100).forEach(function(x){var el=document.createElement('p');el.textContent='Page '+x.page+' · '+x.id+' : '+x.from+' → '+x.to+' px';panel.appendChild(el)});
+ proposal.blocked.slice(0,100).forEach(function(x){var el=document.createElement('p');el.textContent='Page '+x.page+' · '+x.id+' : '+x.reason;panel.appendChild(el)});
+ var warning=document.createElement('p');warning.textContent='Sauvegardez une copie. Seules les hauteurs des blocs sans conflit sont modifiées. Les débordements et le rendu doivent être revérifiés visuellement.';panel.appendChild(warning);
+ var cancel=document.createElement('button');cancel.textContent='Annuler';cancel.onclick=function(){panel.remove()};panel.appendChild(cancel);
+ var apply=document.createElement('button');apply.textContent='Confirmer les agrandissements';apply.disabled=!proposal.changes.length;apply.style.marginLeft='12px';apply.onclick=function(){
+  try{var current=rxIdState();if(!current||current.t!==c.t)throw Error('Document actif différent');var next=ripe14Apply(current.s,proposal);current.t.idState=next;current.t.dirty=true;rxIdRefresh();try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}panel.remove();ripe13ShowAudit();}
+  catch(e){warning.textContent=e.message||String(e);warning.style.color='#ad2736'}
+ };panel.appendChild(apply);document.body.appendChild(panel);
+}
+/* RIPE 15 — opt-in interpage reflow after measured text overflow.
+   Reconstructs only RIPE-owned blocks, preserving their full text and images. */
+function ripe15Propose(state,report){
+ if(!state||!state.ripeSource)throw Error('Redistribution réservée aux documents RIPE');
+ if(!report||report.unavailable||!Array.isArray(report.issues))throw Error('Audit typographique complet requis');
+ var overflows=report.issues.filter(function(i){return i.code==='rendered-text-overflow'});
+ if(!overflows.length)throw Error('Aucun débordement typographique à redistribuer');
+ if(report.issues.some(function(i){return i.code==='invalid-text-frame'}))throw Error('Cadre invalide : corrigez-le avant redistribution');
+ var proposal=ripe12Propose(state);
+ // Use a conservative composition area to reserve breathing room on each page.
+ // The existing RIPE layout engine remains responsible for splitting text.
+ var extracted=ripe12Extract(state),dims=Object.assign({},state,{height:Number(state.height)*.88});
+ var layout=ripe8Layout(extracted.parts,state.ripeSource.style||'editorial',dims);
+ var audit=ripe9Audit(layout,state,extracted.parts);
+ if(!audit.ok||layout.sourceChars!==extracted.sourceChars)throw Error('Contrôle de fidélité de la redistribution échoué');
+ var imageCount=layout.pages.reduce(function(n,page){return n+page.filter(function(b){return b.type==='frame'}).length},0);
+ if(imageCount!==extracted.images)throw Error('Perte d’illustration détectée');
+ var after=proposal.after,items={},id=Number(state.nextItemId)||1;
+ layout.pages.forEach(function(page,i){items[i+1]=page.map(function(b,j){return Object.assign({id:'obj'+id++,layerId:state.activeLayer||'layer1',rot:0,z:j+1,fill:'transparent',stroke:'transparent',strokeWidth:0,ripeSource:true},b)})});
+ after.pageItems=items;after.pages=layout.pages.length;after.nextItemId=id;after.current=Math.min(Number(state.current)||1,after.pages);
+ after.ripeSource=Object.assign({},after.ripeSource,{layout:'ripe15-interpage-reflow',preflight:audit,sourceChars:extracted.sourceChars});
+ return {before:JSON.stringify(state),after:after,oldPages:Number(state.pages),newPages:after.pages,sourceChars:extracted.sourceChars,images:extracted.images,overflows:overflows.length,qa:audit};
+}
+function ripe15Apply(state,proposal){
+ if(!proposal||JSON.stringify(state)!==proposal.before)throw Error('Document modifié depuis la prévisualisation : recommencez');
+ return JSON.parse(JSON.stringify(proposal.after));
+}
+function ripe15ShowCorrection(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var report=ripe13Audit(c.s),proposal=ripe15Propose(c.s,report);
+ var old=document.getElementById('ripe15-dialog');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe15-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:15% 17%;z-index:1000005;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var title=document.createElement('h2');title.textContent='RIPE — Redistribution interpages';panel.appendChild(title);
+ var summary=document.createElement('p');summary.textContent=proposal.overflows+' débordements détectés · '+proposal.oldPages+' → '+proposal.newPages+' pages · '+proposal.sourceChars+' caractères · '+proposal.images+' illustrations conservées.';panel.appendChild(summary);
+ var warning=document.createElement('p');warning.textContent='Cette opération recompose TOUS les blocs RIPE, change leurs identifiants et réserve une marge verticale supplémentaire. Elle ne garantit pas l’absence de débordement au rendu réel. Sauvegardez une copie et contrôlez le résultat après validation.';panel.appendChild(warning);
+ var cancel=document.createElement('button');cancel.textContent='Annuler';cancel.onclick=function(){panel.remove()};panel.appendChild(cancel);
+ var apply=document.createElement('button');apply.textContent='Confirmer la redistribution';apply.style.marginLeft='12px';apply.onclick=function(){
+  try{var current=rxIdState();if(!current||current.t!==c.t)throw Error('Document actif différent');
+   var next=ripe15Apply(current.s,proposal);current.t.idState=next;current.t.dirty=true;rxIdRefresh();try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}panel.remove();ripe13ShowAudit();
+  }catch(e){warning.textContent=e.message||String(e);warning.style.color='#ad2736'}
+ };panel.appendChild(apply);document.body.appendChild(panel);
+}
+/* RIPE 16 — final, read-only pre-export validation. No automatic export approval. */
+function ripe16Validate(state,typographic){
+ if(!state||!state.pageItems)throw Error('Document InDesign requis');
+ var pages=[];for(var i=1;i<=Number(state.pages||0);i++)pages.push(state.pageItems[i]||[]);
+ var layout={pages:pages},issues=[],parts=[],expected=null;
+ var structure=ripe9Audit(layout,state,parts);
+ structure.issues.filter(function(i){return i.code!=='text-mismatch'&&i.code!=='image-mismatch'&&i.code!=='visual-check-required'}).forEach(function(i){issues.push({severity:i.severity,code:i.code,page:i.page,message:i.message})});
+ var collisions=0;
+ pages.forEach(function(page,pageIndex){
+  for(var a=0;a<page.length;a++)for(var b=a+1;b<page.length;b++){
+   var x=page[a],y=page[b];if(!x||!y)continue;
+   var nums=[x.x,x.y,x.w,x.h,y.x,y.y,y.w,y.h].map(Number);
+   if(nums.some(function(n){return !Number.isFinite(n)}))continue;
+   if(nums[0]<nums[4]+nums[6]-.5&&nums[0]+nums[2]>nums[4]+.5&&nums[1]<nums[5]+nums[7]-.5&&nums[1]+nums[3]>nums[5]+.5){
+    collisions++;issues.push({severity:'error',code:'overlap',page:pageIndex+1,message:'Chevauchement entre '+String(x.id||a)+' et '+String(y.id||b)});
+   }
+  }
+ });
+ if(state.ripeSource&&Number.isFinite(Number(state.ripeSource.sourceChars))){
+  expected=Number(state.ripeSource.sourceChars);
+  // Only compare to original source when no user edits have invalidated that baseline.
+  if(expected!==structure.counts.textChars)issues.push({severity:'warning',code:'source-chars-changed',page:null,message:'Le nombre de caractères diffère du manuscrit RIPE initial ; vérifier les modifications manuelles.'});
+ }
+ if(!typographic||!Array.isArray(typographic.issues))issues.push({severity:'error',code:'typography-not-checked',page:null,message:'Audit typographique indisponible'});
+ else{
+  typographic.issues.forEach(function(i){issues.push({severity:'error',code:i.code,page:i.page,message:'Bloc '+String(i.id||'?')+(i.excess?' : dépassement estimé '+i.excess+' px':' : cadre invalide')})});
+  if(typographic.unavailable>0)issues.push({severity:'error',code:'measurement-unavailable',page:null,message:typographic.unavailable+' mesure(s) typographique(s) indisponible(s)'});
+ }
+ issues.push({severity:'info',code:'visual-approval',page:null,message:'Contrôle visuel et vérification du PDF final obligatoires avant publication.'});
+ var errors=issues.filter(function(i){return i.severity==='error'}).length;
+ return {status:errors?'blocked':'review-required',readyForPublication:false,errors:errors,warnings:issues.filter(function(i){return i.severity==='warning'}).length,issues:issues,counts:structure.counts,collisions:collisions,measured:typographic?typographic.measured:0,expectedChars:expected,scope:'Contrôle pré-export indicatif, sans validation du PDF final'};
+}
+function ripe16ShowReport(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign');
+ var result=ripe16Validate(c.s,ripe13Audit(c.s));
+ var old=document.getElementById('ripe16-report');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe16-report';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:10% 12%;z-index:1000007;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var close=document.createElement('button');close.textContent='Fermer';close.onclick=function(){panel.remove()};panel.appendChild(close);
+ var h=document.createElement('h2');h.textContent='RIPE Phase 16 — Rapport pré-export : '+(result.errors?'Anomalies bloquantes':'Vérification visuelle requise');panel.appendChild(h);
+ var p=document.createElement('p');p.textContent=result.counts.pages+' pages · '+result.counts.blocks+' blocs · '+result.counts.textChars+' caractères · '+result.errors+' erreurs · '+result.warnings+' avertissements';panel.appendChild(p);
+ var note=document.createElement('p');note.textContent='Ce rapport ne certifie pas le rendu final et ne déclenche aucun export. Vérifiez le document et le PDF avant publication.';panel.appendChild(note);
+ var ul=document.createElement('ul');result.issues.slice(0,150).forEach(function(i){var li=document.createElement('li');li.textContent=(i.page?'Page '+i.page+' — ':'')+i.severity.toUpperCase()+' : '+i.message;ul.appendChild(li)});panel.appendChild(ul);
+ if(result.issues.length>150){var more=document.createElement('p');more.textContent=(result.issues.length-150)+' autres anomalies non affichées';panel.appendChild(more)}
+ document.body.appendChild(panel);
+ return result;
+}
+/* RIPE 17 — inspection of an explicitly selected exported PDF (read-only). */
+function ripe17AnalyzePages(pages,expected){
+ if(!Array.isArray(pages)||!pages.length)throw Error('Aucune page PDF à examiner');
+ var issues=[],blanks=[],images=0;
+ pages.forEach(function(p,i){
+  var n=i+1,chars=String(p.text||'').replace(/\s/g,'').length,imgs=Number(p.images)||0;
+  if(!Number.isFinite(imgs)||imgs<0)throw Error('Comptage des images invalide');
+  images+=imgs;
+  if(chars===0&&imgs===0){blanks.push(n);issues.push({severity:'warning',page:n,code:'potential-blank',message:'Page sans texte extractible ni opération image détectée (peut contenir des éléments vectoriels)'})}
+ });
+ if(expected&&Number.isFinite(Number(expected.pages))&&Number(expected.pages)!==pages.length)issues.push({severity:'warning',page:null,code:'page-count',message:'Pages du PDF : '+pages.length+' ; pages du document : '+expected.pages});
+ if(expected&&Number.isFinite(Number(expected.images))&&Number(expected.images)>images)issues.push({severity:'warning',page:null,code:'images-to-review',message:'Moins d’opérations image détectées que d’illustrations du document ; vérifier visuellement (les deux mesures ne sont pas équivalentes)'});
+ return {pages:pages.length,blankCandidates:blanks,imageOperations:images,issues:issues,status:'manual-review-required',certified:false};
+}
+async function ripe17InspectPDF(bytes,expected){
+ if(!window.pdfjsLib)throw Error('Lecteur PDF.js indisponible');
+ var data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+ if(data.length<5||String.fromCharCode.apply(null,Array.from(data.slice(0,5)))!=='%PDF-')throw Error('Fichier PDF invalide');
+ var task=window.pdfjsLib.getDocument({data:data.slice(0)}),pdf=await task.promise,pages=[];
+ try{
+  if(pdf.numPages>3000)throw Error('PDF trop volumineux pour cet audit');
+  for(var i=1;i<=pdf.numPages;i++){
+   var page=await pdf.getPage(i),content=await page.getTextContent(),ops=await page.getOperatorList(),fn=ops.fnArray||[],OPS=window.pdfjsLib.OPS||{};
+   var imageIds=[OPS.paintImageXObject,OPS.paintInlineImageXObject,OPS.paintImageMaskXObject,OPS.paintJpegXObject].filter(function(v){return v!==undefined});
+   var imageOps=fn.filter(function(v){return imageIds.indexOf(v)>=0}).length;
+   pages.push({text:(content.items||[]).map(function(x){return x.str||''}).join(''),images:imageOps});
+  }
+  return ripe17AnalyzePages(pages,expected);
+ }finally{try{await pdf.destroy()}catch(_){}}
+}
+function ripe17ShowPDFCheck(){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign pour comparer la pagination');
+ var old=document.getElementById('ripe17-report');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe17-report';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:12% 15%;z-index:1000008;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var h=document.createElement('h2');h.textContent='RIPE Phase 17 — Inspection du PDF exporté';panel.appendChild(h);
+ var note=document.createElement('p');note.textContent='Sélectionnez le PDF réellement exporté. Analyse locale en lecture seule : pages, pages potentiellement blanches, opérations image. Ne garantit ni la présence de toutes les illustrations ni la fidélité visuelle.';panel.appendChild(note);
+ var input=document.createElement('input');input.type='file';input.accept='.pdf,application/pdf';input.setAttribute('aria-label','Choisir le PDF exporté');panel.appendChild(input);
+ var out=document.createElement('div');out.setAttribute('aria-live','polite');panel.appendChild(out);
+ input.onchange=async function(){out.textContent='Analyse en cours…';try{
+  var file=input.files&&input.files[0];if(!file)return;
+  if(file.size>100*1024*1024)throw Error('PDF supérieur à 100 Mo : analyse refusée');
+  var expected={pages:c.s.pages,images:Object.keys(c.s.pageItems||{}).reduce(function(n,k){return n+(c.s.pageItems[k]||[]).filter(function(b){return b.type==='frame'&&b.imageSrc}).length},0)};
+  var r=await ripe17InspectPDF(await file.arrayBuffer(),expected);
+  out.textContent=r.pages+' pages PDF · '+r.blankCandidates.length+' pages potentiellement blanches · '+r.imageOperations+' opérations image. Vérification humaine obligatoire.';
+  var ul=document.createElement('ul');r.issues.forEach(function(i){var li=document.createElement('li');li.textContent=(i.page?'Page '+i.page+' — ':'')+i.message;ul.appendChild(li)});out.appendChild(ul);
+ }catch(e){out.textContent='Analyse impossible : '+(e.message||String(e))}};
+ var close=document.createElement('button');close.textContent='Fermer';close.onclick=function(){panel.remove()};panel.appendChild(close);
+ document.body.appendChild(panel);
+}
+/* RIPE 18 — visual PDF review, no changes to the PDF or manuscript. */
+function ripe18PageStatus(page,observations){
+ var notes=(observations||[]).filter(function(x){return x.page===page});
+ return {page:page,reviewed:notes.some(function(x){return x.kind==='reviewed'}),issues:notes.filter(function(x){return x.kind==='issue'}).length};
+}
+function ripe18Summary(total,observations){
+ if(!Number.isInteger(total)||total<1||total>3000)throw Error('Nombre de pages invalide');
+ var reviewed=0,flagged=0;
+ for(var i=1;i<=total;i++){var s=ripe18PageStatus(i,observations);if(s.reviewed)reviewed++;if(s.issues)flagged++;}
+ return {pages:total,reviewed:reviewed,flagged:flagged,complete:reviewed===total&&flagged===0,certified:false};
+}
+/* RIPE 21 — deterministic per-page issue tracking, compatible with review.v1. */
+function ripe21Track(observations,pages){
+ if(!Number.isInteger(pages)||pages<1||pages>3000)throw Error('Pagination invalide');
+ var open=[],events=[],reviewed=new Set(),items=observations||[];
+ if(!Array.isArray(items)||items.length>10000)throw Error('Observations invalides');
+ items.forEach(function(o,i){
+  if(!o||!Number.isInteger(o.page)||o.page<1||o.page>pages||!['reviewed','issue','resolved'].includes(o.kind)||typeof(o.message||'')!=='string'||String(o.message||'').length>500)throw Error('Observation invalide');
+  if(o.kind==='reviewed'){reviewed.add(o.page);return;}
+  if(o.kind==='issue'){
+   if(!String(o.message||'').trim())throw Error('Description d’anomalie manquante');
+   var issue={page:o.page,message:o.message,index:i,status:'open'};open.push(issue);events.push(issue);
+  }else{
+   var match=open.findIndex(function(x){return x.page===o.page&&x.message===o.message});
+   if(match<0)throw Error('Résolution sans anomalie correspondante (page et description)');
+   var issue=open.splice(match,1)[0];issue.status='resolved';issue.resolvedAt=i;
+  }
+ });
+ return {open:open,events:events,reviewed:reviewed.size,pages:pages,ready:reviewed.size===pages&&open.length===0,certified:false};
+}
+function ripe21Resolve(observations,pages,page,message){
+ var tracked=ripe21Track(observations,pages);
+ if(!tracked.open.some(function(x){return x.page===page&&x.message===message}))throw Error('Anomalie ouverte introuvable');
+ return observations.concat([{page:page,kind:'resolved',message:message}]);
+}
+/* RIPE 22 — explicit editorial decision, separate from PDF review v1. */
+function ripe22Evaluate(observations,pages,checks,decision,reviewer,reason,pdfIdentity){
+ var t=ripe21Track(observations,pages);
+ var required=['pagination','typography','illustrations','cover','rights'];
+ var checklist={};required.forEach(function(k){checklist[k]=!!(checks&&checks[k]===true)});
+ var missing=required.filter(function(k){return !checklist[k]});
+ var d=String(decision||'').toLowerCase(),name=String(reviewer||'').trim(),why=String(reason||'').trim();
+ if(!['approve','reject'].includes(d))throw Error('Décision éditoriale invalide');
+ if(!name||name.length>120)throw Error('Responsable de validation requis (120 caractères maximum)');
+ if(why.length>1000)throw Error('Motif trop long');
+ if(d==='reject'&&!why)throw Error('Motif du refus obligatoire');
+ if(!pdfIdentity||!/^[a-f0-9]{64}$/i.test(String(pdfIdentity.sha256||''))||!Number.isSafeInteger(pdfIdentity.bytes)||pdfIdentity.bytes<1||pdfIdentity.pages!==pages)throw Error('Empreinte PDF et pagination requises');
+ var blockers=[];
+ if(t.reviewed!==pages)blockers.push('Pages non examinées : '+(pages-t.reviewed));
+ if(t.open.length)blockers.push('Anomalies ouvertes : '+t.open.length);
+ if(missing.length)blockers.push('Contrôles non validés : '+missing.join(', '));
+ if(d==='approve'&&blockers.length)throw Error('Approbation interdite : '+blockers.join(' ; '));
+ return {schema:'readox.ripe.editorial-decision.v1',decision:d,reviewer:name,reason:why,pdf:{sha256:String(pdfIdentity.sha256).toLowerCase(),bytes:pdfIdentity.bytes,pages:pages},checks:checklist,reviewed:t.reviewed,openIssues:t.open.length,resolvedIssues:t.events.filter(function(x){return x.status==='resolved'}).length,blockers:blockers,publicationCertified:false};
+}
+function ripe22DownloadDecision(record){
+ var data=JSON.stringify(Object.assign({},record,{decidedAt:new Date().toISOString()}),null,2);
+ var url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+ var a=document.createElement('a');a.href=url;a.download='readox-ripe-decision-'+record.decision+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+/* RIPE 23 — local, untrusted editorial decision history tied to exact PDF bytes. */
+function ripe23ValidateDecision(record,identity){
+ if(!record||record.schema!=='readox.ripe.editorial-decision.v1'||!record.pdf||!identity)throw Error('Décision éditoriale incompatible');
+ var hash=String(record.pdf.sha256||'').toLowerCase();
+ if(!/^[a-f0-9]{64}$/.test(hash)||hash!==String(identity.sha256||'').toLowerCase()||record.pdf.bytes!==identity.bytes||record.pdf.pages!==identity.pages)throw Error('Décision pour une autre version du PDF : empreinte, taille ou pagination différentes');
+ if(!['approve','reject'].includes(record.decision)||typeof record.reviewer!=='string'||!record.reviewer.trim()||record.reviewer.length>120)throw Error('Décision ou responsable invalide');
+ if(!record.checks||!['pagination','typography','illustrations','cover','rights'].every(function(k){return typeof record.checks[k]==='boolean'}))throw Error('Contrôles éditoriaux invalides');
+ if(!Number.isInteger(record.reviewed)||record.reviewed<0||record.reviewed>identity.pages||!Number.isInteger(record.openIssues)||record.openIssues<0||!Array.isArray(record.blockers))throw Error('Bilan de décision invalide');
+ if(record.decision==='approve'&&(record.reviewed!==identity.pages||record.openIssues!==0||record.blockers.length||!Object.values(record.checks).every(Boolean)))throw Error('Approbation incohérente');
+ if(typeof record.decidedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T/.test(record.decidedAt)||!Number.isFinite(Date.parse(record.decidedAt)))throw Error('Date de décision invalide');
+ return {schema:record.schema,decision:record.decision,reviewer:record.reviewer,reason:String(record.reason||'').slice(0,1000),decidedAt:record.decidedAt,pdf:{sha256:hash,bytes:record.pdf.bytes,pages:record.pdf.pages},checks:Object.assign({},record.checks),reviewed:record.reviewed,openIssues:record.openIssues,blockers:record.blockers.slice(0,100).map(function(x){return String(x).slice(0,500)}),publicationCertified:false,trust:'imported-or-local-unverified'};
+}
+function ripe23DecisionHistory(records,identity){
+ if(!Array.isArray(records)||records.length>100)throw Error('Historique trop volumineux');
+ var accepted=[],other=0;
+ records.forEach(function(r){try{accepted.push(ripe23ValidateDecision(r,identity))}catch(e){other++}});
+ accepted.sort(function(a,b){return a.decidedAt.localeCompare(b.decidedAt)});
+ return {records:accepted,otherVersionsOrInvalid:other,latest:accepted.length?accepted[accepted.length-1]:null,certified:false};
+}
+function ripe23DownloadHistory(records,identity){
+ var result=ripe23DecisionHistory(records,identity);
+ var payload={schema:'readox.ripe.editorial-history.v1',pdf:identity,records:result.records,exportedAt:new Date().toISOString(),verifiedSignature:false};
+ var url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+ var a=document.createElement('a');a.href=url;a.download='readox-ripe-historique-decisions.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+/* RIPE 19 — portable review history; local JSON only, no server persistence. */
+function ripe19BuildReport(filename,byteSize,total,observations,createdAt){
+ var name=String(filename||'').trim();
+ if(!name||name.length>255||!name.toLowerCase().endsWith('.pdf'))throw Error('Nom PDF invalide');
+ if(!Number.isSafeInteger(byteSize)||byteSize<1||byteSize>100*1024*1024)throw Error('Taille PDF invalide');
+ var summary=ripe18Summary(total,observations);
+ var items=(observations||[]).map(function(o){
+  if(!o||!Number.isInteger(o.page)||o.page<1||o.page>total||!['reviewed','issue','resolved'].includes(o.kind))throw Error('Observation invalide');
+  var msg=String(o.message||'');if(msg.length>500)throw Error('Observation trop longue');
+  return {page:o.page,kind:o.kind,message:msg};
+ });
+ if(items.length>10000)throw Error('Trop d’observations');
+ var at=String(createdAt||new Date().toISOString());if(!/^\d{4}-\d{2}-\d{2}T/.test(at)||!Number.isFinite(Date.parse(at)))throw Error('Date invalide');
+ return {schema:'readox.ripe.review.v1',createdAt:at,pdf:{filename:name,bytes:byteSize,pages:total},observations:items,summary:summary,storage:'portable-local-only'};
+}
+function ripe19ValidateReport(report){
+ if(!report||report.schema!=='readox.ripe.review.v1'||!report.pdf||!Array.isArray(report.observations))throw Error('Rapport RIPE incompatible');
+ var verified=ripe19BuildReport(report.pdf.filename,report.pdf.bytes,report.pdf.pages,report.observations,report.createdAt);
+ if(report.observations.length>10000)throw Error('Rapport trop volumineux');
+ return verified;
+}
+function ripe19IssueHistory(reports){
+ var result=[];
+ (reports||[]).forEach(function(r){var v=ripe19ValidateReport(r);v.observations.forEach(function(o){if(o.kind==='issue'||o.kind==='resolved')result.push({date:v.createdAt,pdf:v.pdf.filename,page:o.page,status:o.kind,message:o.message})})});
+ return result;
+}
+function ripe19Download(report){
+ var validated=ripe19ValidateReport(report),data=JSON.stringify(validated,null,2);
+ var url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+ var a=document.createElement('a');a.href=url;a.download='readox-ripe-revue-'+validated.createdAt.slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+/* RIPE Phase 20 — SHA-256 document identity + authenticated TEST persistence. */
+async function ripe20Hash(bytes){
+ if(!window.crypto||!window.crypto.subtle)throw Error('SHA-256 indisponible : HTTPS requis');
+ var digest=await window.crypto.subtle.digest('SHA-256',bytes);
+ return Array.from(new Uint8Array(digest)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+}
+async function ripe20Request(path,options){
+ var token=typeof getToken==='function'?getToken():null;
+ if(!token)throw Error('Connectez-vous pour enregistrer dans Supabase TEST');
+ var res=await fetch(path,Object.assign({},options||{},{headers:Object.assign({'Authorization':'Bearer '+token},options&&options.body?{'Content-Type':'application/json'}:{})}));
+ var data=await res.json().catch(function(){return {}});
+ if(!res.ok)throw Error(data.error||'Serveur TEST indisponible ('+res.status+')');
+ return data;
+}
+function ripe18ShowVisualReview(){
+ if(!window.pdfjsLib)throw Error('PDF.js indisponible');
+ var old=document.getElementById('ripe18-visual');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe18-visual';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:5% 8%;z-index:1000010;background:#fff;color:#182230;padding:20px;overflow:auto;border-radius:12px;box-shadow:0 10px 50px #0006';
+ var heading=document.createElement('h2');heading.textContent='RIPE Phase 18 — Vérification visuelle du PDF';panel.appendChild(heading);
+ var explanation=document.createElement('p');explanation.textContent='Sélectionnez le PDF exporté. Parcourez ses pages, signalez les anomalies et marquez les pages examinées. Les annotations restent locales à cette fenêtre et ne sont pas enregistrées.';panel.appendChild(explanation);
+ var input=document.createElement('input');input.type='file';input.accept='.pdf,application/pdf';input.setAttribute('aria-label','PDF à examiner visuellement');panel.appendChild(input);
+ var bar=document.createElement('div');bar.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0';panel.appendChild(bar);
+ var prev=document.createElement('button');prev.textContent='Page précédente';bar.appendChild(prev);
+ var next=document.createElement('button');next.textContent='Page suivante';bar.appendChild(next);
+ var counter=document.createElement('span');bar.appendChild(counter);
+ var mark=document.createElement('button');mark.textContent='Marquer examinée';bar.appendChild(mark);
+ var flag=document.createElement('button');flag.textContent='Signaler une anomalie';bar.appendChild(flag);
+ var report=document.createElement('button');report.textContent='Afficher le bilan';bar.appendChild(report);
+ var status=document.createElement('p');status.setAttribute('aria-live','polite');panel.appendChild(status);
+ var canvas=document.createElement('canvas');canvas.style.cssText='display:block;max-width:100%;height:auto;border:1px solid #ccc;margin:10px auto';panel.appendChild(canvas);
+ var observations=[],pdf=null,index=1,epoch=0,task=null,pdfName='',pdfBytes=0,pdfHash='',history=[],decisions=[];
+ async function draw(){
+  if(!pdf)return;var token=++epoch;status.textContent='Rendu de la page '+index+'…';
+  try{var page=await pdf.getPage(index);if(token!==epoch)return;
+   var viewport=page.getViewport({scale:1.15});var maxPixels=5000000;
+   var scale=Math.min(1,Math.sqrt(maxPixels/(viewport.width*viewport.height)));viewport=page.getViewport({scale:1.15*scale});
+   canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+   var ctx=canvas.getContext('2d');await page.render({canvasContext:ctx,viewport:viewport}).promise;
+   if(token!==epoch)return;var ps=ripe18PageStatus(index,observations);
+   counter.textContent='Page '+index+' / '+pdf.numPages;status.textContent=(ps.reviewed?'Page examinée':'Page non examinée')+(ps.issues?' · '+ps.issues+' anomalie(s) signalée(s)':'');
+   prev.disabled=index<=1;next.disabled=index>=pdf.numPages;
+  }catch(e){if(token===epoch)status.textContent='Rendu impossible : '+(e.message||String(e))}
+ }
+ input.onchange=async function(){
+  var file=input.files&&input.files[0];if(!file)return;
+  if(file.size>100*1024*1024){status.textContent='PDF supérieur à 100 Mo : refusé';return}
+  ++epoch;observations=[];decisions=[];index=1;pdfName='';pdfBytes=0;pdfHash='';canvas.width=0;canvas.height=0;
+  if(task){try{await task.destroy()}catch(_){}}task=null;pdf=null;
+  try{var data=new Uint8Array(await file.arrayBuffer());if(String.fromCharCode.apply(null,Array.from(data.slice(0,5)))!=='%PDF-')throw Error('PDF invalide');
+   pdfHash=await ripe20Hash(data);task=window.pdfjsLib.getDocument({data:data});pdf=await task.promise;
+   if(pdf.numPages>3000)throw Error('PDF supérieur à 3000 pages');pdfName=file.name;pdfBytes=file.size;await draw();
+  }catch(e){status.textContent='Ouverture impossible : '+(e.message||String(e))}
+ };
+ prev.onclick=function(){if(pdf&&index>1){index--;draw()}};
+ next.onclick=function(){if(pdf&&index<pdf.numPages){index++;draw()}};
+ mark.onclick=function(){if(!pdf)return;observations=observations.filter(function(x){return !(x.page===index&&x.kind==='reviewed')});observations.push({page:index,kind:'reviewed'});draw()};
+ flag.onclick=function(){if(!pdf)return;var reason=window.prompt('Décrivez brièvement l’anomalie observée sur la page '+index+' :');if(!reason||!reason.trim())return;observations.push({page:index,kind:'issue',message:reason.trim().slice(0,500)});draw()};
+ report.onclick=function(){if(!pdf)return;var summary=ripe18Summary(pdf.numPages,observations);status.textContent=summary.reviewed+'/'+summary.pages+' pages examinées · '+summary.flagged+' pages signalées. '+(summary.complete?'Revue manuelle complète, non certifiée.':'Revue incomplète ou anomalies à corriger.');var details=observations.filter(function(x){return x.kind==='issue'}).map(function(x){return 'Page '+x.page+' : '+x.message}).join('\n');if(details)status.textContent+='\n'+details;status.style.whiteSpace='pre-wrap'};
+ var save=document.createElement('button');save.textContent='Télécharger le rapport JSON (Phase 19)';bar.appendChild(save);
+ save.onclick=function(){if(!pdf)return;try{var r=ripe19BuildReport(pdfName,pdfBytes,pdf.numPages,observations);history.push(r);ripe19Download(r);status.textContent='Rapport téléchargé localement. Aucun enregistrement Supabase.'}catch(e){status.textContent=e.message||String(e)}};
+ var cloudSave=document.createElement('button');cloudSave.textContent='Enregistrer dans Supabase TEST (Phase 20)';bar.appendChild(cloudSave);
+ cloudSave.onclick=async function(){if(!pdf||!pdfHash){status.textContent='Ouvrez un PDF avant enregistrement';return}cloudSave.disabled=true;
+  try{var r=ripe19BuildReport(pdfName,pdfBytes,pdf.numPages,observations);r.pdf.sha256=pdfHash;
+   var out=await ripe20Request('/api/ripe/pdf-reviews',{method:'POST',body:JSON.stringify(r)});
+   status.textContent='Rapport enregistré dans Supabase TEST. Identifiant : '+out.id;
+  }catch(e){status.textContent='Enregistrement TEST impossible : '+(e.message||String(e))}finally{cloudSave.disabled=false}
+ };
+ var cloudHistory=document.createElement('button');cloudHistory.textContent='Historique Supabase TEST de ce PDF';bar.appendChild(cloudHistory);
+ cloudHistory.onclick=async function(){if(!pdfHash){status.textContent='Ouvrez un PDF avant de consulter son historique';return}cloudHistory.disabled=true;
+  try{var out=await ripe20Request('/api/ripe/pdf-reviews?sha256='+pdfHash);
+   status.style.whiteSpace='pre-wrap';status.textContent=out.items.length+' rapport(s) enregistrés pour ce PDF :\n'+out.items.map(function(r){return r.created_at+' · '+r.id+' · '+r.pdf_filename}).join('\n');
+  }catch(e){status.textContent='Historique TEST indisponible : '+(e.message||String(e))}finally{cloudHistory.disabled=false}
+ };
+ var cloudLoad=document.createElement('button');cloudLoad.textContent='Restaurer un rapport TEST par identifiant';bar.appendChild(cloudLoad);
+ cloudLoad.onclick=async function(){if(!pdfHash){status.textContent='Ouvrez un PDF avant de restaurer';return}
+  var id=window.prompt('Identifiant UUID du rapport à restaurer :');if(!id)return;
+  if(!/^[0-9a-f-]{36}$/i.test(id)){status.textContent='Identifiant invalide';return}
+  try{var out=await ripe20Request('/api/ripe/pdf-reviews/'+encodeURIComponent(id));var r=out.report;
+   if(!r||r.pdf.sha256!==pdfHash||r.pdf.bytes!==pdfBytes||r.pdf.pages!==pdf.numPages)throw Error('Empreinte ou caractéristiques du PDF différentes');
+   observations=ripe19ValidateReport(r).observations.slice();history.push(r);await draw();status.textContent='Rapport restauré depuis Supabase TEST';
+  }catch(e){status.textContent='Restauration refusée : '+(e.message||String(e))}
+ };
+ var load=document.createElement('input');load.type='file';load.accept='.json,application/json';load.setAttribute('aria-label','Importer un rapport de revue RIPE');bar.appendChild(load);
+ load.onchange=async function(){var file=load.files&&load.files[0];if(!file)return;if(file.size>2*1024*1024){status.textContent='Rapport supérieur à 2 Mo : refusé';return}
+  try{var r=ripe19ValidateReport(JSON.parse(await file.text()));history.push(r);
+   if(pdf&&r.pdf.filename===pdfName&&r.pdf.bytes===pdfBytes&&r.pdf.pages===pdf.numPages){observations=r.observations.slice();draw();status.textContent='Rapport importé pour ce PDF (nom, taille et pagination concordants).'}
+   else status.textContent='Rapport ajouté à l’historique de cette fenêtre. PDF différent ou non chargé : annotations non appliquées.';
+  }catch(e){status.textContent='Import refusé : '+(e.message||String(e))}
+ };
+ var historyButton=document.createElement('button');historyButton.textContent='Historique des rapports importés / téléchargés';bar.appendChild(historyButton);
+ historyButton.onclick=function(){var issues=ripe19IssueHistory(history);status.style.whiteSpace='pre-wrap';status.textContent=history.length+' rapport(s) dans cette fenêtre · '+issues.length+' signalement(s) / résolution(s).\n'+issues.slice(-100).map(function(x){return x.date.slice(0,10)+' · '+x.pdf+' · p.'+x.page+' · '+(x.status==='resolved'?'Résolu':'Anomalie')+' : '+x.message}).join('\n')};
+ var resolve=document.createElement('button');resolve.textContent='Consigner une correction';bar.appendChild(resolve);
+ resolve.onclick=function(){if(!pdf)return;try{
+  var pending=ripe21Track(observations,pdf.numPages).open.filter(function(x){return x.page===index});
+  if(!pending.length){status.textContent='Aucune anomalie ouverte sur cette page';return}
+  var choice=window.prompt('Numéro de l’anomalie corrigée sur la page '+index+' :\n'+pending.map(function(x,i){return (i+1)+'. '+x.message}).join('\n'));
+  if(choice===null)return;var n=Number(choice);if(!Number.isInteger(n)||n<1||n>pending.length)throw Error('Choix invalide');
+  observations=ripe21Resolve(observations,pdf.numPages,index,pending[n-1].message);draw();
+ }catch(e){status.textContent=e.message||String(e)}};
+ var tracking=document.createElement('button');tracking.textContent='Suivi des anomalies (Phase 21)';bar.appendChild(tracking);
+ tracking.onclick=function(){if(!pdf)return;try{var t=ripe21Track(observations,pdf.numPages);
+  status.style.whiteSpace='pre-wrap';status.textContent=t.reviewed+'/'+t.pages+' pages examinées · '+t.open.length+' anomalie(s) ouvertes · '+t.events.filter(function(x){return x.status==='resolved'}).length+' résolue(s).\n'+(t.ready?'Revue complète sur ce PDF (validation visuelle humaine requise).':'Validation finale bloquée : pages non examinées ou anomalies ouvertes.')+'\n'+t.open.map(function(x){return 'Page '+x.page+' : '+x.message}).join('\n');
+ }catch(e){status.textContent='Suivi impossible : '+(e.message||String(e))}};
+ var editorial=document.createElement('button');editorial.textContent='Décision éditoriale (Phase 22)';bar.appendChild(editorial);
+ editorial.onclick=function(){if(!pdf||!pdfHash){status.textContent='Ouvrez un PDF avant toute décision';return}
+  var labels={pagination:'Pagination et pages blanches',typography:'Typographie et lisibilité',illustrations:'Illustrations et légendes',cover:'Couverture et mentions',rights:'Droits et autorisations'};
+  var checks={};Object.keys(labels).forEach(function(k){checks[k]=window.confirm('Contrôle éditorial effectué et conforme : '+labels[k]+' ?')});
+  var choice=window.prompt('Décision : APPROVE (approuver) ou REJECT (refuser) ?');if(choice===null)return;
+  var reviewer=window.prompt('Nom du responsable de la décision :');if(reviewer===null)return;
+  var reason=window.prompt('Motif ou commentaire (obligatoire pour un refus) :');if(reason===null)return;
+  try{var record=ripe22Evaluate(observations,pdf.numPages,checks,choice,reviewer,reason,{sha256:pdfHash,bytes:pdfBytes,pages:pdf.numPages});
+   record.decidedAt=new Date().toISOString();decisions.push(ripe23ValidateDecision(record,{sha256:pdfHash,bytes:pdfBytes,pages:pdf.numPages}));ripe22DownloadDecision(record);status.style.whiteSpace='pre-wrap';status.textContent=(record.decision==='approve'?'Approbation éditoriale déclarée':'Refus éditorial enregistré')+' · Décision téléchargée en JSON. Aucune publication automatique. '+record.blockers.join(' ; ');
+  }catch(e){status.textContent='Décision non enregistrée : '+(e.message||String(e))}
+ };
+ var decisionImport=document.createElement('input');decisionImport.type='file';decisionImport.accept='.json,application/json';decisionImport.setAttribute('aria-label','Importer une décision éditoriale JSON (Phase 23)');bar.appendChild(decisionImport);
+ decisionImport.onchange=async function(){var file=decisionImport.files&&decisionImport.files[0];if(!file||!pdf)return;
+  if(file.size>1024*1024){status.textContent='Décision supérieure à 1 Mo : refusée';return}
+  try{var raw=JSON.parse(await file.text());var identity={sha256:pdfHash,bytes:pdfBytes,pages:pdf.numPages};
+   var incoming=raw&&raw.schema==='readox.ripe.editorial-history.v1'?raw.records:[raw];
+   if(!Array.isArray(incoming)||incoming.length>100)throw Error('Historique invalide');
+   var validated=incoming.map(function(x){return ripe23ValidateDecision(x,identity)});
+   decisions=decisions.concat(validated).slice(-100);status.textContent=validated.length+' décision(s) importée(s) pour cette version exacte du PDF. Déclarations non signées : aucune approbation certifiée.';
+  }catch(e){status.textContent='Import refusé : '+(e.message||String(e))}
+ };
+ var decisionHistory=document.createElement('button');decisionHistory.textContent='Historique éditorial (Phase 23)';bar.appendChild(decisionHistory);
+ decisionHistory.onclick=function(){if(!pdf)return;var h=ripe23DecisionHistory(decisions,{sha256:pdfHash,bytes:pdfBytes,pages:pdf.numPages});
+  status.style.whiteSpace='pre-wrap';status.textContent=h.records.length+' décision(s) pour cette version du PDF. Non signées et non certifiées.\n'+h.records.map(function(x){return x.decidedAt+' · '+(x.decision==='approve'?'APPROUVÉ (déclaratif)':'REFUSÉ')+' · '+x.reviewer}).join('\n')};
+ var decisionExport=document.createElement('button');decisionExport.textContent='Exporter l’historique éditorial JSON';bar.appendChild(decisionExport);
+ decisionExport.onclick=function(){if(!pdf)return;ripe23DownloadHistory(decisions,{sha256:pdfHash,bytes:pdfBytes,pages:pdf.numPages})};
+ var close=document.createElement('button');close.textContent='Fermer';close.onclick=async function(){++epoch;panel.remove();if(task){try{await task.destroy()}catch(_){}}};panel.insertBefore(close,heading);
+ document.body.appendChild(panel);
+}
+function ripe9ShowReport(report){
+ var old=document.getElementById('ripe9-report');if(old)old.remove();
+ var panel=document.createElement('section');panel.id='ripe9-report';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ panel.style.cssText='position:fixed;inset:10% 12%;z-index:999999;background:white;color:#1d2939;padding:24px;overflow:auto;box-shadow:0 8px 40px #0005;border-radius:12px';
+ var close=document.createElement('button');close.textContent='Fermer';close.onclick=function(){panel.remove()};panel.appendChild(close);
+ var title=document.createElement('h2');title.textContent='Contrôle qualité RIPE — '+(report.ok?'Aucune erreur structurelle':'Anomalies détectées');panel.appendChild(title);
+ var summary=document.createElement('p');summary.textContent=report.counts.pages+' pages · '+report.counts.blocks+' blocs · '+report.counts.images+' images · '+report.counts.textChars+' caractères';panel.appendChild(summary);
+ var list=document.createElement('ul');report.issues.forEach(function(issue){var li=document.createElement('li');li.textContent=(issue.page?'Page '+issue.page+' — ':'')+issue.severity.toUpperCase()+' : '+issue.message;list.appendChild(li)});panel.appendChild(list);
+ var fix=document.createElement('button');fix.textContent='Prévisualiser les corrections géométriques';fix.onclick=function(){try{ripe10ShowCorrection()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(fix); var overlapButton=document.createElement('button');overlapButton.textContent='Analyser et corriger les chevauchements';overlapButton.style.marginLeft='10px';overlapButton.onclick=function(){try{ripe11ShowCorrection()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(overlapButton); var reflowButton=document.createElement('button');reflowButton.textContent='Prévisualiser la redistribution des pages';reflowButton.style.marginLeft='10px';reflowButton.onclick=function(){try{ripe12ShowReflow()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(reflowButton); var typeButton=document.createElement('button');typeButton.textContent='Vérifier les débordements typographiques';typeButton.style.marginLeft='10px';typeButton.onclick=function(){try{ripe13ShowAudit()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(typeButton); var assisted=document.createElement('button');assisted.textContent='Prévisualiser les corrections typographiques';assisted.style.marginLeft='10px';assisted.onclick=function(){try{ripe14ShowCorrection()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(assisted); var interpage=document.createElement('button');interpage.textContent='Prévisualiser la redistribution interpages des débordements';interpage.style.marginLeft='10px';interpage.onclick=function(){try{ripe15ShowCorrection()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(interpage); var finalQa=document.createElement('button');finalQa.textContent='Rapport pré-export RIPE (Phase 16)';finalQa.style.marginLeft='10px';finalQa.onclick=function(){try{ripe16ShowReport()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(finalQa); var pdfCheck=document.createElement('button');pdfCheck.textContent='Inspecter le PDF exporté (Phase 17)';pdfCheck.style.marginLeft='10px';pdfCheck.onclick=function(){try{ripe17ShowPDFCheck()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(pdfCheck); var visual=document.createElement('button');visual.textContent='Vérification visuelle du PDF (Phase 18)';visual.style.marginLeft='10px';visual.onclick=function(){try{ripe18ShowVisualReview()}catch(e){window.alert(e.message||String(e))}};panel.appendChild(visual);
+ var note=document.createElement('p');note.textContent='Ce contrôle analyse la géométrie et les ressources enregistrées, pas le rendu typographique réel.';panel.appendChild(note);
+ document.body.appendChild(panel);
+}
+// Backwards-compatible entry point for the existing InDesign composer.
+function ripe7Layout(parts,styleKey,dimensions){return ripe8Layout(parts,styleKey,dimensions);}
+function ripe4ComposeInDesign(book,parts,styleKey){
+ var c=rxIdState();if(!c)throw Error('Ouvrez un document InDesign avant de composer');
+ var state=JSON.parse(JSON.stringify(c.s)),layout=ripe7Layout(parts,styleKey,state),items={},next=Number(state.nextItemId)||1;
+ layout.pages.forEach(function(page,i){items[i+1]=page.map(function(b,j){
+  return Object.assign({id:'obj'+next++,layerId:state.activeLayer||'layer1',rot:0,z:j+1,fill:'transparent',stroke:'transparent',strokeWidth:0,ripeSource:true},b);
+ });});
+ state.pageItems=items;state.pages=layout.pages.length;state.current=1;state.nextItemId=next;state.selected=null;state.selectedIds=[];
+ state.ripeSource={manuscriptId:book.id,revision:book.revision,parts:parts.length,style:styleKey,layout:'ripe8-measured-flow',sourceChars:layout.sourceChars,preflight:ripe9Audit(layout,state,parts)};
+ return {tab:c.t,state,pages:state.pages};
+}
+
+async function ripe4Apply(engine,id,status,styleKey){
+ var response=await api('/api/ripe/manuscripts/'+encodeURIComponent(id),undefined);
+ var book=response.manuscript,parts=ripe4Parts(book);
+ if(!parts.length)throw Error('Manuscrit vide');
+ var snap=rxaiSnapshot(engine);if(snap==null)throw Error('Ouvrez l’éditeur avant de composer');
+ var message='Cette opération remplace le contenu du document actuellement ouvert par '+parts.length+' éléments du manuscrit « '+book.title+' ».\n\nEnregistrez d’abord le document actuel si nécessaire. Continuer ?';
+ if(!window.confirm(message))return;
+ status('Composition du manuscrit…');
+ if(engine==='word'){
+  var html=ripe4ComposeWord(parts,styleKey);window.RXW_API.setHTML(html);
+  if(window.RXW_API.getHTML().length===0)throw Error('Word n’a pas accepté le contenu');
+  try{docMarkDirty()}catch(_){}
+  status('Manuscrit composé dans Word. Vérifiez la pagination et les illustrations.');
+ }else{
+  var result=ripe4ComposeInDesign(book,parts,styleKey);
+  result.tab.idState=result.state;result.tab.dirty=true;rxIdRefresh();
+  try{window.scheduleAutosave&&window.scheduleAutosave()}catch(_){}
+  status('Manuscrit composé en '+result.pages+' page(s) natives. Contrôle qualité disponible.');
+  ripe9ShowReport(result.state.ripeSource.preflight);
+ }
+}
+
+/* RIPE phase 3 : interface de création progressive, sans insertion silencieuse dans l'éditeur. */
+function ripe3Open(engine){
+  var existing=document.getElementById('ripe3-dialog');if(existing)existing.remove();
+  var wrap=document.createElement('div');wrap.id='ripe3-dialog';wrap.className='ripe3-overlay';
+  wrap.innerHTML='<section class="ripe3-modal" role="dialog" aria-modal="true" aria-label="Création de livre RIPE">'+
+    '<header><strong>📖 Création de livre — '+(engine==='word'?'Word':'InDesign')+'</strong><button type="button" data-close aria-label="Fermer">×</button></header>'+
+    '<p>Préparez le plan, confirmez-le, puis rédigez les chapitres un par un. Le manuscrit est enregistré dans votre espace sécurisé.</p>'+
+    '<label>Description du livre<textarea data-brief rows="3" placeholder="Décrivez le thème, le ton et le public…"></textarea></label>'+
+    '<label>Nombre de chapitres <input data-count type="number" min="1" max="30" value="3"></label>'+
+    '<label>Direction artistique <select data-art-style><option value="editorial">Éditorial classique</option><option value="science">Documentaire scientifique</option><option value="novel">Roman littéraire</option><option value="modern">Éditorial contemporain</option></select></label>'+
+    '<div data-art-preview role="status" aria-live="polite"></div>'+
+    '<div class="ripe3-buttons"><button data-plan>1. Préparer le plan</button><button data-save disabled>2. Approuver et enregistrer</button></div>'+
+    '<div data-status role="status" aria-live="polite"></div><div data-outline></div><div data-chapters></div><div data-compose-slot></div>'+
+    '<small>La composition intervient après validation de tous les chapitres. Sauvegardez votre document actuel avant de le remplacer.</small></section>';
+  document.body.appendChild(wrap);
+  var $=q=>wrap.querySelector(q), book=null,plan=null,busy=false;
+  function status(msg,error){$('[data-status]').textContent=msg;$('[data-status]').style.color=error?'#ad2736':'#315b44';}
+  function busySet(v){busy=v;wrap.querySelectorAll('button:not([data-close])').forEach(b=>b.disabled=v);if(!v){$('[data-save]').disabled=!plan||!!book;$('[data-plan]').disabled=!!book;var cb=$('[data-compose-slot] button');if(cb)cb.disabled=cb.dataset.verified!=='true';}}
+  function artPreview(){var key=$('[data-art-style]').value,st=ripe6Style(key);var el=$('[data-art-preview]');
+    el.textContent='Aperçu de style : '+st.label+' — '+st.font+', corps '+st.body+' pt, titres '+st.heading+' pt. Les éléments restent éditables.';
+    el.style.cssText='border-left:4px solid '+st.accent+';padding:9px 12px;margin:10px 0;background:#f4f6f8;color:#253243';
+  }
+  $('[data-art-style]').addEventListener('change',artPreview);artPreview();
+  $('[data-close]').onclick=()=>wrap.remove();
+  $('[data-plan]').onclick=async()=>{
+    if(busy)return;var brief=$('[data-brief]').value.trim();if(!brief){status('Saisissez une description.',true);return;}
+    var count=Number($('[data-count]').value);if(!Number.isInteger(count)||count<1||count>30){status('Choisissez de 1 à 30 chapitres.',true);return;}
+    plan=null;book=null;$('[data-outline]').replaceChildren();$('[data-chapters]').replaceChildren();busySet(true);status('Préparation du plan avec Gemini…');
+    try{var r=await api('/api/ripe/plan',{brief,chapters:count});plan=r.plan;
+      var title=document.createElement('h3');title.textContent=plan.title;$('[data-outline]').appendChild(title);
+      var ol=document.createElement('ol');plan.chapters.forEach(c=>{var li=document.createElement('li');li.textContent=c.title+' — '+(c.summary||'');ol.appendChild(li)});$('[data-outline]').appendChild(ol);
+      status('Plan prêt. Vérifiez les chapitres puis approuvez.');
+    }catch(e){status(e.message||String(e),true)}finally{busySet(false)}
+  };
+  $('[data-save]').onclick=async()=>{
+    if(!plan||busy)return;busySet(true);status('Enregistrement du manuscrit…');
+    try{var r=await api('/api/ripe/manuscripts',{plan,brief:$('[data-brief]').value.trim()});book=r.manuscript;
+      if(!book||!book.id||!Array.isArray(book.chapters))throw Error('Réponse de création incomplète');
+      $('[data-chapters]').replaceChildren();book.chapters.forEach(ch=>{
+        var section=document.createElement('section');section.className='ripe3-chapter';
+        var h=document.createElement('h4');h.textContent=ch.title;section.appendChild(h);
+        var draft=document.createElement('button');draft.textContent='Générer le brouillon';section.appendChild(draft);
+        var illustration=document.createElement('button');illustration.textContent='Générer une illustration pour ce chapitre';section.appendChild(illustration);
+        illustration.onclick=async()=>{
+          if(busy)return;
+          var description=window.prompt('Décrivez l’illustration à créer pour « '+ch.title+' » :','Illustration éditoriale cohérente avec le thème du chapitre');
+          if(!description||!description.trim())return;
+          var ok=window.confirm('Générer et enregistrer cette illustration dans le manuscrit ? Cette opération consomme du quota IA.');if(!ok)return;
+          busySet(true);status('Génération et enregistrement de l’illustration…');
+          try{
+            var result=await api('/api/ripe/manuscripts/'+encodeURIComponent(book.id)+'/chapters/'+encodeURIComponent(ch.id)+'/illustration',{
+              prompt:description.trim(),requestId:crypto.randomUUID()});
+            book=result.manuscript||book;
+            var a=(book.assets||[]).find(x=>x.id===result.assetId);
+            if(a){var img=document.createElement('img');img.src=a.uri;img.alt=a.alt||'';img.style.cssText='display:block;max-width:180px;max-height:240px;margin:8px 0;border-radius:6px';section.appendChild(img)}
+            var composeButton=$('[data-compose-slot] [data-compose]');if(composeButton){composeButton.dataset.verified='false';composeButton.disabled=true;}
+            status('Illustration enregistrée. Revérifiez le manuscrit avant composition.');
+          }catch(e){status(e.message||String(e),true)}finally{busySet(false)}
+        };
+        var preview=document.createElement('div');section.appendChild(preview);
+        draft.onclick=async()=>{
+          if(busy)return;busySet(true);status('Rédaction : '+ch.title+'…');preview.replaceChildren();
+          try{var result=await api('/api/ripe/manuscripts/'+encodeURIComponent(book.id)+'/chapters/'+encodeURIComponent(ch.id)+'/draft',{});
+            if(!Array.isArray(result.blocks)||!result.blocks.length)throw Error('Brouillon vide');
+            result.blocks.forEach(b=>{var el=document.createElement(b.type==='heading'?'h4':'p');el.textContent=b.text;preview.appendChild(el)});
+            var approve=document.createElement('button');approve.textContent='Approuver et enregistrer ce chapitre';preview.appendChild(approve);
+            approve.onclick=async()=>{if(busy)return;busySet(true);status('Sauvegarde du chapitre…');try{
+              var saved=await api('/api/ripe/manuscripts/'+encodeURIComponent(book.id)+'/chapters/'+encodeURIComponent(ch.id)+'/blocks',{
+                blocks:result.blocks,expectedRevision:result.expectedRevision,requestId:crypto.randomUUID()});
+              book=saved.manuscript||book;approve.remove();draft.disabled=true;status('Chapitre enregistré.');
+            }catch(e){status(e.message||String(e),true)}finally{busySet(false);}}
+            status('Brouillon prêt : vérifiez le contenu avant de confirmer.');
+          }catch(e){status(e.message||String(e),true)}finally{busySet(false)}
+        };
+        $('[data-chapters]').appendChild(section);
+      });
+      var slot=$('[data-compose-slot]');slot.replaceChildren();
+      var compose=document.createElement('button');compose.textContent='3. Composer le livre dans '+(engine==='word'?'Word':'InDesign');
+      compose.disabled=true;compose.dataset.verified='false';compose.dataset.compose='true';slot.appendChild(compose);
+      var check=document.createElement('button');check.textContent='Vérifier les chapitres enregistrés';slot.appendChild(check);
+      if(engine==='indesign'){var qa=document.createElement('button');qa.textContent='Contrôler les pages InDesign';slot.appendChild(qa);qa.onclick=function(){try{ripe9ShowReport(ripe9AuditDocument())}catch(e){status(e.message||String(e),true)}};}
+      check.onclick=async()=>{if(busy)return;busySet(true);try{var rr=await api('/api/ripe/manuscripts/'+encodeURIComponent(book.id),undefined);var b=rr.manuscript;ripe4Parts(b);compose.dataset.verified='true';compose.disabled=false;status('Tous les chapitres sont présents. Composition disponible.');}catch(e){compose.dataset.verified='false';compose.disabled=true;status(e.message||String(e),true)}finally{busySet(false)}};
+      compose.onclick=async()=>{if(busy||compose.dataset.verified!=='true')return;busySet(true);try{await ripe4Apply(engine,book.id,status,$('[data-art-style]').value)}catch(e){status(e.message||String(e),true)}finally{busySet(false)}};
+      status('Manuscrit créé. Vous pouvez générer chaque chapitre.');
+    }catch(e){status(e.message||String(e),true)}finally{busySet(false)}
+  };
 }
 
 /* ---------------- CÂBLAGE (délégation — aucun clic simulé) ---------------- */
