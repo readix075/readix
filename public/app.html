@@ -10470,7 +10470,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         else if (rx57IsImg(b) && b.src) h += "<figure><img src=\"" + b.src + "\">" + (b.caption ? "<figcaption>" + esc(b.caption) + "</figcaption>" : "") + "</figure>";
       });
     });
-    return "<div class=\"rx57-book\" data-rx57-key=\"" + rx57BookKey(ai) + "\">" + h + "</div>";
+    return "<h1 data-rx57-key=\"" + rx57BookKey(ai) + "\">" + esc(ai.plan.title) + "</h1>" + h.slice(h.indexOf("</h1>") + 5); // Lot 8 : blocs en séquence directe (paginate n itère que les enfants de ed)
   }
   function rx57BlocksToHTML(blocks) {
     var esc = function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); };
@@ -10698,9 +10698,24 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       missingImages: Math.max(0, src.images - dst.images),
       missingChars: Math.max(0, src.chars - dst.chars) };
     s.rx57IntegrityReport = report;
-    if (report.missingParagraphs || report.missingImages || report.missingChars)
-      toast("Integrite : " + report.missingImages + " image(s), " + report.missingChars + " caractere(s) non transferes", "err");
+    var ok = !(report.missingParagraphs || report.missingImages || report.missingChars);
+    toast("[" + RX57_BUILD + "] Integrite " + (ok ? "OK" : "INCOMPLETE") + " : " + dst.paragraphs + " paragraphes, " + dst.chars + " caracteres, images " + dst.images + "/" + src.images + ", " + s.pages + " pages", ok ? "ok" : "err");
     return report;
+  }
+  var RX57_BUILD = "56.11-lot8";
+  function rx57PreloadImages(ai) {
+    var urls = [];
+    (ai.plan.chapters || []).forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      if (!c || !c.blocks) return;
+      c.blocks.forEach(function(b) { if (rx57IsImg(b) && b.src) urls.push(b.src); });
+    });
+    return Promise.all(urls.map(function(u) {
+      return new Promise(function(res) {
+        try { var im = new Image(); im.onload = function() { res(true); }; im.onerror = function() { res(false); }; im.src = u; }
+        catch (e) { res(false); }
+      });
+    }));
   }
   function rx57BookToInDesign(t, stage, ai) {
     openReadixInDesign();
@@ -11415,8 +11430,29 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         bDoc.onclick = function () { exportBook(t, stage, "docx", bDoc); };
         pad3.appendChild(bDoc);
         var miss = rx57MissingChapters(ai).length;
+        if (!ai._layoutMode) ai._layoutMode = "Auto";
+        var modeRow = E("div", "rxbai-modes", "");
+        ["Auto", "Assistée", "Manuel"].forEach(function(md) {
+          var bm = E("button", "rxbai-btn" + (ai._layoutMode === md ? " active" : ""), md);
+          bm.onclick = function() { ai._layoutMode = md; modeRow.querySelectorAll("button").forEach(function(x){ x.classList.remove("active"); }); bm.classList.add("active"); toast("Mode de mise en page : " + md, "ok"); };
+          modeRow.appendChild(bm);
+        });
+        pad3.appendChild(modeRow);
+        function rx57ModeGate(kind) {
+          if (ai._layoutMode === "Manuel") { toast("Mode Manuel : " + kind + " ouvert à vide — collez votre contenu puis composez librement.", "ok"); return "manuel"; }
+          if (ai._layoutMode === "Assistée") {
+            var v = rx57ValidateBook(ai);
+            var msg = kind + " — validation : " + (v.ok ? "aucun blocage" : "BLOQUÉ : " + v.blocking.join(" | ")) + (v.warnings.length ? " — avertissements : " + v.warnings.join(" | ") : "");
+            if (v.ok) { if (typeof confirm === "function" && !confirm(msg + "\nContinuer ?")) return "stop"; }
+            else { toast(msg, "err"); return "stop"; }
+          }
+          return "go";
+        }
         var bW = E("button", "rxbai-btn block", "🅦 Ouvrir dans Readox Word" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
         bW.onclick = function () {
+          var gate = rx57ModeGate("Transfert Word");
+          if (gate === "manuel") { openReadixWordTab(); return; }
+          if (gate === "stop") return;
           var v = rx57ValidateBook(ai);
           if (!v.ok) { toast("Transfert Word bloqué : " + v.blocking[0], "err"); return; }
           if (v.warnings.length) toast(v.warnings[0], "warn");
@@ -11427,7 +11463,11 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         };
         pad3.appendChild(bW);
         var bI = E("button", "rxbai-btn block", "🅟 Mettre en page dans Readox InDesign" + (miss ? " (" + miss + " chapitre(s) à rédiger)" : ""));
-        bI.onclick = function () {
+        bI.onclick = async function () {
+          var gate = rx57ModeGate("Mise en page InDesign");
+          if (gate === "manuel") { openReadixInDesign(); return; }
+          if (gate === "stop") return;
+          await rx57PreloadImages(ai); // Lot 8 : décoder les images AVANT de mesurer et placer
           var v = rx57ValidateBook(ai);
           if (!v.ok) { toast("Mise en page bloquée : " + v.blocking[0], "err"); return; }
           if (v.warnings.length) toast(v.warnings[0], "warn");
