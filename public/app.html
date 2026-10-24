@@ -1542,37 +1542,7 @@ function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileRea
 /* ---------- Nettoyage HTML ---------- */
 const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
 function sanitizeHTML(html,internal){
-  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
-</body>','text/html');
+  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'</body>','text/html');
   const kill='script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template,xml,o\\:p';
   try{doc.body.querySelectorAll(kill).forEach(n=>n.remove());}catch(e){doc.body.querySelectorAll('script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template').forEach(n=>n.remove());}
   const walk=el=>{for(const n of [...el.children]){
@@ -3186,36 +3156,6 @@ async function textPdf(){const L=window.PDFLib;const doc=await L.PDFDocument.cre
   return new Blob([await doc.save()],{type:'application/pdf'});}
 function htmlDoc(){const t=esc(meta.props.title||baseName(host.getName()));return `<!doctype html><html lang="${S.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t}</title><style>${CONTENT_CSS}body{margin:0;background:#E8EEF5}.rxw-page{background:#fff;max-width:${Math.round(pageW())}px;margin:24px auto;padding:${meta.mt}cm ${meta.mr}cm ${meta.mb}cm ${meta.ml}cm;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.15)}.rxw-editor{min-height:0;cursor:auto}@media print{body{background:#fff}.rxw-page{box-shadow:none;margin:0}}</style></head><body><div class="rxw-page">${meta.header?`<header style="font:10pt 'Times New Roman';color:#444;margin-bottom:12pt">${fillFields(meta.header,1,1)}</header>`:''}<div class="rxw-editor">${cleanHTML()}</div>${meta.footer?`<footer style="font:10pt 'Times New Roman';color:#444;margin-top:18pt">${fillFields(meta.footer,1,1)}</footer>`:''}</div>
 
-
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
 </body></html>`;}
 function plainText(){const out=[];for(const b of ed.querySelectorAll('p,h1,h2,h3,li,blockquote,pre,tr,.rxw-pagebreak')){if(b.closest('.rxw-obj'))continue;if(b.tagName==='TR'){out.push([...b.cells].map(c=>c.textContent.trim()).join('\t'));continue;}if(b.closest('td,th'))continue;if(b.classList.contains('rxw-pagebreak')){out.push('\f');continue;}if(b.querySelector('p,li'))continue;out.push((b.tagName==='LI'?'• ':'')+b.textContent.replace(/\u200B/g,''));}return out.join('\r\n');}
 async function cmdPrint(){closePops();endTextEdit();toast('Préparation de l’impression…');let imgs=[];
@@ -3225,36 +3165,6 @@ async function cmdPrint(){closePops();endTextEdit();toast('Préparation de l’i
   const body=imgs?imgs.map(s=>`<img src="${s}" alt="">`).join(''):`<div class="rxw-editor" style="padding:${meta.mt}cm ${meta.mr}cm ${meta.mb}cm ${meta.ml}cm">${cleanHTML()}</div>`;
   d.open();d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(baseName(host.getName()))}</title><style>@page{size:${wmm}mm ${hmm}mm;margin:0}html,body{margin:0;padding:0;background:#fff}img{display:block;width:${wmm}mm;height:${hmm}mm;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}${imgs?'':CONTENT_CSS}</style></head><body>${body}
 
-
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
 </body></html>`);d.close();
   await Promise.all([...d.images].map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r;})));
   setTimeout(()=>{try{fr.contentWindow.focus();fr.contentWindow.print();}catch(e){toast('Impression bloquée par le navigateur : exportez en PDF puis imprimez le fichier.','err');}setTimeout(()=>fr.remove(),60000);},120);}
@@ -3873,36 +3783,6 @@ function printDocStudio(t){
     <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),180));window.addEventListener('afterprint',()=>setTimeout(()=>window.close(),250));<\/script>
   
 
-
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
 </body></html>`);
   w.document.close();
   return true;
@@ -3910,37 +3790,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 async function printPdfDocument(t){
   const w=window.open('','_blank','noopener,noreferrer,width=1100,height=850');
   if(!w){toast('Le navigateur a bloqué la fenêtre d’impression. Autorisez les fenêtres contextuelles pour Readix.','err');return false;}
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Document PDF</title><style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}.pdf-print-page{width:100%;break-after:page;page-break-after:always;display:flex;justify-content:center;align-items:flex-start}.pdf-print-page:last-child{break-after:auto;page-break-after:auto}.pdf-print-page canvas{display:block;width:100%;height:auto}</style></head><body><div id="pages"></div>
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
-</body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Document PDF</title><style>@page{margin:0}html,body{margin:0;padding:0;background:#fff}.pdf-print-page{width:100%;break-after:page;page-break-after:always;display:flex;justify-content:center;align-items:flex-start}.pdf-print-page:last-child{break-after:auto;page-break-after:auto}.pdf-print-page canvas{display:block;width:100%;height:auto}</style></head><body><div id="pages"></div></body></html>');
   w.document.close();
   try{
     if(!window.pdfjsLib)throw new Error('Moteur PDF indisponible.');
@@ -6860,37 +6710,7 @@ $("#rAi").onclick=()=>openAIFloating("__home");
     var ifr = document.createElement("iframe"); ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
     document.body.appendChild(ifr);
     var d = ifr.contentDocument || ifr.contentWindow.document;
-    d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(name || "CV") + '</title><style>@page{margin:16mm;}body{margin:0;}</style></head><body>' + html + '
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
-</body></html>'); d.close();
+    d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(name || "CV") + '</title><style>@page{margin:16mm;}body{margin:0;}</style></head><body>' + html + '</body></html>'); d.close();
     setTimeout(function () { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(function () { ifr.remove(); }, 800); }, 350);
   }
 
@@ -8684,37 +8504,7 @@ textarea.ed-result { width: 100%; box-sizing: border-box; }
     oebps.file("style.css", "body{font-family:serif;line-height:1.5;margin:1em}h1,h2{font-family:sans-serif}blockquote{border-left:3px solid #ccc;padding-left:1em;color:#555}");
     var uid = "urn:uuid:readix-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
     var items = [], spine = [], nav = [];
-    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
-</body></html>'); }
+    function xhtml(name, title, bodyHtml) { oebps.file(name, '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="' + (book.language || "fr") + '"><head><meta charset="utf-8"/><title>' + esc(title) + '</title><link rel="stylesheet" href="style.css"/></head><body>' + bodyHtml + '</body></html>'); }
     var idx = 0; var fm = book.frontMatter || {};
     function addDoc(title, html, inNav) { idx++; var name = "s" + idx + ".xhtml"; xhtml(name, title, html); items.push('<item id="s' + idx + '" href="' + name + '" media-type="application/xhtml+xml"/>'); spine.push('<itemref idref="s' + idx + '"/>'); if (inNav) nav.push('<li><a href="' + name + '">' + esc(title) + '</a></li>'); return name; }
     if (fm.titlePage) addDoc(book.title || "Titre", '<h1>' + esc(book.title || "") + '</h1>' + (book.subtitle ? '<p><b>' + esc(book.subtitle) + '</b></p>' : '') + (book.author ? '<p>' + esc(book.author) + '</p>' : ''), false);
@@ -8729,37 +8519,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     });
     (book.backMatter || []).forEach(function (b) { addDoc(b.title || b.type, '<h2>' + esc(b.title || b.type) + '</h2>' + (b.content || ""), true); });
     // nav.xhtml (EPUB3)
-    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav>
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
-</body></html>');
+    oebps.file("nav.xhtml", '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><meta charset="utf-8"/><title>Navigation</title></head><body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>' + nav.join("") + '</ol></nav></body></html>');
     items.push('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
     var opf = '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">' + uid + '</dc:identifier><dc:title>' + esc(book.title || "Livre") + '</dc:title><dc:language>' + (book.language || "fr") + '</dc:language>' + (book.author ? '<dc:creator>' + esc(book.author) + '</dc:creator>' : '') + (book.description ? '<dc:description>' + esc(clampText(book.description, 400)) + '</dc:description>' : '') + '<meta property="dcterms:modified">' + new Date().toISOString().replace(/\.\d+Z$/, "Z") + '</meta></metadata><manifest><item id="css" href="style.css" media-type="text/css"/>' + items.join("") + '</manifest><spine>' + spine.join("") + '</spine></package>';
     oebps.file("content.opf", opf);
@@ -13377,7 +13137,7 @@ function rxMaskEditor(it){rx51Sync(it);const pts=Array.isArray(it.imageMaskPoint
 
 
 function itemHTML(s,it){const layer=(s.layers||[]).find(l=>l.id===(it.layerId||'layer1'));if(layer&&layer.visible===false)return '';const z=Number.isFinite(Number(it.z))?Number(it.z):1,sel=(s.selected===it.id||(s.selectedIds||[]).includes(it.id))?' sel':'';let inner='';if(it.type==='text'||it.type==='note')inner=`<div class="rxid-item-text${it.dropCap?' rxid-dropcap':''}" data-drop-lines="${it.dropCapLines||3}" style="${textStyle(it,s)}" spellcheck="false" contenteditable="${(!it.locked&&!layerLocked(s,it)&&s._editTextId===it.id)?'true':'false'}">${it.html!=null?it.html:esc(it.text||'')}</div>`;else if(it.type==='frame')inner=it.imageSrc?`<div class="rxid-img-viewport" style="${rxImageMaskStyle(it)}"><img class="rxid-frame-img" src="${it.imageSrc}" style="width:100%;height:100%;object-fit:${it.fit||'cover'};object-position:center center;opacity:${it.imageOpacity??1};transform:translate(${((it.imageX??50)-50)*((Math.max(100,it.imageScale??100)-100)/100)}%,${((it.imageY??50)-50)*((Math.max(100,it.imageScale??100)-100)/100)}%) scale(${(it.imageFlipX?-1:1)*Math.max(100,it.imageScale??100)/100},${(it.imageFlipY?-1:1)*Math.max(100,it.imageScale??100)/100});filter:${rxImageFilter(it)}"></div>`:'<div class="rxid-item-center">▣<small>Cadre image — double-cliquez pour importer</small></div>';else if(it.type==='line')inner='<div class="rxid-item-line" style="transform-origin:left center;'+(it.lineFlip?'transform:scaleY(-1);':'')+'"></div>';else if(it.type==='table'){const rows=Math.max(1,it.rows||3),cols=Math.max(1,it.cols||3),cells=it.cells||[];inner=`<table class="rxid-real-table" style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed">${Array.from({length:rows},(_,r)=>`<tr>${Array.from({length:cols},(_,c)=>(()=>{const k=r+':'+c,sp=(it.cellSpans||{})[k]||{},hidden=(it.hiddenCells||[]).includes(k),sel=(it.selectedCells||[]).includes(k);return hidden?'':`<td spellcheck="false" contenteditable="${(!it.locked&&!layerLocked(s,it)&&s._editTextId===it.id)?'true':'false'}" data-cell="${k}" ${sp.rowspan>1?'rowspan="'+sp.rowspan+'"':''} ${sp.colspan>1?'colspan="'+sp.colspan+'"':''} style="border:${it.cellBorderWidth??1}px solid ${it.cellBorder||'#6b7f96'};padding:${it.cellPadding??5}px;background:${sel?'#d9ecff':(it.cellStyles?.[k]?.fill||it.cellFill||'#fff')}">${esc(cells[r*cols+c]??'')}</td>`})()).join('')}</tr>`).join('')}</table>`}else if(it.type==='path'){let d='';if(Array.isArray(it.anchors)&&it.anchors.length){const a=it.anchors;d=`M ${a[0].x-it.x} ${a[0].y-it.y}`;for(let i=1;i<a.length;i++){const p=a[i-1],q=a[i],pout=[(p.outX??p.x)-it.x,(p.outY??p.y)-it.y],qin=[(q.inX??q.x)-it.x,(q.inY??q.y)-it.y];d+=` C ${pout[0]} ${pout[1]} ${qin[0]} ${qin[1]} ${q.x-it.x} ${q.y-it.y}`}if(it.closed&&a.length>2){const p=a[a.length-1],q=a[0];d+=` C ${(p.outX??p.x)-it.x} ${(p.outY??p.y)-it.y} ${(q.inX??q.x)-it.x} ${(q.inY??q.y)-it.y} ${q.x-it.x} ${q.y-it.y} Z`}}else{const pts=(it.pathPoints||[]).map(p=>p[0]+','+p[1]).join(' ');d='M '+pts.replace(/ /g,' L ')}inner=`<svg viewBox="0 0 ${Math.max(1,it.w)} ${Math.max(1,it.h)}" width="100%" height="100%" style="overflow:visible"><defs><path id="rxid-path-${it.id}" d="${d}"/></defs><path d="${d}" fill="${it.closed?(it.fill||'transparent'):'none'}" stroke="${it.stroke||'#168cff'}" stroke-width="${it.strokeWidth||2}" stroke-linecap="round" stroke-linejoin="round"/>${it.pathText?`<text fill="${it.pathTextColor||'#17283a'}" font-size="${it.pathTextSize||16}" font-family="${it.pathTextFont||'Georgia'}"><textPath href="#rxid-path-${it.id}" startOffset="${it.pathTextOffset||0}%">${esc(it.pathText)}</textPath></text>`:''}${(s.selected===it.id&&s.directMode&&it.anchors)?it.anchors.map((a,i)=>`<line x1="${a.x-it.x}" y1="${a.y-it.y}" x2="${(a.inX??a.x)-it.x}" y2="${(a.inY??a.y)-it.y}" stroke="#6aaeff"/><line x1="${a.x-it.x}" y1="${a.y-it.y}" x2="${(a.outX??a.x)-it.x}" y2="${(a.outY??a.y)-it.y}" stroke="#6aaeff"/><circle data-bezier="in" data-anchor-index="${i}" cx="${(a.inX??a.x)-it.x}" cy="${(a.inY??a.y)-it.y}" r="3" fill="#168cff"/><circle data-bezier="out" data-anchor-index="${i}" cx="${(a.outX??a.x)-it.x}" cy="${(a.outY??a.y)-it.y}" r="3" fill="#168cff"/><circle data-anchor-index="${i}" cx="${a.x-it.x}" cy="${a.y-it.y}" r="4" fill="#fff" stroke="#168cff" stroke-width="2"/>`).join(''):''}</svg>`}const feather=it.feather??0,mask=feather>0?`mask-image:linear-gradient(${it.featherAngle??90}deg,rgba(0,0,0,1) ${Math.max(0,100-feather)}%,transparent 100%);-webkit-mask-image:linear-gradient(${it.featherAngle??90}deg,rgba(0,0,0,1) ${Math.max(0,100-feather)}%,transparent 100%);`:'';const shadow=it.shadow?`box-shadow:${it.shadowX??4}px ${it.shadowY??6}px ${it.shadowBlur??18}px rgba(0,0,0,${it.shadowOpacity??0.22});`:'';return `<div class="rxid-item rxid-${it.type}${it.rx55Generated&&it.type==='text'?' rx551-ai-text':''}${sel}" data-item-id="${it.id}" style="left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;z-index:${z};transform:rotate(${it.rot||0}deg);background:${it.type==='table'?'transparent':visualBackground(it)};border-color:${it.stroke||'#168cff'};border-width:${it.type==='table'?0:(it.strokeWidth??1)}px;border-radius:${it.cornerRadius??0}px;opacity:${it.opacity??1};mix-blend-mode:${it.blendMode||'normal'};${shadow}${mask}">${inner}${["nw","n","ne","e","se","s","sw","w"].map(d=>`<i class="rxid-handle rxid-handle-${d}" data-resize="${d}"></i>`).join("")}<i class="rxid-rotate-handle" data-rotate title="Faire pivoter"></i></div>`}
-function pageHTML(s,n){const odd=n%2===1,m=s.margins,top=mmPx(m.top,s),bottom=mmPx(m.bottom,s),left=mmPx(odd?m.inside:m.outside,s),right=mmPx(odd?m.outside:m.inside,s),cols=Math.max(1,s.columns),items=s.pageItems[n]||[],gv=(s.guidesV||[]).map(v=>`<i class="rxid-user-guide v" style="left:${mmPx(v,s)}px" data-guide-v="${v}"></i>`).join(''),gh=(s.guidesH||[]).map(v=>`<i class="rxid-user-guide h" style="top:${mmPx(v,s)}px" data-guide-h="${v}"></i>`).join('');return `<div class="rxid-page-wrap" data-page-no="${n}"><div class="rxid-page-label">${n}</div><div class="rxid-page ${s.showGrid?'grid-on':''}" data-page="${n}" style="width:${mmPx((s.pageDimensions?.[n]?.width||s.width),s)}px;height:${mmPx((s.pageDimensions?.[n]?.height||s.height),s)}px;background:${/^#[0-9a-f]{6}$/i.test(s.pageBackgrounds?.[n]||'')?s.pageBackgrounds[n]:'#ffffff'}"><div class="rxid-margin" style="top:${top}px;bottom:${bottom}px;left:${left}px;right:${right}px;display:${s.showMargins?'block':'none'}"></div>${cols>1?Array.from({length:cols-1},(_,i)=>`<i class="rxid-col-guide" style="left:${left+((mmPx(s.width,s)-left-right)/cols)*(i+1)}px"></i>`).join(''):''}${gv}${gh}${s.showBaselineGrid?`<div class="rxid-baseline-grid" style="background-size:100% ${Math.max(4,s.baselineStep||14)}px"></div>`:''}${(s.masterItems||[]).map(it=>itemHTML(s,{...it,id:'master-'+it.id,locked:true})).join('')}${items.map(it=>itemHTML(s,it)).join('')}</div></div>`}
+function pageHTML(s,n){const odd=n%2===1,m=s.margins,top=mmPx(m.top,s),bottom=mmPx(m.bottom,s),left=mmPx(odd?m.inside:m.outside,s),right=mmPx(odd?m.outside:m.inside,s),cols=Math.max(1,s.columns),items=s.pageItems[n]||[],gv=(s.guidesV||[]).map(v=>`<i class="rxid-user-guide v" style="left:${mmPx(v,s)}px" data-guide-v="${v}"></i>`).join(''),gh=(s.guidesH||[]).map(v=>`<i class="rxid-user-guide h" style="top:${mmPx(v,s)}px" data-guide-h="${v}"></i>`).join('');return `<div class="rxid-page-wrap" data-page-no="${n}"><div class="rxid-page-label">${n}</div><div class="rxid-page ${s.showGrid?'grid-on':''}" data-page="${n}" style="width:${mmPx(s.width,s)}px;height:${mmPx(s.height,s)}px;background:${/^#[0-9a-f]{6}$/i.test(s.pageBackgrounds?.[n]||'')?s.pageBackgrounds[n]:'#ffffff'}"><div class="rxid-margin" style="top:${top}px;bottom:${bottom}px;left:${left}px;right:${right}px;display:${s.showMargins?'block':'none'}"></div>${cols>1?Array.from({length:cols-1},(_,i)=>`<i class="rxid-col-guide" style="left:${left+((mmPx(s.width,s)-left-right)/cols)*(i+1)}px"></i>`).join(''):''}${gv}${gh}${s.showBaselineGrid?`<div class="rxid-baseline-grid" style="background-size:100% ${Math.max(4,s.baselineStep||14)}px"></div>`:''}${(s.masterItems||[]).map(it=>itemHTML(s,{...it,id:'master-'+it.id,locked:true})).join('')}${items.map(it=>itemHTML(s,it)).join('')}</div></div>`}
 function renderPages(s){let arr=[];if(!s.facing){for(let i=1;i<=s.pages;i++)arr.push(`<div class="rxid-spread single">${pageHTML(s,i)}</div>`)}else{arr.push(`<div class="rxid-spread cover">${pageHTML(s,1)}</div>`);for(let i=2;i<=s.pages;i+=2)arr.push(`<div class="rxid-spread facing">${pageHTML(s,i)}${i+1<=s.pages?pageHTML(s,i+1):''}</div>`)}return arr.join('')}
 // Phase 41.1: independent scroll memory for the three InDesign work areas.
 function rx41ScrollCapture(t,stage){
@@ -13424,7 +13184,7 @@ function render(t,stage){rx41ScrollCapture(t,stage);const previousCanvas=stage.q
 <span class="rxid-hint">12 poignées sur la page · zoom ≠ dimension réelle · Annuler/Rétablir actifs</span></div>
 <div class="rxid-doc-tabs"><div class="rxid-doc-tab">${esc(t.name||'Document InDesign.rxd')} ${t.dirty?'*':''}<span data-doc-close title="Fermer l’onglet">×</span></div></div><div class="rxid-body"><aside class="rxid-tools">${TOOLS.map(a=>a[0]==='sep'?'<div class="rxid-sep"></div>':`<button class="rxid-tool ${a[0]===active?'on':''}" data-id-tool="${a[0]}" title="${a[2]}">${a[1]}</button>`).join('')}<div class="rxid-colorstack"><button data-color-action="default" title="Couleurs par défaut">◧</button><button data-color-action="swap" title="Permuter fond/contour">⇄</button><button data-color-action="none" title="Aucun fond">∅</button></div></aside>
 <main class="rxid-canvas"><div class="rxid-ruler-x" style="display:${s.showRulers?'flex':'none'}">${Array.from({length:Math.floor(s.width/25)+1},(_,i)=>`<span>${i*25}</span>`).join('')}</div><div class="rxid-ruler-y" style="display:${s.showRulers?'flex':'none'}">${Array.from({length:Math.floor(s.height/25)+1},(_,i)=>`<span>${i*25}</span>`).join('')}</div><div class="rxid-stage" data-id-stage>${renderPages(s)}</div></main>
-<aside class="rxid-leftpanel"><button type="button" class="rxid-collapse-left" data-rxid-collapse-left aria-label="Replier le panneau Pages Calques Ressources" title="Replier le panneau">❮ <span>Masquer le panneau</span></button><div class="rxid-ptabs"><button data-panel="pages">Pages</button><button data-panel="layers">Calques</button><button data-panel="ressources">Ressources</button></div><div data-panel-body-left></div></aside>
+<aside class="rxid-leftpanel"><div class="rxid-ptabs"><button data-panel="pages">Pages</button><button data-panel="layers">Calques</button><button data-panel="ressources">Ressources</button></div><div data-panel-body-left></div></aside>
 <aside class="rxid-props"><div class="rxid-ptabs"><button class="on" data-panel="props">Propriétés</button><button data-panel="tools">Outils</button><button data-panel="styles">Styles</button><button data-panel="ia">IA</button><button data-panel="hist">Historique</button></div><div data-panel-body>${propsHTML(s)}</div></aside></div><div class="rxid-status"><span>Page <b data-current>${s.current}</b> sur <b>${s.pages}</b></span><span data-id-status>Outil : ${TOOL_NAMES[active]}</span><span>${s.format} · ${s.orientation} · ${s.columns} colonne${s.columns>1?'s':''} · ${s.margins.top} mm</span><span>Readox InDesign R2026 · Phase 40</span></div></div>`;bind(t,stage);rx27RestoreViewport(t,stage);rx41ScrollRestore(t,stage);}
 function rx27RestoreViewport(t,stage){
  const canvas=stage.querySelector('.rxid-canvas');if(!canvas)return;
@@ -13985,11 +13745,11 @@ function rxPageTransform(s,opts){
   var newW=+opts.newW||0,newH=+opts.newH||0;
   if(!(newW>20&&newH>20))return{ok:false,err:'dimensions invalides (min 20 mm)'};
   if(newW>3000||newH>3000)return{ok:false,err:'dimensions hors limites (max 3000 mm)'};
-  var prior=(!opts.all&&s.pageDimensions&&s.pageDimensions[opts.page||s.current||1])||{};var W0=opts.all?s.width:(prior.width||s.width),H0=opts.all?s.height:(prior.height||s.height),sx=newW/W0,sy=newH/H0;
+  var W0=s.width,H0=s.height,sx=newW/W0,sy=newH/H0;
   var out=JSON.parse(JSON.stringify(s));
-  if(opts.all){out.width=rxR2(newW);out.height=rxR2(newH);out.pageDimensions={};}else{out.pageDimensions=out.pageDimensions||{};out.pageDimensions[opts.page||out.current||1]={width:rxR2(newW),height:rxR2(newH)};}
-  if(opts.all&&out.margins){['top','bottom'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sy)});['left','right','inside','outside'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sx)})}
-  if(opts.all&&+out.gutter>0)out.gutter=rxR2(out.gutter*sx);
+  out.width=rxR2(newW);out.height=rxR2(newH);
+  if(out.margins){['top','bottom'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sy)});['left','right','inside','outside'].forEach(function(k){if(+out.margins[k]>0)out.margins[k]=rxR2(out.margins[k]*sx)})}
+  if(+out.gutter>0)out.gutter=rxR2(out.gutter*sx);
   var ax=String(opts.anchor||'c');
   var axH=ax.indexOf('r')>=0?'r':(ax==='c'?'c':'l');
   var axV=ax.indexOf('b')>=0?'b':(ax==='c'?'c':'t');
@@ -14021,7 +13781,11 @@ function iaPanelHTML(){return '<div style="padding:12px;font-size:12.5px"><butto
 function histPanelHTML(t){var h=(t.idHistory||[]);var rows=h.slice(-12).reverse().map(function(e,i){return '<li>'+(h.length-i)+'. '+(e.label||'Modification')+'</li>'}).join('');return '<div style="padding:10px;font-size:12.5px"><b>'+h.length+' opération(s)</b><ul>'+(rows||'<li class="rxid-hint">Aucune opération pour le moment.</li>')+'</ul><p class="rxid-hint">Annuler / Rétablir : barre supérieure (ou raccourcis existants).</p></div>'}
 function rxaiSafe(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
 /* ---- sélection de page + 12 poignées + aperçu en temps réel ---- */
-function rxPageEl(root,n){return root.querySelector('.rxid-page[data-page="'+n+'"]')}
+function rxPageEl(root,n){var st=root.querySelector('[data-id-stage]');if(!st)return null;
+  var els=st.querySelectorAll('.rxid-sheet');if(els.length>=n)return els[n-1];
+  var sp=st.querySelectorAll('.rxid-spread');var c=0;
+  for(var i=0;i<sp.length;i++){var pp=sp[i].children;for(var j=0;j<pp.length;j++){c++;if(c===n)return pp[j]}}
+  return null}
 function rxPageHandles(t,stage,root){
   var s=ensure(t);
   /* clic sur le fond avec l outil Page : sélectionne la page elle-même */
@@ -14029,15 +13793,16 @@ function rxPageHandles(t,stage,root){
   if(cv&&!cv.__rxpg){cv.__rxpg=1;cv.addEventListener('pointerdown',function(e){
     if(t.idTool!=='page')return;
     if(e.target.closest&&e.target.closest('[data-item-id]'))return;
-    var targetPage=e.target.closest?.('.rxid-page[data-page]');if(targetPage)s.current=Number(targetPage.dataset.page)||s.current;t.pageSelected=true;s.selected=null;s.selectedIds=[];
+    t.pageSelected=true;s.selected=null;s.selectedIds=[];
     try{render(t,stage)}catch(_){}
   })}
   if(!(t.pageSelected&&t.idTool==='page'))return;
   var pel=rxPageEl(root,s.current);if(!pel)return;
   var stg=root.querySelector('[data-id-stage]');
+  stg.querySelectorAll('.rxpage-handles,.rxpage-ghost').forEach(function(node){node.remove()});
   var pr=pel.getBoundingClientRect(),sr=stg.getBoundingClientRect();
   var X=pr.left-sr.left,Y=pr.top-sr.top,W=pr.width,H=pr.height;
-  var dim=s.pageDimensions?.[s.current]||{};var kx=W/(dim.width||s.width),ky=H/(dim.height||s.height);
+  var kx=W/s.width,ky=H/s.height;
   var ov=document.createElement('div');ov.className='rxpage-handles';
   var ghost=document.createElement('div');ghost.className='rxpage-ghost';stg.appendChild(ghost);
   /* 12 poignées : 4 coins + 4 milieux + 4 intermédiaires (25 %/75 % haut et bas) */
@@ -14050,7 +13815,7 @@ function rxPageHandles(t,stage,root){
     el.addEventListener('pointerdown',function(e){
       e.preventDefault();e.stopPropagation();
       el.setPointerCapture(e.pointerId);
-      start={hx:hh[0],x0:e.clientX,y0:e.clientY,W:(s.pageDimensions?.[s.current]?.width||s.width),H:(s.pageDimensions?.[s.current]?.height||s.height)};
+      start={hx:hh[0],x0:e.clientX,y0:e.clientY,W:s.width,H:s.height};
       ghost.style.display='block';
       var lock=root.querySelector('[data-pg-lock]');lock=lock?lock.checked:true;
       function mv(ev){
@@ -14058,11 +13823,11 @@ function rxPageHandles(t,stage,root){
         var dW=0,dH=0,hx=start.hx;
         if(hx.indexOf('r')>=0||hx==='rm')dW=dx/kx;
         if(hx.indexOf('l')>=0)dW=-dx/kx;
-        if(hx.indexOf('b')>=0)dH=dy/ky;
+        if(hx.indexOf('b')>=0||['bm','b1','b3'].indexOf(hx)>=0)dH=dy/ky;
         if(hx.indexOf('t')>=0)dH=-dy/ky;
         if(anchorSel()==='c'){dW*=2;dH*=2} /* ancrage centre : croissance symétrique (le facteur d échelle reste le ratio de la page — identité géométrique documentée) */
-        var nW=Math.max(20,start.W+dW),nH=Math.max(20,start.H+dH);
-        if(lock){var f=Math.max(nW/start.W,nH/start.H);nW=rxR2(start.W*f);nH=rxR2(start.H*f)}
+        var nW=Math.min(3000,Math.max(20,start.W+dW)),nH=Math.min(3000,Math.max(20,start.H+dH));
+        if(lock){var changedW=Math.abs(dW)>0.001,changedH=Math.abs(dH)>0.001;var f=changedW&&changedH?(Math.abs(dW/start.W)>=Math.abs(dH/start.H)?nW/start.W:nH/start.H):(changedW?nW/start.W:nH/start.H);nW=rxR2(start.W*f);nH=rxR2(start.H*f)}
         var gx=X,gy=Y,gw=W*(nW/start.W),gh=H*(nH/start.H);
         if(anchorSel()==='c'){gx=X-(gw-W)/2;gy=Y-(gh-H)/2}
         ghost.style.left=gx+'px';ghost.style.top=gy+'px';
@@ -14070,17 +13835,18 @@ function rxPageHandles(t,stage,root){
         ghost.textContent=rxR2(nW)+' × '+rxR2(nH)+' mm';
         start.nW=nW;start.nH=nH;
       }
+      function cancel(){el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',cancel);ghost.style.display='none';start=null}
       function up(){
-        el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
+        el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',cancel);
         ghost.style.display='none';
         if(!start.nW)return;
-        var all=root.querySelector('[data-pg-all]');if(root.querySelector('[data-pg-all]')?.checked&&!confirm('Modifier toutes les pages et leur contenu ?'))return;var r=rxPageTransform(s,{page:s.current,newW:start.nW,newH:start.nH,all:!!(all&&all.checked),anchor:anchorSel()});
+        var all=root.querySelector('[data-pg-all]');if(all&&all.checked&&!window.confirm('Modifier les dimensions de toutes les pages ?'))return;var r=rxPageTransform(s,{page:s.current,newW:start.nW,newH:start.nH,all:!!(all&&all.checked)});
         if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
         t.idState=r.state;
         try{toast('Page '+s.current+' : '+r.note,'ok')}catch(_){}
         dirty(t);render(t,stage);
       }
-      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',cancel);
     });
     ov.appendChild(el);
   });
@@ -14096,7 +13862,8 @@ function rxPageHandles(t,stage,root){
   if(ap&&!ap.__rx){ap.__rx=1;ap.addEventListener('click',function(){
     var wi=root.querySelector('[data-pg="w"]'),hi=root.querySelector('[data-pg="h"]');
     var all=root.querySelector('[data-pg-all]');
-    if(all?.checked&&!confirm('Modifier toutes les pages et leur contenu ?'))return;var r=rxPageTransform(s,{page:s.current,newW:+(wi&&wi.value)||s.width,newH:+(hi&&hi.value)||s.height,all:!!(all&&all.checked),anchor:(root.querySelector('[data-pg-anchor]')?.value||'c')});
+    if(all&&all.checked&&!window.confirm('Modifier les dimensions de toutes les pages ?'))return;
+    var r=rxPageTransform(s,{page:s.current,newW:+(wi&&wi.value)||s.width,newH:+(hi&&hi.value)||s.height,all:!!(all&&all.checked)});
     if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
     t.idState=r.state;try{toast('Redimensionnement : '+r.note,'ok')}catch(_){}
     dirty(t);render(t,stage);
@@ -14158,35 +13925,5 @@ bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t
 @media(max-width:960px){.rxid[data-rxid-root] .rxid-body{grid-template-columns:50px 155px minmax(0,1fr) 200px!important}.rxid[data-rxid-root] .rxid-brand em{display:none}.rxid[data-rxid-root] .rxid-topright [data-top-action="workspace"],.rxid[data-rxid-root] .rxid-topright [data-top-action="search"]{display:none}}
 @media(max-width:740px){.rxid[data-rxid-root] .rxid-body{grid-template-columns:48px minmax(0,1fr) 185px!important}.rxid[data-rxid-root] .rxid-leftpanel{display:none}.rxid[data-rxid-root] .rxid-canvas{grid-column:2}.rxid[data-rxid-root] .rxid-props{grid-column:3}}
 </style>
-
-<style id="rxid-phase5616-styles">
-.rxid-body.rxid-left-collapsed{grid-template-columns:58px 34px minmax(0,1fr) clamp(225px,22vw,305px)!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel{min-width:0!important;overflow:hidden!important}
-.rxid-body.rxid-left-collapsed .rxid-leftpanel>.rxid-ptabs,.rxid-body.rxid-left-collapsed .rxid-leftpanel>[data-panel-body-left]{display:none!important}
-.rxid-collapse-left{display:block;width:100%;flex-shrink:0;padding:9px 5px;background:#f6f8fc;color:#344563;border:0;border-bottom:1px solid #dfe5ef;cursor:pointer;font-size:12px;text-align:center}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left span{display:none}
-.rxid-body.rxid-left-collapsed .rxid-collapse-left{writing-mode:vertical-rl;min-height:96px}
-@media(max-width:1000px){.rxid-body:not(.rxid-left-collapsed){grid-template-columns:52px 170px minmax(0,1fr) 225px!important}.rxid-body.rxid-left-collapsed{grid-template-columns:52px 34px minmax(0,1fr) 225px!important}}
-@media(max-width:700px){.rxid-body.rxid-left-collapsed{grid-template-columns:45px 30px minmax(0,1fr) 0px!important}.rxid-body.rxid-left-collapsed .rxid-props{display:none!important}}
-</style>
-<script id="rxid-phase5616-controller">
-(()=>{
-'use strict';
-let collapsed=false;
-try{collapsed=sessionStorage.getItem('rxid-left-collapsed')==='1'}catch(e){}
-function sync(){document.querySelectorAll('.rxid-body').forEach(body=>{
- const btn=body.querySelector('[data-rxid-collapse-left]');if(!btn)return;
- body.classList.toggle('rxid-left-collapsed',collapsed);
- btn.setAttribute('aria-expanded',String(!collapsed));
- btn.setAttribute('aria-label',collapsed?'Afficher le panneau Pages Calques Ressources':'Replier le panneau Pages Calques Ressources');
- btn.title=collapsed?'Afficher Pages / Calques / Ressources':'Replier Pages / Calques / Ressources';
- btn.innerHTML=collapsed?'❯':'❮ <span>Masquer le panneau</span>';
-});}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-rxid-collapse-left]'))return;collapsed=!collapsed;try{sessionStorage.setItem('rxid-left-collapsed',collapsed?'1':'0')}catch(e){}sync()});
-const observer=new MutationObserver(()=>{if(!document.querySelector('.rxid-body'))return;sync()});
-function start(){sync();observer.observe(document.body,{childList:true,subtree:true})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-})();
-</script>
 </body>
 </html>
