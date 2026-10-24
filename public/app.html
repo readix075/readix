@@ -2455,6 +2455,31 @@ function layout(){if(!root.isConnected||S.destroyed)return;
   S.pages=n;
   if(web){renderSheets(0);pagesEl.style.height=(bottom+80)+'px';}else{renderSheets(n);pagesEl.style.height=(n*ph+(n-1)*GAP)+'px';}
   positionRulers(true);drawOverlay();if(paneNav.classList.contains('rxw-show'))refreshNav();if(paneCmt.classList.contains('rxw-show'))refreshComments();scheduleUI();}
+// Lot 6 (anomalie C) : aucune ligne dans l espace inter-pages ; un bloc plus haut que la
+// zone utile est scinde et son reste continue en tete de la page suivante.
+function rxwSplitBlock(b,availPx){
+  if(b.children.length>1){
+    let acc=0,cut=-1;
+    for(let i=0;i<b.children.length;i++){acc+=b.children[i].offsetHeight||0;if(acc>availPx){cut=i;break;}}
+    if(cut<=0){rxwSplitText(b,availPx);return;}
+    if(cut>=b.children.length)return;
+    const clone=b.cloneNode(false);clone.removeAttribute('data-pg');clone.style.removeProperty('--pg');
+    while(b.children.length>cut)clone.appendChild(b.children[cut]);
+    b.after(clone);return;
+  }
+  rxwSplitText(b,availPx);
+}
+function rxwSplitText(b,availPx){
+  const tn=[...b.childNodes].filter(n=>n.nodeType===3).pop();if(!tn)return;
+  const full=tn.textContent;if(!full.trim())return;
+  let lo=0,hi=full.length,ok=0;
+  while(lo<hi){const mid=(lo+hi+1)>>1;tn.textContent=full.slice(0,mid);
+    if(b.getBoundingClientRect().height<=availPx*zfac()+1){ok=mid;lo=mid;}else hi=mid-1;}
+  let cut=full.lastIndexOf(' ',ok);if(cut<=0)cut=ok;if(cut<=0){tn.textContent=full;return;}
+  const clone=b.cloneNode(false);clone.removeAttribute('data-pg');clone.style.removeProperty('--pg');
+  clone.textContent=full.slice(cut+1);tn.textContent=full.slice(0,cut);
+  b.after(clone);
+}
 function paginate(){S.lastBreakPage=null;
   for(const b of ed.querySelectorAll('[data-pg]')){b.removeAttribute('data-pg');b.style.removeProperty('--pg');}
   if(S.view!=='page')return;
@@ -2466,6 +2491,8 @@ function paginate(){S.lastBreakPage=null;
     if(brk!=null){target=(brk+1)*SD;brk=null;S.lastBreakPage=null;}
     else if(top>=pE-.5)target=(p+1)*SD;
     else if(top+hg>pE+.5&&hg<=C&&top>pS+.5)target=(p+1)*SD;
+    else if(top+hg>pE+.5&&hg<=C&&top<=pS+.5)target=(p+1)*SD; // Lot 6 : debord depuis la tete de page
+    else if(top+hg>pE+.5&&hg>C)rxwSplitBlock(b,Math.max(40,pE-top)); // Lot 6 : bloc plus haut qu une page -> scission
     if(target!=null&&target>top+.5){let m=(parseFloat(getComputedStyle(b).marginTop)||0)+(target-top);b.dataset.pg='1';b.style.setProperty('--pg',m+'px');
       const t2=(b.getBoundingClientRect().top-top0)/zf;const d=target-t2;if(Math.abs(d)>.5){m+=d;b.style.setProperty('--pg',m+'px');}}}}
 function fillFields(html,p,n){if(!html)return'';const d=h('div');d.innerHTML=html.replace(/\{PAGE\}/g,'<span class="rxw-field" data-field="PAGE" contenteditable="false">1</span>').replace(/\{PAGES\}/g,'<span class="rxw-field" data-field="PAGES" contenteditable="false">1</span>');d.querySelectorAll('.rxw-field').forEach(f=>f.textContent=f.dataset.field==='PAGES'?n:p);return d.innerHTML;}
@@ -10329,6 +10356,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
 
   /* ---------------- Phase 56-Livre : ponts natifs Word / InDesign + brouillon reprenable ---------------- */
+  function rx57IsImg(b) { return b && (b.type === "img" || b.type === "illus"); } // Lot 6 : le module Livre IA nomme les images "illus"
   // Phase 56-Livre Lot 2 — stockage double : index léger localStorage (synchrone)
   // + contenu complet IndexedDB (images incluses, > 5 Mo tolérées).
   var rx57Store = {
@@ -10379,7 +10407,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
           Object.keys(ai.content || {}).forEach(function(k) {
             var cc = ai.content[k] || {};
             c[k] = { status: cc.status, blocks: (cc.blocks || []).map(function(b) {
-              return b.type === "img" ? Object.assign({}, b, { src: "" }) : b;
+              return rx57IsImg(b) ? Object.assign({}, b, { src: "" }) : b;
             }) };
           });
           return c;
@@ -10437,7 +10465,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       (c.blocks || []).forEach(function(b) {
         if (b.type === "h") h += "<h2>" + esc(b.text) + "</h2>";
         else if (b.type === "p") h += "<p>" + esc(b.text) + "</p>";
-        else if (b.type === "img" && b.src) h += "<figure><img src=\"" + b.src + "\">" + (b.caption ? "<figcaption>" + esc(b.caption) + "</figcaption>" : "") + "</figure>";
+        else if (rx57IsImg(b) && b.src) h += "<figure><img src=\"" + b.src + "\">" + (b.caption ? "<figcaption>" + esc(b.caption) + "</figcaption>" : "") + "</figure>";
       });
     });
     return "<div class=\"rx57-book\" data-rx57-key=\"" + rx57BookKey(ai) + "\">" + h + "</div>";
@@ -10448,7 +10476,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
   // Pagination déterministe (Lot 2) : estimateur exporté pour les tests + répartition par page.
   function rx57EstBlock(b, widthPx, fsPx, linePx) {
-    if (b.type === "img") return Math.round(widthPx * (b.layout === "full" ? 0.62 : 0.45));
+    if (rx57IsImg(b)) return Math.round(widthPx * (b.layout === "full" ? 0.62 : 0.45));
     var charsPerLine = Math.max(8, Math.floor(widthPx / (fsPx * 0.52)));
     var lines = Math.max(1, Math.ceil(String(b.text || "").length / charsPerLine));
     return lines * linePx + (b.type === "h" ? Math.round(linePx * 0.6) : 0);
@@ -10488,7 +10516,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var host = document.createElement("div");
       host.style.cssText = "position:absolute;left:-99999px;top:0;width:" + widthPx + "px;font-family:Georgia;font-size:" + fsPx + "px;line-height:1.3;visibility:hidden;";
       (blocks || []).forEach(function(b) {
-        if (b.type === "img") return;
+        if (rx57IsImg(b)) return;
         var d = document.createElement(b.type === "h" ? "h3" : "p");
         d.style.margin = "0"; d.style.fontSize = fsPx + "px"; d.style.lineHeight = "1.3";
         if (b.type === "h") d.style.fontWeight = "bold";
@@ -10628,7 +10656,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var c = ai.content && ai.content[ch.id];
       if (!c || !c.blocks) return;
       c.blocks.forEach(function(b) {
-        if (b.type !== "img" || !b.src) return;
+        if (!rx57IsImg(b) || !b.src) return;
         total++;
         var ok = false;
         if (typeof rx56NormalizeImageSrc === "function") ok = !!rx56NormalizeImageSrc(b.src);
@@ -10642,6 +10670,35 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       if (String(plain[id] || "").trim().length < 100) warnings.push("Chapitre très court : « " + id + " » (" + String(plain[id] || "").trim().length + " caractères)");
     });
     return { ok: blocking.length === 0, blocking: blocking, warnings: warnings };
+  }
+  // Lot 6 — Rapport d integrite source/destination (§20) : toute perte devient visible.
+  function rx57Integrity(ai, s) {
+    var src = { chapters: (ai.plan.chapters || []).length, paragraphs: 0, chars: 0, images: 0 };
+    (ai.plan.chapters || []).forEach(function(ch) {
+      var c = ai.content && ai.content[ch.id];
+      if (!c || !c.blocks) return;
+      c.blocks.forEach(function(b) {
+        if (rx57IsImg(b)) { if (b.src) src.images++; }
+        else { src.paragraphs++; src.chars += String(b.text || "").length; }
+      });
+    });
+    var dst = { paragraphs: 0, chars: 0, images: 0, objects: 0 };
+    Object.keys(s.pageItems || {}).forEach(function(n) {
+      (s.pageItems[n] || []).forEach(function(it) {
+        if (!it.rx57Book) return;
+        dst.objects++;
+        if (it.type === "frame") { if (it.imageSrc) dst.images++; }
+        else { dst.paragraphs += (it.text || "").split("\n\n").length; dst.chars += (it.text || "").length; }
+      });
+    });
+    var report = { source: src, destination: dst,
+      missingParagraphs: Math.max(0, src.paragraphs - dst.paragraphs),
+      missingImages: Math.max(0, src.images - dst.images),
+      missingChars: Math.max(0, src.chars - dst.chars) };
+    s.rx57IntegrityReport = report;
+    if (report.missingParagraphs || report.missingImages || report.missingChars)
+      toast("Integrite : " + report.missingImages + " image(s), " + report.missingChars + " caractere(s) non transferes", "err");
+    return report;
   }
   function rx57BookToInDesign(t, stage, ai) {
     openReadixInDesign();
@@ -10694,8 +10751,8 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       var prevFrame = null;
       slices.forEach(function(slice, k) {
         var p = (k === 0) ? pg : (s.pages += 1, s.pages);
-        var texts = slice.filter(function(b){ return b.type !== "img"; });
-        var imgs  = slice.filter(function(b){ return b.type === "img" && b.src; });
+        var texts = slice.filter(function(b){ return !rx57IsImg(b); });
+        var imgs  = slice.filter(function(b){ return rx57IsImg(b) && b.src; });
         var fh = (k === 0) ? bodyH : s.height - mg.top - mg.bottom;
         var f = addText(p, mg.left, (k === 0) ? bodyY : mg.top, bodyW, fh, rx57BlocksToHTML(texts), { fs: fsPx });
         f.text = texts.map(function(b){ return b.text || ""; }).join("\n\n");
@@ -10714,6 +10771,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     s.masters = { bookTitle: ai.plan.title };
     s.rx57BookKey = rx57BookKey(ai);
     rx57PaintChrome(s, mg);
+    rx57Integrity(ai, s);
     s.current = 1;
     try { renderView(); updateHeader(); } catch (e) {}
     toast("Livre mis en page dans Readox InDesign : " + s.pages + " pages, " + ai.plan.chapters.length + " chapitres, chaînage actif.", "ok");
