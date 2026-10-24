@@ -12,6 +12,8 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import {newManuscript,validatePlan,parseStructuredJson,appendChapterBlocks,addAsset,auditManuscript} from "./ripe-engine.js";
+import {validateReview,makeReviewRow,validHash} from "./ripe-review.js";
 
 dotenv.config();
 const { Pool } = pg;
@@ -544,6 +546,172 @@ Quand l'utilisateur demande comment faire une action, donne les étapes exactes 
     const answer = (data.content || []).filter(b=>b.type==='text').map(b=>b.text).join("\n");
     res.json({ answer });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// RIPE v0.1 : planification commune pour Livre IA, Word et InDesign.
+// Ne modifie jamais un document ouvert ; l'application doit confirmer avant insertion.
+app.post('/api/ripe/plan',auth,async(req,res)=>{
+  const brief=String(req.body?.brief||'').trim().slice(0,12000);
+  const count=Math.max(1,Math.min(30,Number(req.body?.chapters)||3));
+  if(!brief)return res.status(400).json({error:'Description du livre obligatoire'});
+  if(levelOf(req.user.plan)<2)return res.status(402).json({error:'Fonction IA réservée au plan Pro ou supérieur pour le moment'});
+  if(!GEMINI_API_KEY||!GEMINI_FAST_MODEL)return res.status(503).json({error:'Gemini non configuré'});
+  try{
+    const used=await getUsage(req.user.email),quota=AI_QUOTA[req.user.plan]??0;
+    if(!isUnlimited(req.user.email)&&used>=quota)return res.status(429).json({error:'Quota IA atteint'});
+    const system='Tu planifies des livres. Retourne exclusivement un objet JSON {"title":"...","chapters":[{"title":"...","summary":"..."}]}. Respecte exactement le nombre de chapitres demandé. Ne rédige pas encore le livre.';
+    const response=await geminiMessage({system,max_tokens:2400,messages:[{role:'user',content:'Nombre de chapitres : '+count+'\nDemande : '+brief}]});
+    const raw=parseStructuredJson(response.content.map(x=>x.text||'').join(''));
+    const plan=validatePlan(raw);
+    if(plan.chapters.length!==count)throw Error('Gemini n’a pas respecté le nombre de chapitres');
+    await incUsage(req.user.email);
+    return res.json({plan,manuscript:newManuscript({title:plan.title,brief,chapters:plan.chapters}),requiresApproval:true});
+  }catch(e){return res.status(502).json({error:String(e.message||e)});}
+});
+
+// RIPE v0.2 — persistance transactionnelle, activable uniquement après migration TEST.
+// Les mutations sont conditionnées par revision; aucune écriture silencieuse sur une version obsolète.
+const ripeEnabled=()=>process.env.RIPE_ENABLED==='true';
+function ripeGuard(req,res){
+  if(!ripeEnabled()||!pool){res.status(503).json({error:'RIPE désactivé ou base de données absente. Appliquer la migration TEST puis RIPE_ENABLED=true.'});return false;}
+  return true;
+}
+const ripeId=s=>typeof s==='string'&&/^[0-9a-f-]{36}$/i.test(s);
+// RIPE Phase 20 — authenticated, owner-scoped PDF review storage. TEST flag off by default.
+function ripeReviewGuard(req,res){
+ if(process.env.RIPE_REVIEWS_TEST_ENABLED!=='true'||!pool){res.status(503).json({error:'Revues RIPE TEST désactivées ou base absente'});return false;}
+ return true;
+}
+app.post('/api/ripe/pdf-reviews',auth,async(req,res)=>{
+ if(!ripeReviewGuard(req,res))return;
+ let row;try{row=makeReviewRow(req.user.email,req.body)}catch(e){return res.status(400).json({error:e.message})}
+ try{
+  await pool.query('INSERT INTO ripe_pdf_reviews(id,email,pdf_sha256,pdf_filename,pdf_bytes,pdf_pages,report) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)',[row.id,row.email,row.pdf_sha256,row.pdf_filename,row.pdf_bytes,row.pdf_pages,JSON.stringify(row.report)]);
+  return res.status(201).json({id:row.id,created:true});
+ }catch(e){console.error('RIPE review save:',e);return res.status(500).json({error:'Enregistrement indisponible'})}
+});
+app.get('/api/ripe/pdf-reviews',auth,async(req,res)=>{
+ if(!ripeReviewGuard(req,res))return;
+ const hash=String(req.query.sha256||'').toLowerCase();if(!validHash(hash))return res.status(400).json({error:'SHA-256 invalide'});
+ try{const r=await pool.query('SELECT id,created_at,pdf_filename,pdf_pages,report FROM ripe_pdf_reviews WHERE email=$1 AND pdf_sha256=$2 ORDER BY created_at DESC,id DESC LIMIT 50',[req.user.email,hash]);return res.json({items:r.rows})}
+ catch(e){console.error('RIPE review list:',e);return res.status(500).json({error:'Historique indisponible'})}
+});
+app.get('/api/ripe/pdf-reviews/:id',auth,async(req,res)=>{
+ if(!ripeReviewGuard(req,res))return;
+ if(!ripeId(req.params.id))return res.status(400).json({error:'Identifiant invalide'});
+ try{const r=await pool.query('SELECT id,created_at,report FROM ripe_pdf_reviews WHERE email=$1 AND id=$2',[req.user.email,req.params.id]);if(!r.rowCount)return res.status(404).json({error:'Rapport introuvable'});return res.json(r.rows[0])}
+ catch(e){console.error('RIPE review read:',e);return res.status(500).json({error:'Lecture indisponible'})}
+});
+app.post('/api/ripe/manuscripts',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  const {plan,brief='',language='fr'}=req.body||{};
+  let manuscript;
+  try{const clean=validatePlan(plan);manuscript=newManuscript({title:clean.title,brief,language,chapters:clean.chapters});}
+  catch(e){return res.status(400).json({error:e.message});}
+  try{
+    await pool.query('INSERT INTO ripe_manuscripts(email,id,revision,data) VALUES($1,$2,0,$3::jsonb)',[req.user.email,manuscript.id,JSON.stringify(manuscript)]);
+    return res.status(201).json({manuscript,audit:auditManuscript(manuscript)});
+  }catch(e){return res.status(500).json({error:'Enregistrement du manuscrit impossible'});}
+});
+app.get('/api/ripe/manuscripts',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  try{const r=await pool.query('SELECT id,revision,data->>\'title\' AS title,updated_at FROM ripe_manuscripts WHERE email=$1 ORDER BY updated_at DESC LIMIT 50',[req.user.email]);return res.json({items:r.rows});}
+  catch(e){return res.status(500).json({error:'Liste indisponible'});}
+});
+app.get('/api/ripe/manuscripts/:id',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  if(!ripeId(req.params.id))return res.status(400).json({error:'Identifiant invalide'});
+  try{const r=await pool.query('SELECT data FROM ripe_manuscripts WHERE email=$1 AND id=$2',[req.user.email,req.params.id]);if(!r.rowCount)return res.status(404).json({error:'Manuscrit introuvable'});return res.json({manuscript:r.rows[0].data,audit:auditManuscript(r.rows[0].data)});}
+  catch(e){return res.status(500).json({error:'Lecture impossible'});}
+});
+// La clé de requête rend un ajout rejouable sans doubler le texte après une coupure réseau.
+app.post('/api/ripe/manuscripts/:id/chapters/:chapterId/blocks',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  const {id,chapterId}=req.params,{blocks,expectedRevision,requestId}=req.body||{};
+  if(!ripeId(id)||!ripeId(chapterId)||!ripeId(requestId)||!Number.isInteger(expectedRevision)||expectedRevision<0)return res.status(400).json({error:'Paramètres de révision ou identifiants invalides'});
+  if(!Array.isArray(blocks)||blocks.length<1||blocks.length>100)return res.status(400).json({error:'Entre 1 et 100 blocs requis'});
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    const r=await client.query('SELECT data,revision FROM ripe_manuscripts WHERE email=$1 AND id=$2 FOR UPDATE',[req.user.email,id]);
+    if(!r.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Manuscrit introuvable'});}
+    const book=r.rows[0].data;
+    if((book.appliedRequests||[]).includes(requestId)){await client.query('COMMIT');return res.json({manuscript:book,audit:auditManuscript(book),replayed:true});}
+    if(r.rows[0].revision!==expectedRevision){await client.query('ROLLBACK');return res.status(409).json({error:'Révision obsolète',currentRevision:r.rows[0].revision});}
+    appendChapterBlocks(book,chapterId,blocks);
+    book.appliedRequests=[...(book.appliedRequests||[]),requestId].slice(-500);
+    await client.query('UPDATE ripe_manuscripts SET data=$3::jsonb,revision=$4,updated_at=now() WHERE email=$1 AND id=$2',[req.user.email,id,JSON.stringify(book),book.revision]);
+    await client.query('COMMIT');return res.json({manuscript:book,audit:auditManuscript(book),replayed:false});
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});return res.status(400).json({error:String(e.message||e)});}
+  finally{client.release();}
+});
+// Génération d'un chapitre en une étape : Gemini produit des blocs, qui restent en attente
+// d'une insertion explicite par le client via l'endpoint transactionnel ci-dessus.
+app.post('/api/ripe/manuscripts/:id/chapters/:chapterId/draft',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  if(!ripeId(req.params.id)||!ripeId(req.params.chapterId))return res.status(400).json({error:'Identifiant invalide'});
+  if(levelOf(req.user.plan)<2)return res.status(402).json({error:'Plan Pro ou supérieur requis'});
+  if(!GEMINI_API_KEY||!GEMINI_FAST_MODEL)return res.status(503).json({error:'Gemini non configuré'});
+  try{
+    const r=await pool.query('SELECT data FROM ripe_manuscripts WHERE email=$1 AND id=$2',[req.user.email,req.params.id]);
+    if(!r.rowCount)return res.status(404).json({error:'Manuscrit introuvable'});
+    const book=r.rows[0].data,chapter=book.chapters.find(c=>c.id===req.params.chapterId);
+    if(!chapter)return res.status(404).json({error:'Chapitre introuvable'});
+    const used=await getUsage(req.user.email),quota=AI_QUOTA[req.user.plan]??0;
+    if(!isUnlimited(req.user.email)&&used>=quota)return res.status(429).json({error:'Quota IA atteint'});
+    const system='Rédige un chapitre original en français. Réponds uniquement avec un objet JSON {"blocks":[{"type":"heading","text":"..."},{"type":"paragraph","text":"..."}]}. Aucune image fictive. Chaque bloc doit être complet. Limite à 30 blocs.';
+    const response=await geminiMessage({system,max_tokens:6000,messages:[{role:'user',content:'Livre : '+book.title+'\nBrief : '+book.brief+'\nChapitres : '+book.chapters.map(c=>c.title).join(' / ')+'\nChapitre demandé : '+chapter.title+'\nConsigne : '+String(req.body?.instruction||'').slice(0,1500)}]});
+    const raw=parseStructuredJson((response.content||[]).map(x=>x.text||'').join(''));
+    if(!Array.isArray(raw.blocks)||!raw.blocks.length||raw.blocks.length>30||raw.blocks.some(b=>!['heading','paragraph','quote'].includes(b.type)||typeof b.text!=='string'||!b.text.trim()||b.text.length>120000))throw Error('Blocs Gemini invalides');
+    await incUsage(req.user.email);
+    return res.json({blocks:raw.blocks,expectedRevision:book.revision,requiresApproval:true});
+  }catch(e){return res.status(502).json({error:String(e.message||e)});}
+});
+
+// RIPE Phase 5 — illustration native persistée et liée au chapitre (prototype TEST).
+// Les octets sont conservés dans le JSONB du manuscrit : solution provisoire limitée à 2 Mo.
+app.post('/api/ripe/manuscripts/:id/chapters/:chapterId/illustration',auth,async(req,res)=>{
+  if(!ripeGuard(req,res))return;
+  const {id,chapterId}=req.params;
+  if(!ripeId(id)||!ripeId(chapterId))return res.status(400).json({error:'Identifiant invalide'});
+  if(levelOf(req.user.plan)<2)return res.status(402).json({error:'Plan Pro ou supérieur requis'});
+  if(!GEMINI_API_KEY||!GEMINI_IMAGE_MODEL)return res.status(503).json({error:'Gemini image non configuré'});
+  const prompt=String(req.body?.prompt||'').trim().slice(0,1800);
+  const requestId=String(req.body?.requestId||'');
+  if(!prompt||!ripeId(requestId))return res.status(400).json({error:'Description et requestId obligatoires'});
+  try{
+    const existing=await pool.query('SELECT data FROM ripe_manuscripts WHERE email=$1 AND id=$2',[req.user.email,id]);
+    if(!existing.rowCount)return res.status(404).json({error:'Manuscrit introuvable'});
+    const original=existing.rows[0].data,chapter=original.chapters.find(c=>c.id===chapterId);
+    if(!chapter)return res.status(404).json({error:'Chapitre introuvable'});
+    if((original.appliedRequests||[]).includes(requestId))return res.json({manuscript:original,audit:auditManuscript(original),replayed:true});
+    const used=await getUsage(req.user.email),quota=AI_QUOTA[req.user.plan]??0;
+    if(!isUnlimited(req.user.email)&&used>=quota)return res.status(429).json({error:'Quota IA atteint'});
+    const generated=await geminiImage('Illustration éditoriale pour le livre « '+original.title+' », chapitre « '+chapter.title+' ». '+prompt,null,'2:3');
+    const im=generated.data?.[0],mimeType=im?.mime_type||'image/png',bytes=Buffer.from(im?.b64_json||'','base64');
+    if(!/^image\/(png|jpeg|webp)$/.test(mimeType)||bytes.length<100||bytes.length>2*1024*1024)
+      throw Error('Image absente ou supérieure à 2 Mo : aucune modification du manuscrit');
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      const r=await client.query('SELECT data FROM ripe_manuscripts WHERE email=$1 AND id=$2 FOR UPDATE',[req.user.email,id]);
+      if(!r.rowCount){await client.query('ROLLBACK');return res.status(404).json({error:'Manuscrit introuvable'});}
+      const book=r.rows[0].data;
+      if((book.appliedRequests||[]).includes(requestId)){
+        await client.query('COMMIT');return res.json({manuscript:book,audit:auditManuscript(book),replayed:true});
+      }
+      if(!book.chapters.some(c=>c.id===chapterId))throw Error('Chapitre introuvable');
+      if((book.assets||[]).length>=24)throw Error('Limite provisoire de 24 illustrations par manuscrit');
+      const alt=prompt.slice(0,500);
+      const assetId=addAsset(book,{mimeType,uri:'data:'+mimeType+';base64,'+bytes.toString('base64'),alt});
+      appendChapterBlocks(book,chapterId,[{type:'image',assetId,alt}]);
+      book.appliedRequests=[...(book.appliedRequests||[]),requestId].slice(-500);
+      await client.query('UPDATE ripe_manuscripts SET data=$3::jsonb,revision=$4,updated_at=now() WHERE email=$1 AND id=$2',[req.user.email,id,JSON.stringify(book),book.revision]);
+      await client.query('COMMIT');
+      await incUsage(req.user.email).catch(()=>{});
+      return res.json({manuscript:book,audit:auditManuscript(book),assetId,replayed:false});
+    }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+  }catch(e){return res.status(502).json({error:String(e.message||e)});}
 });
 
 // Génération de texte libre (rédaction assistée : plans, chapitres, réécriture…). Auth + plan Pro+ + quota.
