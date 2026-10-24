@@ -1140,6 +1140,7 @@ button.rxw-st:hover{background:var(--rx-hover)}
 .rxw-wm{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .rxw-pageborder{position:absolute;pointer-events:none;z-index:0}
 
+.rxw-ed img{max-width:100%;height:auto;}.rxw-ed figure{margin:8px 0;text-align:center;}
 </style>
   <style id="readix-indesign-embedded-css">
 /* Readix InDesign — Phase 1 foundation. Namespaced: no impact on existing Readix tools. */
@@ -2061,7 +2062,7 @@ let meta=normMeta(host.getMeta());
 try{const L=JSON.parse(localStorage.getItem('rxw-layout')||'{}');S.hide=L.hide||{};S.dock=L.dock||{};if(L.author)S.author=L.author;if(L.ac)Object.assign(S.ac,L.ac);}catch(e){S.hide={};S.dock={};}
 S.lang=meta.lang||'fr-CA';
 const saveLayout=()=>{try{localStorage.setItem('rxw-layout',JSON.stringify({hide:S.hide,dock:S.dock,author:S.author,ac:S.ac}));}catch(e){}};
-function normMeta(m){m=Object.assign({},m||{});if(m.ml==null){const px=+m.margin;const cm=px?px/CM:2.5;m.ml=m.mr=Math.round(cm*100)/100;}if(m.mt==null)m.mt=2.5;if(m.mb==null)m.mb=2.5;if(!PAPERS[m.paper])m.paper=m.paper==='Letter'?'Letter':'A4';m.orient=m.orient==='landscape'?'landscape':'portrait';m.header=m.header||'';m.footer=m.footer||'';m.props=m.props||{};m.headerFirst=m.headerFirst||'';m.footerFirst=m.footerFirst||'';m.headerEven=m.headerEven||'';m.footerEven=m.footerEven||'';m.diffFirst=!!m.diffFirst;m.diffOddEven=!!m.diffOddEven;m.watermark=m.watermark||null;m.pageBorder=m.pageBorder||null;m.pageColor=m.pageColor||'';return m;}
+function normMeta(m){m=Object.assign({},m||{});if(m.ml==null){const px=+m.margin;const cm=px?px/CM:2.54;/*Lot 7 : marge Word officielle (1 pouce)*/m.ml=m.mr=Math.round(cm*100)/100;}if(m.mt==null)m.mt=2.54;if(m.mb==null)m.mb=2.54;if(!PAPERS[m.paper])m.paper=m.paper==='Letter'?'Letter':'A4';m.orient=m.orient==='landscape'?'landscape':'portrait';m.header=m.header||'';m.footer=m.footer||'';m.props=m.props||{};m.headerFirst=m.headerFirst||'';m.footerFirst=m.footerFirst||'';m.headerEven=m.headerEven||'';m.footerEven=m.footerEven||'';m.diffFirst=!!m.diffFirst;m.diffOddEven=!!m.diffOddEven;m.watermark=m.watermark||null;m.pageBorder=m.pageBorder||null;m.pageColor=m.pageColor||'';return m;}
 const pageW=()=>{const P=PAPERS[meta.paper];return (meta.orient==='landscape'?P.h:P.w)*CM;};
 const pageH=()=>{const P=PAPERS[meta.paper];return (meta.orient==='landscape'?P.w:P.h)*CM;};
 const contentH=()=>pageH()-(meta.mt+meta.mb)*CM;
@@ -3064,7 +3065,8 @@ function handleTab(back){const r=rng();if(!r)return;const cell=closestEl(r.start
 /* ---------- Fichiers ---------- */
 function migrate(html){return String(html||'').replace(/class="doc-page-break"/g,'class="rxw-pagebreak" contenteditable="false"').replace(/class="doc-comment"/g,'class="rxw-comment"').replace(/class="doc-change"/g,'class="rxw-ins-legacy"');}
 function loadDoc(html,m,name,keepSaved){deselectObjs();clearFind();ed.innerHTML=migrate(sanitizeHTML(html||'',true))||'<p><br></p>';meta=normMeta(m||{});S.lang=meta.lang||S.lang;ed.lang=S.lang;
-  if(name)host.setName(name);if(!keepSaved)host.setSavedAs(false);H.u=[];H.r=[];updHist();ensureBlocks();layout();if(S.fit)fitZoom(S.fit);caretAtStart();ed.focus({preventScroll:true});scroll.scrollTop=0;syncHost();S.dirty=false;updateTitle();}
+  if(name)host.setName(name);if(!keepSaved)host.setSavedAs(false);H.u=[];H.r=[];updHist();ensureBlocks();layout();try{ed.querySelectorAll('img').forEach(function(im){if(!im.complete)im.addEventListener('load',function(){try{layout()}catch(e){}},{once:true})})}catch(e){}
+if(S.fit)fitZoom(S.fit);caretAtStart();ed.focus({preventScroll:true});scroll.scrollTop=0;syncHost();S.dirty=false;updateTitle();}
 function cmdNew(){closePops();if(host.newDocument){syncHost();host.newDocument();return;}
   const go=()=>{loadDoc('',{},'Document1.docx');toast('Nouveau document créé.');};if(S.dirty&&ed.textContent.trim())confirmDlg('Nouveau document','Le document actuel sera remplacé. Enregistrez-le d’abord si vous souhaitez le conserver.','Créer un document vierge',go);else go();}
 function cmdOpen(){closePops();fileInput.value='';fileInput.click();}
@@ -10484,7 +10486,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function rx57PaginateBlocks(blocks, bodyHPx, widthPx, fsPx, linePx) {
     var pages = [], cur = [], used = 0;
     (blocks || []).forEach(function(b) {
-      var need = rx57EstBlock(b, widthPx, fsPx, linePx);
+      var need = Math.ceil(rx57EstBlock(b, widthPx, fsPx, linePx) * 1.15); // Lot 7 : marge de securite
       if (cur.length && used + need > bodyHPx) { pages.push(cur); cur = []; used = 0; }
       cur.push(b); used += need;
     });
@@ -10526,7 +10528,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       document.body.appendChild(host);
       var heights = [], ki = 0;
       for (var i = 0; i < (blocks || []).length; i++) {
-        if (blocks[i].type === "img") { heights.push(rx57EstBlock(blocks[i], widthPx, fsPx, 0)); continue; }
+        if (rx57IsImg(blocks[i])) { heights.push(rx57EstBlock(blocks[i], widthPx, fsPx, 0)); continue; }
         var h = host.children[ki] ? host.children[ki].offsetHeight : 0; ki++;
         if (!h) { try { host.remove(); } catch (e) {} return null; }
         heights.push(h);
@@ -10540,7 +10542,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
     if (!heights) return rx57PaginateBlocks(blocks, bodyHPx, widthPx, fsPx, linePx); // repli estimateur (Node/tests)
     var pages = [], cur = [], used = 0;
     (blocks || []).forEach(function(b, i) {
-      var need = heights[i];
+      var need = Math.ceil(heights[i] * 1.15); // Lot 7 : marge de securite anti-rognage
       if (cur.length && used + need > bodyHPx) { pages.push(cur); cur = []; used = 0; }
       cur.push(b); used += need;
     });
@@ -10747,7 +10749,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
         "<h2 style=\"font-size:28px\">" + ch.title + "</h2>", { fs: 28, bold: true });
       var bodyY = mg.top + 30, bodyH = s.height - bodyY - mg.bottom;
       var bodyW = s.width - mg.left - mg.right;
-      var slices = rx57PaginateMeasured(blocks, px(bodyH), px(bodyW), fsPx, linePx);
+      var slices = rx57PaginateMeasured(blocks, Math.floor(px(bodyH) * 0.92), px(bodyW), fsPx, linePx); // Lot 7 : hauteur utile -8 %
       var prevFrame = null;
       slices.forEach(function(slice, k) {
         var p = (k === 0) ? pg : (s.pages += 1, s.pages);
