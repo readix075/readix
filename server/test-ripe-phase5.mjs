@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {newManuscript,addAsset,appendChapterBlocks,auditManuscript} from './ripe-engine.js';
+const book=newManuscript({title:'Test',chapters:[{title:'Un'}]});
+const chapter=book.chapters[0];
+appendChapterBlocks(book,chapter.id,[{type:'paragraph',text:'Un paragraphe complet.'}]);
+const assetId=addAsset(book,{mimeType:'image/png',uri:'data:image/png;base64,AAAA',alt:'Image de test'});
+appendChapterBlocks(book,chapter.id,[{type:'image',assetId,alt:'Image de test'}]);
+assert.equal(auditManuscript(book).missingImages.length,0);
+assert.equal(chapter.blocks.length,2);
+assert.equal(book.assets.length,1);
+assert.equal(chapter.blocks[0].text,'Un paragraphe complet.');
+assert.throws(()=>addAsset(book,{mimeType:'text/plain',uri:'abc'}));
+console.log('RIPE phase 5: 5 assertions OK');
