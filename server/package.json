@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
-    "prestart": "node verify-deploy.mjs"
+    "dev": "node --watch server.js"
   },
   "engines": {
     "node": ">=18"
