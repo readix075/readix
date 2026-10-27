@@ -137,18 +137,6 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 const app = express();
-// READOX PHASE 3C — retired general-purpose AI endpoints; preserve feature-specific CV/OCR/PDF services.
-const READOX_RETIRED_AI_ROUTES = [
-  /^\/api\/copilot(?:\/|$)/i,
-  /^\/api\/ai\/(?:chatbot|generate)(?:\/|$)/i
-];
-app.use((req, res, next) => {
-  if (READOX_RETIRED_AI_ROUTES.some((pattern) => pattern.test(req.path))) {
-    return res.status(410).json({ error: "Cette fonctionnalité a été retirée de Readox.", code: "FEATURE_RETIRED" });
-  }
-  next();
-});
-
 app.use(cors({ origin: true, credentials: false }));
 
 // Le webhook Stripe a besoin du corps BRUT : déclaré AVANT express.json().
