@@ -3862,6 +3862,7 @@ async function renderView(){
     await ensurePdf(t);
     stage.innerHTML="";stage.classList.remove("empty");
   }
+  if(t&&t.tool==="flyermaker"){ stage.style.padding="0";stage.style.overflow="hidden";const f=document.createElement("iframe");f.src="flyer-maker.html";f.title="Readox Flyer Maker";f.style.cssText="border:0;width:100%;height:100%;min-height:620px;display:block";stage.appendChild(f);return; }
   if(t&&t.tool==="cvbuilder"){ return renderCvBuilder(t,stage); }
   if(t&&t.tool==="bookstudio"){ return renderBookStudio(t,stage); }
   if(t&&t.tool==="engstudio"){ return renderEngStudio(t,stage); }
@@ -5350,16 +5351,16 @@ function renderTools(){
   $$(".mtab").forEach(m=>m.classList.toggle("on",(m.dataset.view==="home"&&APP.tool==="home")||m.dataset.tool===APP.tool||(!!m.dataset.cv&&APP.tool==="cvbuilder")||(!!m.dataset.book&&APP.tool==="bookstudio")||(!!m.dataset.eng&&APP.tool==="engstudio")));
 }
 function renderDocumentStudioHome(stage){
-  stage.classList.remove("empty");
-  stage.innerHTML='<div class="rxds-home"><div class="rxds-kicker">READIX · DOCUMENT STUDIO</div><h1>Choisissez votre studio</h1><p>Document Studio regroupe les trois environnements de création. Chaque environnement s’ouvre dans un onglet Readix.</p><div class="rxds-grid"><button class="rxds-card" data-ds="word"><div class="ico word">W</div><h2>Readix<sup>Word</sup></h2><p>Traitement de texte, styles, tableaux, révision, import et export Word.</p><span>Ouvrir Readix Word →</span></button><button class="rxds-card featured" data-ds="indesign"><div class="ico indesign">R</div><h2>Readix<sup>InDesign</sup></h2><p>Mise en page éditoriale professionnelle, pages, objets, images, typographie et composition.</p><span>Ouvrir Readix InDesign →</span></button><button class="rxds-card" data-ds="book"><div class="ico book">✦</div><h2>Livre<sup>IA</sup></h2><p>Plan, rédaction et mise en forme de livres assistés par l’IA Readix.</p><span>Ouvrir Livre IA →</span></button></div></div>';
-  stage.querySelector('[data-ds="word"]').onclick=openReadixWordTab;
-  stage.querySelector('[data-ds="indesign"]').onclick=openReadixInDesign;
-  stage.querySelector('[data-ds="book"]').onclick=function(){ if(window.openBookAIStudio) openBookAIStudio(); else if(window.openBookStudio) openBookStudio(); };
+ stage.classList.remove("empty");
+ stage.innerHTML='<div class="rxds-home"><div class="rxds-kicker">READOX · ATELIER DE CRÉATION</div><h1>Choisissez votre outil de création</h1><p>Créez des documents professionnels ou des visuels entièrement personnalisables.</p><div class="rxds-grid rx7-grid"><button class="rxds-card" data-ds="word"><div class="ico word">W</div><h2>Readox Word</h2><p>Documents, styles, tableaux, révision, import et export Word.</p><span>Ouvrir Word →</span></button><button class="rxds-card featured" data-ds="flyer"><div class="ico indesign">✦</div><h2>Flyer Maker</h2><p>Affiches, promotions, événements et créations graphiques éditables.</p><span>Créer un flyer →</span></button></div></div>';
+ stage.querySelector('[data-ds="word"]').onclick=openReadixWordTab;
+ stage.querySelector('[data-ds="flyer"]').onclick=function(){openTool("flyermaker")};
 }
 function openReadixWordTab(docHTML){const t=createTab("Nouveau document.docx");t.tool="docstudio";APP.tool="docstudio";t.doc=docHTML||defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();}
 function openReadixInDesign(){const t=createTab("Document InDesign.rxd");t.tool="indesign";t.idTool="select";APP.tool="indesign";if(window.ReadixInDesign&&ReadixInDesign.ensure)ReadixInDesign.ensure(t);pushHist({tool:"indesign",page:1});renderTabs();renderTools();renderView();updateHeader();scheduleAutosave();}
 window.openReadixWordTab=openReadixWordTab;window.openReadixInDesign=openReadixInDesign;
 function openTool(id){
+  if(id==="flyermaker"){let t=createTab("Flyer Maker");t.tool="flyermaker";APP.tool="flyermaker";pushHist({tool:"flyermaker",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   if(id==="aiadvanced"){openAIFloating("__home");return;}
   if(id==="documentstudiohome"){let t=activeTab();if(!t||t.pdf||t.tool!=="documentstudiohome")t=createTab("Document Studio");t.tool="documentstudiohome";APP.tool="documentstudiohome";pushHist({tool:"documentstudiohome",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   if(id==="indesign"){openReadixInDesign();return;}
@@ -8851,11 +8852,11 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   function runTool(id) { try { T[id] && T[id].run(); } catch (e) {} setTimeout(syncActive, 40); }
 
   /* ---------------- Barre latérale ---------------- */
-  var NAV_ORDER = ["home", "projects", "documents", "book", "cv", "docstudio", "editpdf", "copilot", "settings"];
+  var NAV_ORDER = ["home", "projects", "documents", "cv", "docstudio", "editpdf", "settings"];
   var itemsById = {};
   function buildNav() {
     var nav = ce("aside", "rx-nav"); nav.id = "rxNav";
-    nav.appendChild(ce("div", "rx-brand", '<span class="rx-logo">' + svg('<path d="M4 5h11a3 3 0 0 1 3 3v11H8a3 3 0 0 0-3 3z"/>') + '</span><span class="rx-bt"><b>Readix</b><i>Espace de productivité</i></span>'));
+    nav.appendChild(ce("div", "rx-brand", '<span class="rx-logo">' + svg('<path d="M4 5h11a3 3 0 0 1 3 3v11H8a3 3 0 0 0-3 3z"/>') + '</span><span class="rx-bt"><b>Readox</b><i>Espace de productivité</i></span>'));
     var scroll = ce("div", "rx-nav-scroll");
     NAV_ORDER.forEach(function (id) {
       var it = T[id];
@@ -8903,7 +8904,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   }
   function searchItems() {
     var list = [];
-    Object.keys(T).forEach(function (id) { list.push({ id: id, label: T[id].label, sub: T[id].sub || "", ic: T[id].ic }); });
+    Object.keys(T).filter(function(id){return id!=="copilot"&&id!=="book";}).forEach(function (id) { list.push({ id: id, label: T[id].label, sub: T[id].sub || "", ic: T[id].ic }); });
     return list;
   }
   function wireSearch() {
@@ -9133,7 +9134,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
       '<div class="rx-hero-tx"><h1>' + greet + name + ' !</h1><p>Votre espace de travail intelligent pour créer, modifier et gérer vos documents.</p></div>' +
       '<div class="rx-hero-side"><div class="rx-hero-dt">' + dt.charAt(0).toUpperCase() + dt.slice(1) + '<br><span>' + tm + '</span></div><div class="rx-hero-tag">Plus qu’un outil,<br>votre productivité</div></div>'));
     var cards = ce("div", "rx-tcards");
-    ["editpdf", "copilot", "book", "cv", "docstudio"].forEach(function (id) { cards.appendChild(toolCard(id)); });
+    ["editpdf", "cv", "docstudio"].forEach(function (id) { cards.appendChild(toolCard(id)); });
     d.appendChild(cards);
     var cols = ce("div", "rx-cols");
     cols.appendChild(ce("div", "rx-col", '<div class="rx-col-h">' + svg(IC.folder) + '<b>Projets récents</b><button class="rx-voir" id="rxVoirP">Voir tout ' + svg(IC.chevron) + '</button></div><div class="rx-list" id="rxRecentP"><div class="rx-empty">Aucun projet récent.</div></div>'));
@@ -13921,6 +13922,15 @@ bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t
 @media(max-width:1280px){.rxid[data-rxid-root] .rxid-body{grid-template-columns:52px 180px minmax(0,1fr) 235px!important}.rxid[data-rxid-root] .rxid-topright [data-rx54-open]{display:none}}
 @media(max-width:960px){.rxid[data-rxid-root] .rxid-body{grid-template-columns:50px 155px minmax(0,1fr) 200px!important}.rxid[data-rxid-root] .rxid-brand em{display:none}.rxid[data-rxid-root] .rxid-topright [data-top-action="workspace"],.rxid[data-rxid-root] .rxid-topright [data-top-action="search"]{display:none}}
 @media(max-width:740px){.rxid[data-rxid-root] .rxid-body{grid-template-columns:48px minmax(0,1fr) 185px!important}.rxid[data-rxid-root] .rxid-leftpanel{display:none}.rxid[data-rxid-root] .rxid-canvas{grid-column:2}.rxid[data-rxid-root] .rxid-props{grid-column:3}}
+</style>
+<style id="rx7a-nondestructive-ui">
+/* Phase 7A: masquage visuel, moteurs historiques conservés */
+#rxRight,#rxIaBtn,#cbotFab,#aiFloat,#rxRrCopilot,.tool-ai,.rx-rr-card,.rx-rr-sec,.rx-rr-list,.rx-rr-list2,
+#rxDash .rx-cols,#rxDash .rx-qgrid,#rxDash .rx-sklist,
+[data-nav="copilot"],[data-nav="book"],.rx-ai-floating,.ai-float-overlay{display:none!important}
+.rx7-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.rx7-grid .rxds-card.featured{border-color:#168aff;background:linear-gradient(145deg,rgba(19,119,255,.09),rgba(0,190,215,.04))}
+#stage:has(iframe[src="flyer-maker.html"]){padding:0!important;overflow:hidden!important}
 </style>
 </body>
 </html>
