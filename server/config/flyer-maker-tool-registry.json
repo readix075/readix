@@ -1,0 +1,399 @@
+{
+  "schema": "readox.flyer.tool-registry.v1",
+  "version": "7A-fix1",
+  "scope": "catalogue fonctionnel sans activation de fonctions différées",
+  "tools": [
+    {
+      "zone": "navigation",
+      "nom": "Modèles",
+      "id": "library",
+      "definition": "Choisir un modèle",
+      "role": "Ouvre la galerie et permet de charger une composition",
+      "statut": "actif"
+    },
+    {
+      "zone": "navigation",
+      "nom": "Mes créations",
+      "id": "projects",
+      "definition": "Accéder aux créations enregistrées",
+      "role": "À relier au stockage Readox après vérification",
+      "statut": "prévu"
+    },
+    {
+      "zone": "navigation",
+      "nom": "Importer",
+      "id": "load",
+      "definition": "Importer un projet JSON",
+      "role": "Lit un projet et restaure ses objets",
+      "statut": "actif"
+    },
+    {
+      "zone": "navigation",
+      "nom": "IA (bientôt)",
+      "id": "ai",
+      "definition": "Générer une composition",
+      "role": "Désactivé, aucune API appelée",
+      "statut": "désactivé"
+    },
+    {
+      "zone": "navigation",
+      "nom": "Enregistrer",
+      "id": "save",
+      "definition": "Sauvegarder la composition",
+      "role": "Télécharge le JSON structuré; intégration compte à venir",
+      "statut": "actif"
+    },
+    {
+      "zone": "navigation",
+      "nom": "Aperçu",
+      "id": "preview",
+      "definition": "Visualiser sans panneaux",
+      "role": "Masque temporairement les panneaux",
+      "statut": "actif"
+    },
+    {
+      "zone": "navigation",
+      "nom": "Exporter",
+      "id": "export",
+      "definition": "Exporter un visuel",
+      "role": "SVG vectoriel disponible; autres formats prévus",
+      "statut": "partiel"
+    },
+    {
+      "zone": "galerie",
+      "nom": "Recherche",
+      "id": "search",
+      "definition": "Filtrer les modèles",
+      "role": "Recherche textuelle dans les modèles",
+      "statut": "actif"
+    },
+    {
+      "zone": "galerie",
+      "nom": "Catégories",
+      "id": "filters",
+      "definition": "Filtrer par catégorie",
+      "role": "Promotion, Événement, Entreprise, Tous",
+      "statut": "actif"
+    },
+    {
+      "zone": "galerie",
+      "nom": "Miniatures",
+      "id": "templates",
+      "definition": "Choisir une composition",
+      "role": "Charge un ensemble d’objets éditables de démonstration",
+      "statut": "partiel"
+    },
+    {
+      "zone": "galerie",
+      "nom": "Modèles professionnels",
+      "id": "catalog",
+      "definition": "Catalogue de compositions élaborées",
+      "role": "Photos sous licence, typographies et objets éditables",
+      "statut": "prévu"
+    },
+    {
+      "zone": "outils",
+      "nom": "Texte",
+      "id": "addText",
+      "definition": "Insérer du texte",
+      "role": "Crée un objet texte modifiable",
+      "statut": "actif"
+    },
+    {
+      "zone": "outils",
+      "nom": "Images",
+      "id": "addImage",
+      "definition": "Importer une image",
+      "role": "Insère une image locale comme objet distinct",
+      "statut": "actif"
+    },
+    {
+      "zone": "outils",
+      "nom": "Éléments",
+      "id": "elements",
+      "definition": "Bibliothèque d’éléments",
+      "role": "Icônes et décorations éditables",
+      "statut": "prévu"
+    },
+    {
+      "zone": "outils",
+      "nom": "Formes",
+      "id": "addShape",
+      "definition": "Créer une forme",
+      "role": "Insère un rectangle éditable",
+      "statut": "partiel"
+    },
+    {
+      "zone": "outils",
+      "nom": "Arrière-plan",
+      "id": "background",
+      "definition": "Changer le fond",
+      "role": "Ouvre la sélection de couleur du fond",
+      "statut": "partiel"
+    },
+    {
+      "zone": "outils",
+      "nom": "Mes fichiers",
+      "id": "myfiles",
+      "definition": "Importer un projet",
+      "role": "Ouvre l’import JSON local",
+      "statut": "partiel"
+    },
+    {
+      "zone": "outils",
+      "nom": "QR Code",
+      "id": "qr",
+      "definition": "Générer un QR Code",
+      "role": "À développer et tester",
+      "statut": "désactivé"
+    },
+    {
+      "zone": "outils",
+      "nom": "Page vierge",
+      "id": "blank",
+      "definition": "Créer une composition vide",
+      "role": "Vide les objets et réinitialise le fond",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Annuler",
+      "id": "undo",
+      "definition": "Annuler une modification",
+      "role": "Restaure une capture historique",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Rétablir",
+      "id": "redo",
+      "definition": "Rétablir une annulation",
+      "role": "Restaure l’état annulé",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Zoom −",
+      "id": "zoomOut",
+      "definition": "Réduire le zoom",
+      "role": "Modifie l’échelle de l’aperçu",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Zoom +",
+      "id": "zoomIn",
+      "definition": "Augmenter le zoom",
+      "role": "Modifie l’échelle de l’aperçu",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Dupliquer",
+      "id": "duplicate",
+      "definition": "Copier un objet",
+      "role": "Crée une copie décalée",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Supprimer",
+      "id": "delete",
+      "definition": "Supprimer un objet",
+      "role": "Retire l’objet sélectionné",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Calques",
+      "id": "front",
+      "definition": "Avancer au premier plan",
+      "role": "Place l’objet en fin de pile",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Reculer",
+      "id": "back",
+      "definition": "Reculer d’un calque",
+      "role": "Échange l’objet avec le précédent",
+      "statut": "actif"
+    },
+    {
+      "zone": "édition",
+      "nom": "Alignement",
+      "id": "align",
+      "definition": "Aligner plusieurs objets",
+      "role": "Alignements horizontaux et verticaux",
+      "statut": "prévu"
+    },
+    {
+      "zone": "édition",
+      "nom": "Sélection multiple",
+      "id": "multi",
+      "definition": "Sélectionner plusieurs objets",
+      "role": "Manipulation de groupe",
+      "statut": "prévu"
+    },
+    {
+      "zone": "édition",
+      "nom": "Poignées",
+      "id": "handles",
+      "definition": "Redimensionner et pivoter",
+      "role": "8 poignées + rotation",
+      "statut": "prévu"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Texte",
+      "id": "text",
+      "definition": "Modifier le contenu",
+      "role": "Change le texte sélectionné",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Police",
+      "id": "font",
+      "definition": "Changer la police",
+      "role": "Applique une police système au texte",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Taille",
+      "id": "size",
+      "definition": "Modifier la taille",
+      "role": "Taille du texte en pixels",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Gras",
+      "id": "bold",
+      "definition": "Activer le gras",
+      "role": "Inverse la graisse du texte",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Italique",
+      "id": "italic",
+      "definition": "Activer l’italique",
+      "role": "Inverse le style italique",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Souligné",
+      "id": "underline",
+      "definition": "Souligner le texte",
+      "role": "Style souligné",
+      "statut": "prévu"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Couleur",
+      "id": "color",
+      "definition": "Changer la couleur",
+      "role": "Modifie la couleur de l’objet",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Position",
+      "id": "x/y",
+      "definition": "Positionner précisément",
+      "role": "Coordonnées X et Y",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Dimensions",
+      "id": "w/h",
+      "definition": "Dimensionner",
+      "role": "Largeur et hauteur",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Opacité",
+      "id": "opacity",
+      "definition": "Régler la transparence",
+      "role": "Valeur 0 à 100 %",
+      "statut": "actif"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Ombre",
+      "id": "shadow",
+      "definition": "Ajouter une ombre",
+      "role": "Décalage, flou et couleur",
+      "statut": "prévu"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Contour",
+      "id": "stroke",
+      "definition": "Ajouter un contour",
+      "role": "Épaisseur et couleur",
+      "statut": "prévu"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Arrondi",
+      "id": "radius",
+      "definition": "Arrondir les angles",
+      "role": "Rayon des rectangles",
+      "statut": "prévu"
+    },
+    {
+      "zone": "propriétés",
+      "nom": "Flou",
+      "id": "blur",
+      "definition": "Flouter un objet",
+      "role": "Filtre visuel",
+      "statut": "prévu"
+    },
+    {
+      "zone": "projet",
+      "nom": "Export SVG",
+      "id": "export",
+      "definition": "Exporter la création",
+      "role": "Génère un SVG depuis les objets",
+      "statut": "partiel"
+    },
+    {
+      "zone": "projet",
+      "nom": "Export PNG/JPG/PDF",
+      "id": "formats",
+      "definition": "Exporter pour partage/impression",
+      "role": "Rendu haute résolution à développer",
+      "statut": "prévu"
+    },
+    {
+      "zone": "projet",
+      "nom": "Sauvegarde compte",
+      "id": "cloud",
+      "definition": "Persister dans Readox",
+      "role": "Synchronisation authentifiée à développer",
+      "statut": "prévu"
+    },
+    {
+      "zone": "projet",
+      "nom": "Format A4",
+      "id": "pageSize",
+      "definition": "Choisir format et orientation",
+      "role": "Préréglages A4/A5/poster/réseaux sociaux",
+      "statut": "prévu"
+    },
+    {
+      "zone": "projet",
+      "nom": "Tests de régression",
+      "id": "qa",
+      "definition": "Protéger Word, CV, PDF, OCR",
+      "role": "Parcours automatisés à réaliser sur Render TEST",
+      "statut": "à tester"
+    }
+  ]
+}

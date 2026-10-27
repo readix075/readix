@@ -1115,6 +1115,14 @@ app.post("/api/ai/:feature", auth, async (req, res) => {
   }
 });
 
+// Phase 7A — route explicite du module intégré (aucun changement aux routes IA/PDF/CV).
+app.get('/flyer-maker.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'flyer-maker.html'));
+});
+app.get('/api/flyer-maker/health', (req, res) => {
+  res.json({ module: 'flyer-maker', available: true, version: '7A-fix1' });
+});
+
 // ---- Sert le front-end (dossier ../public) ----
 app.use(express.static(path.join(__dirname, "..", "public")));
 
