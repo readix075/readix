@@ -13799,7 +13799,6 @@ function rxPageHandles(t,stage,root){
   if(!(t.pageSelected&&t.idTool==='page'))return;
   var pel=rxPageEl(root,s.current);if(!pel)return;
   var stg=root.querySelector('[data-id-stage]');
-  stg.querySelectorAll('.rxpage-handles,.rxpage-ghost').forEach(function(node){node.remove()});
   var pr=pel.getBoundingClientRect(),sr=stg.getBoundingClientRect();
   var X=pr.left-sr.left,Y=pr.top-sr.top,W=pr.width,H=pr.height;
   var kx=W/s.width,ky=H/s.height;
@@ -13821,13 +13820,13 @@ function rxPageHandles(t,stage,root){
       function mv(ev){
         var dx=ev.clientX-start.x0,dy=ev.clientY-start.y0;
         var dW=0,dH=0,hx=start.hx;
-        if(hx.indexOf('r')>=0||hx==='rm')dW=dx/kx;
+        if(hx.indexOf('r')>=0||['rm','t1','t3','b1','b3'].indexOf(hx)>=0)dW=dx/kx;
         if(hx.indexOf('l')>=0)dW=-dx/kx;
         if(hx.indexOf('b')>=0||['bm','b1','b3'].indexOf(hx)>=0)dH=dy/ky;
         if(hx.indexOf('t')>=0)dH=-dy/ky;
         if(anchorSel()==='c'){dW*=2;dH*=2} /* ancrage centre : croissance symétrique (le facteur d échelle reste le ratio de la page — identité géométrique documentée) */
-        var nW=Math.min(3000,Math.max(20,start.W+dW)),nH=Math.min(3000,Math.max(20,start.H+dH));
-        if(lock){var changedW=Math.abs(dW)>0.001,changedH=Math.abs(dH)>0.001;var f=changedW&&changedH?(Math.abs(dW/start.W)>=Math.abs(dH/start.H)?nW/start.W:nH/start.H):(changedW?nW/start.W:nH/start.H);nW=rxR2(start.W*f);nH=rxR2(start.H*f)}
+        var nW=Math.max(20,start.W+dW),nH=Math.max(20,start.H+dH);
+        if(lock){var f=Math.max(nW/start.W,nH/start.H);nW=rxR2(start.W*f);nH=rxR2(start.H*f)}
         var gx=X,gy=Y,gw=W*(nW/start.W),gh=H*(nH/start.H);
         if(anchorSel()==='c'){gx=X-(gw-W)/2;gy=Y-(gh-H)/2}
         ghost.style.left=gx+'px';ghost.style.top=gy+'px';
@@ -13835,18 +13834,17 @@ function rxPageHandles(t,stage,root){
         ghost.textContent=rxR2(nW)+' × '+rxR2(nH)+' mm';
         start.nW=nW;start.nH=nH;
       }
-      function cancel(){el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',cancel);ghost.style.display='none';start=null}
       function up(){
-        el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',cancel);
+        el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
         ghost.style.display='none';
         if(!start.nW)return;
-        var all=root.querySelector('[data-pg-all]');if(all&&all.checked&&!window.confirm('Modifier les dimensions de toutes les pages ?'))return;var r=rxPageTransform(s,{page:s.current,newW:start.nW,newH:start.nH,all:!!(all&&all.checked)});
+        var all=root.querySelector('[data-pg-all]');var r=rxPageTransform(s,{page:s.current,newW:start.nW,newH:start.nH,all:!!(all&&all.checked)});
         if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
         t.idState=r.state;
         try{toast('Page '+s.current+' : '+r.note,'ok')}catch(_){}
         dirty(t);render(t,stage);
       }
-      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',cancel);
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);
     });
     ov.appendChild(el);
   });
@@ -13862,7 +13860,6 @@ function rxPageHandles(t,stage,root){
   if(ap&&!ap.__rx){ap.__rx=1;ap.addEventListener('click',function(){
     var wi=root.querySelector('[data-pg="w"]'),hi=root.querySelector('[data-pg="h"]');
     var all=root.querySelector('[data-pg-all]');
-    if(all&&all.checked&&!window.confirm('Modifier les dimensions de toutes les pages ?'))return;
     var r=rxPageTransform(s,{page:s.current,newW:+(wi&&wi.value)||s.width,newH:+(hi&&hi.value)||s.height,all:!!(all&&all.checked)});
     if(!r.ok){try{toast(r.err,'err')}catch(_){};return}
     t.idState=r.state;try{toast('Redimensionnement : '+r.note,'ok')}catch(_){}
