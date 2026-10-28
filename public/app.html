@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Readix Reader</title>
+<title>Readox</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1336,213 +1336,6 @@ button.rxw-st:hover{background:var(--rx-hover)}
 
 <input type="file" id="hiddenFile" accept="application/pdf" hidden>
 <input type="file" id="hiddenDocFile" accept=".docx,.txt,.html,.htm,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/html" hidden>
-<script id="readix-word-engine">
-/*! Readix Word Engine A3 — Readix Document Studio. Moteur de traitement de texte local (navigateur). */
-(function(){'use strict';
-const RWE={active:null};
-
-/* Readix Word Engine — jeu d'icônes (reproduction de la maquette) */
-const RXI=(()=>{
-const N='#13305F',B='#0A56B4',L='#2A6CC0',sw='stroke-linecap="round" stroke-linejoin="round"';
-const s=(body,vb='0 0 24 24')=>`<svg viewBox="${vb}" aria-hidden="true" fill="none" ${sw}>${body}</svg>`;
-const txt=(t,o)=>`<text x="${o.x||12}" y="${o.y||17.6}" text-anchor="middle" font-family="${o.f||'Segoe UI,Noto Sans,Arial,sans-serif'}" font-size="${o.s||16}" font-weight="${o.w||400}" ${o.i?'font-style="italic"':''} fill="${o.c||N}">${t}</text>`;
-const lines=(ys,x1,x2,c=N,w=2)=>ys.map((y,i)=>`<path d="M${Array.isArray(x1)?x1[i]:x1} ${y}H${Array.isArray(x2)?x2[i]:x2}" stroke="${c}" stroke-width="${w}"/>`).join('');
-return {
- chev:s(`<path d="M3.5 6 8 10.5 12.5 6" stroke="currentColor" stroke-width="1.9"/>`,'0 0 16 16'),
- chevs:s(`<path d="M4 6.5 8 10.5 12 6.5" stroke="currentColor" stroke-width="1.7"/>`,'0 0 16 16'),
- tri:s(`<path d="M3 5.5h10L8 11z" fill="currentColor"/>`,'0 0 16 16'),
- grip:`<svg viewBox="0 0 4 18" aria-hidden="true"><circle cx="2" cy="2" r="1.3" fill="currentColor"/><circle cx="2" cy="7" r="1.3" fill="currentColor"/><circle cx="2" cy="12" r="1.3" fill="currentColor"/><circle cx="2" cy="17" r="1.3" fill="currentColor"/></svg>`,
- logo:s(`<path d="M6 4.5h7.2c3.6 0 5.8 2 5.8 5.2 0 2.5-1.4 4.2-3.7 4.9L19.6 21h-4l-3.8-5.9H9.7V21H6z" fill="#fff"/><path d="M9.7 7.6v4.6h3.3c1.7 0 2.6-.8 2.6-2.3s-.9-2.3-2.6-2.3z" fill="#0157AB"/><path d="M6 4.5 3.2 2.8 3.6 6 6 7.4z" fill="#fff"/><path d="M4.2 8.6 1.9 10l2.3.9z" fill="#fff"/>`),
- search:s(`<circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="1.9"/><path d="m15.3 15.3 5 5" stroke="currentColor" stroke-width="1.9"/>`),
- up:s(`<path d="M5 15 12 8l7 7" stroke="currentColor" stroke-width="2"/>`),
- down:s(`<path d="m5 9 7 7 7-7" stroke="currentColor" stroke-width="2"/>`),
- min:s(`<path d="M4 12h16" stroke="#fff" stroke-width="1.4"/>`),
- max:s(`<rect x="4.5" y="4.5" width="15" height="15" stroke="#fff" stroke-width="1.4"/>`),
- restore:s(`<rect x="4.5" y="7.5" width="12" height="12" stroke="#fff" stroke-width="1.4"/><path d="M7.5 7.5v-3h12v12h-3" stroke="#fff" stroke-width="1.4"/>`),
- close:s(`<path d="m5 5 14 14M19 5 5 19" stroke="currentColor" stroke-width="1.4"/>`),
- x:s(`<path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8"/>`),
- /* --- barre standard --- */
- new:s(`<path d="M5.5 2.5h9l4 4v15h-13z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M14.5 2.5v4h4" stroke="${N}" stroke-width="1.5"/>`),
- open:s(`<path d="M2.5 5.5h6.3l2 2H19v3" fill="#E7A94B" stroke="#B87A22" stroke-width="1.2"/><path d="M2.5 5.5v14h16.2l3-9H6.2l-3.7 9" fill="#F4C875" stroke="#B87A22" stroke-width="1.2"/><path d="M14 4.2c1.5-1.4 3.6-1.3 4.8.2" stroke="#8E6A3A" stroke-width="1.1"/><path d="m18.9 2.9.1 1.8-1.8.2" stroke="#8E6A3A" stroke-width="1.1"/>`),
- save:s(`<path d="M3.5 3.5h13.5l3.5 3.5v13.5h-17z" fill="#2B4470" stroke="#12254A" stroke-width="1.2"/><rect x="7" y="3.5" width="8.5" height="5.3" fill="#D9E3F1"/><rect x="12.4" y="4.4" width="1.8" height="3.4" fill="#2B4470"/><rect x="6" y="12.4" width="12" height="8.1" fill="#F4F7FB"/><path d="M8 15h8M8 17.6h8" stroke="#9FB0C8" stroke-width="1.1"/>`),
- saveas:s(`<path d="M3.5 3.5h13.5l3.5 3.5v13.5h-17z" fill="#fff" stroke="${B}" stroke-width="1.5"/><rect x="7" y="3.5" width="8.5" height="5.3" stroke="${B}" stroke-width="1.3"/><rect x="6.5" y="12.5" width="11" height="8" stroke="${N}" stroke-width="1.3"/><path d="M12.4 5v2.3" stroke="${B}" stroke-width="1.3"/>`),
- print:s(`<path d="M7 8V3.5h10V8" fill="#fff" stroke="${N}" stroke-width="1.5"/><rect x="3" y="8" width="18" height="9" rx="1.8" fill="#DCE6F3" stroke="${N}" stroke-width="1.5"/><path d="M6.5 11h2" stroke="${B}" stroke-width="1.6"/><path d="M7 14.5h10v6H7z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M9.3 17h5.4" stroke="${N}" stroke-width="1.1"/>`),
- undo:s(`<path d="M8.6 4.8 4.4 9l4.2 4.2" stroke="currentColor" stroke-width="2"/><path d="M4.8 9H14a5.6 5.6 0 0 1 0 11.2h-3" stroke="currentColor" stroke-width="2"/>`),
- redo:s(`<path d="m15.4 4.8 4.2 4.2-4.2 4.2" stroke="currentColor" stroke-width="2"/><path d="M19.2 9H10a5.6 5.6 0 0 0 0 11.2h3" stroke="currentColor" stroke-width="2"/>`),
- shapes:s(`<rect x="3.5" y="4" width="17" height="16" rx="1.6" stroke="${N}" stroke-width="1.6"/><path d="M3.8 9.4c4.3.8 8 4.5 9.4 10.4" stroke="${N}" stroke-width="1.6"/><path d="m6.4 16.8 2.6-2.5" stroke="${N}" stroke-width="1.4"/>`),
- chart:s(`<path d="M3.5 3.5v17h17" stroke="${B}" stroke-width="1.6"/><rect x="6.5" y="11" width="3" height="9.5" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="11.5" y="5" width="3" height="15.5" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="16.5" y="8.5" width="3" height="12" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><path d="M11.9 15.2c.7-1.7 2.3-1.7 2.3.4" stroke="${B}" stroke-width="1.1"/>`),
- painter:s(`<rect x="10.2" y="2.5" width="4" height="6.2" rx="1.2" stroke="${N}" stroke-width="1.5"/><path d="M8.5 8.7h7.4l1.6 4.4H6.9z" fill="#E5EEF9" stroke="${N}" stroke-width="1.5"/><path d="M7.4 13.1c-.6 2.1-.5 3.4.7 4.1" stroke="${N}" stroke-width="1.5"/><path d="M6 19.4c2.9 2.1 8.4 2.2 11.6-.3" stroke="${B}" stroke-width="1.9"/><path d="m15.6 16.9 2.3 2.2-2.6 1.6" stroke="${B}" stroke-width="1.7"/>`),
- paste:s(`<rect x="3" y="5" width="15" height="15.5" rx="1.6" fill="#F6CF95" stroke="#C88B35" stroke-width="1.3"/><rect x="7.2" y="3" width="6.6" height="4" rx="1.1" fill="#fff" stroke="#8A6A40" stroke-width="1.2"/><path d="M12.5 11.5h6l2.5 2.5v7.5h-8.5z" fill="#fff" stroke="#1C4B94" stroke-width="1.3"/><path d="m15.4 17.8 1.3 1.3 2.4-2.8" stroke="#D83B32" stroke-width="1.4"/>`),
- table:s(`<rect x="4" y="3.5" width="16" height="17" rx="1" stroke="${N}" stroke-width="1.6"/><path d="M12 3.5v17" stroke="${N}" stroke-width="1.6"/><path d="M7 8h2M7 12h2M7 16h2M15 8h2M15 12h2M15 16h2" stroke="${B}" stroke-width="1.6" stroke-dasharray="0.1 3"/>`),
- object:s(`<rect x="2.5" y="4" width="19" height="13.5" rx="1.6" fill="#E3EDF9" stroke="${N}" stroke-width="1.5"/><rect x="5" y="6.5" width="14" height="8.5" fill="#DFF3E4" stroke="#2C8A57" stroke-width="1.1"/><path d="M5 9.3h14M5 12.1h14M9.7 6.5V15M14.3 6.5V15" stroke="#2C8A57" stroke-width=".9"/><path d="M8.5 20.5h7M12 17.5v3" stroke="${N}" stroke-width="1.5"/>`),
- columns:s(`<rect x="4" y="3" width="16" height="18" stroke="${N}" stroke-width="1.5"/><path d="M12 3v18" stroke="${N}" stroke-width="1.2" stroke-dasharray="1.5 1.6"/><path d="M6.5 7h3M6.5 10h3M14.5 7h3M14.5 10h3" stroke="${B}" stroke-width="1.3"/><path d="m6.8 15.6 2.2 2.2M17.2 15.6 15 17.8" stroke="${N}" stroke-width="1.3"/>`),
- nav:s(`<rect x="3" y="4" width="18" height="16" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M3 8h18" stroke="${N}" stroke-width="1.5"/><path d="M6 11.2h4M6 14.2h4M6 17.2h4" stroke="${B}" stroke-width="1.6"/><path d="M13 11.2h5M13 14.2h5M13 17.2h5" stroke="${N}" stroke-width="1.3"/><path d="M11.5 8v12" stroke="${N}" stroke-width="1" stroke-dasharray="1.4 1.4"/>`),
- reading:s(`<rect x="3" y="3.5" width="8" height="17" rx=".8" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/><rect x="13" y="3.5" width="8" height="17" rx=".8" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/><path d="M5 7h4M5 10h4M5 13h2.5M15 7h4M15 10h4M15 13h2.5" stroke="${N}" stroke-width="1.3"/><path d="M5 16.5h4v2H5zM15 16.5h4v2h-4z" fill="${B}"/>`),
- exportpdf:s(`<path d="M5.5 2.5h9l4 4v15h-13z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M14.5 2.5v4h4" stroke="${N}" stroke-width="1.5"/><path d="m9.2 15.2 3.3-3.3 1.8 1.8-3.3 3.3H9.2z" stroke="${B}" stroke-width="1.3"/><path d="M15.5 19.6h3.2l-1.6 1.9" stroke="${N}" stroke-width="1.3"/>`),
- help:s(`<circle cx="12" cy="12" r="9" stroke="${B}" stroke-width="1.8"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.8 2.4c-.8.4-1.2 1-1.2 1.9v.6" stroke="${N}" stroke-width="2"/><circle cx="12" cy="17.2" r="1.15" fill="${N}"/>`),
- /* --- barre de mise en forme --- */
- bold:s(txt('B',{w:700,s:17,c:'#0A1F5C'})),
- italic:s(txt('I',{i:1,s:17,f:'Georgia,Times New Roman,serif',c:N})),
- underline:s(txt('U',{s:16,y:16,c:N})+`<path d="M6.5 20.2h11" stroke="${N}" stroke-width="1.5"/>`),
- strike:s(txt('abc',{s:12.5,y:16.2,w:600,c:N})+`<path d="M3.5 12.5h17" stroke="${N}" stroke-width="1.3"/>`),
- fontcolor:s(txt('A',{s:17,y:16.5,c:N})),
- hilite:s(txt('A',{s:17,y:16.5,c:N})+`<path d="M17.5 3.2c.9-.9 1.9-.6 2.4.2M19.2 5.2c.5-.4 1-.2 1.3.2" stroke="${B}" stroke-width="1.2"/>`),
- left:s(lines([6,10,14,18],4,[20,15,20,14])),
- center:s(lines([6,10,14,18],[4,7,4,7.5],[20,17,20,16.5])),
- right:s(lines([6,10,14,18],[4,9,4,10],20)),
- justify:s(lines([6,10,14,18],4,20)),
- linespacing:s(`<path d="M5.5 5v14" stroke="${B}" stroke-width="1.6"/><path d="M3.3 7.2 5.5 4.6l2.2 2.6M3.3 16.8l2.2 2.6 2.2-2.6" stroke="${B}" stroke-width="1.5" fill="${B}"/>`+lines([6,10,14,18],10.5,20.5)),
- bullets:s(`<circle cx="5" cy="6.5" r="1.7" fill="${B}"/><circle cx="5" cy="12" r="1.7" fill="${B}"/><circle cx="5" cy="17.5" r="1.7" fill="${B}"/>`+lines([6.5,12,17.5],9.5,20.5)),
- numbering:s(`<path d="M4.3 5.2 5.6 4.5v4" stroke="${B}" stroke-width="1.4"/><path d="M4 10.9c.7-.9 2.3-.6 2 .6-.2.8-1.9 1.6-2 2.5h2.2" stroke="${B}" stroke-width="1.2"/><path d="M4.1 16.1h1.8l-1 1.2c1 0 1.5.5 1.1 1.3-.4.6-1.4.6-2 .2" stroke="${B}" stroke-width="1.1"/>`+lines([6.5,12,17.5],9.5,20.5)),
- multilevel:s(`<path d="M3.5 5.2 6 6.5 3.5 7.8z" fill="${N}"/><path d="M3.5 10.7 6 12l-2.5 1.3z" fill="${N}"/><path d="M3.5 16.2 6 17.5l-2.5 1.3z" fill="${N}"/><path d="M4.8 4.2v14" stroke="${B}" stroke-width=".9" stroke-dasharray="1 1.2"/>`+lines([6.5,12,17.5],8.5,20.5)),
- outdent:s(lines([5,19],4,20)+lines([10,14],10,20)+`<path d="M8 9.3 4.5 12 8 14.7z" fill="${B}"/><path d="M4.8 12H8" stroke="${B}" stroke-width="1.6"/>`),
- indent:s(lines([5,19],4,20)+lines([10,14],11,20)+`<path d="M4 12h5" stroke="${B}" stroke-width="1.6"/><path d="M6.8 9.4 9.5 12l-2.7 2.6z" fill="${B}"/><path d="M5 5.9v2M5 16v2" stroke="${B}" stroke-width="1.2"/>`),
- shading:s(`<path d="M6.5 13.5 11 5c.6-1 1.9-1.1 2.5-.1l2.2 3.7c.5.9 0 2-1 2.3l-4.3 1.2" stroke="${B}" stroke-width="1.5"/><path d="M8.3 10.2c-1.5.7-2.6 2.5-1.8 3.9.7 1.3 2.8 1.3 3.9 0" stroke="${B}" stroke-width="1.5"/><path d="M16.8 11.5c1.4 1.4 2.3 2.6 2.3 3.6a1.8 1.8 0 0 1-3.6 0c0-1 .6-2.2 1.3-3.6z" fill="${B}"/><rect x="4" y="17.8" width="16" height="3" rx=".6" fill="#DCEAFB" stroke="${B}" stroke-width="1.3"/>`),
- styles:s(txt('A',{s:15,y:14.3,c:B,x:10})+`<path d="M4.4 18.4c2.2-1.6 4.2-1.3 5.3.3 1.3-1.9 3.6-1.9 5.8-.4" stroke="${B}" stroke-width="1.5"/><path d="m15.4 20 5.2-8.3 1.4.9-5.2 8.2-1.8.6z" fill="#fff" stroke="${N}" stroke-width="1.3"/>`),
- pen:s(`<path d="m4.4 19.6 1-4.2L16.7 4.1a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.6 18.6z" fill="#5AA2EA" stroke="#1F4F92" stroke-width="1.3"/><path d="m5.4 15.4 3.2 3.2" stroke="#1F4F92" stroke-width="1.3"/><path d="m4.4 19.6 1-4.2 3.2 3.2z" fill="#F4D7A8"/><path d="M4.4 19.6 5 17.4 6.6 19z" fill="#1B2948"/><path d="m15.2 5.6 3.2 3.2" stroke="#1F4F92" stroke-width="1.1"/>`),
- more:s(`<path d="M5 9.5 12 16l7-6.5" stroke="${N}" stroke-width="2"/>`),
- /* --- règle --- */
- tabL:s(`<path d="M5 3v8h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
- tabC:s(`<path d="M2 11h10M7 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
- tabR:s(`<path d="M9 3v8H2" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
- tabD:s(`<path d="M2 11h10M6 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/><circle cx="10" cy="7" r="1.3" fill="currentColor"/>`,'0 0 14 14'),
- mkDown:`<svg viewBox="0 0 12 9" aria-hidden="true"><path d="M1 1h10L6 8z" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
- mkUp:`<svg viewBox="0 0 12 9" aria-hidden="true"><path d="M1 8h10L6 1z" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
- mkBox:`<svg viewBox="0 0 12 8" aria-hidden="true"><rect x="1" y=".8" width="10" height="6.4" fill="#fff" stroke="currentColor" stroke-width="1.2"/></svg>`,
- /* --- barre de dessin --- */
- drawopts:s(`<path d="M4 5.5h16M4 12h16M4 18.5h16" stroke="${B}" stroke-width="1.7"/><circle cx="8.5" cy="5.5" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/><circle cx="15.5" cy="12" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/><circle cx="9.5" cy="18.5" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/>`),
- select:s(`<path d="M8.5 7.5 16.5 11l-3.3 1.2-1.2 3.3z" fill="${B}" stroke="${B}" stroke-width="1.2"/><path d="m13.3 12.4 3.2 3.2" stroke="${B}" stroke-width="1.5"/>`),
- line:s(`<path d="m5.5 5.5 13 13" stroke="#0B2F7E" stroke-width="2.1"/>`),
- freeline:s(`<path d="M18.5 5.5 5.5 18.5" stroke="${L}" stroke-width="1.5"/>`),
- rect:s(`<rect x="4" y="5.5" width="16" height="13" stroke="${L}" stroke-width="1.6"/>`),
- oval:s(`<circle cx="12" cy="12" r="7.8" stroke="${L}" stroke-width="1.6"/>`),
- circle:s(`<circle cx="12" cy="12" r="7.8" stroke="${L}" stroke-width="1.6"/>`),
- wordart:s(txt('A',{s:17,y:18.5,w:600,c:'#13233F',x:11})+`<path d="M18.2 3.8v3.2M16.6 5.4h3.2" stroke="${B}" stroke-width="1.2"/>`),
- house:s(`<path d="M12 4.2 3.8 11.5h3v8.3h10.4v-8.3h3z" stroke="${B}" stroke-width="1.7"/>`),
- arrow:s(`<path d="M5.5 5.5 16 16" stroke="#0B2F6B" stroke-width="2.3"/><path d="M19 19h-8.2l8.2-8.2z" fill="#0B2F6B"/>`),
- textbox:s(`<rect x="4" y="4" width="16" height="16" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M8 8.5V7.2h2.4M8 11V9.5" stroke="${B}" stroke-width="1.4"/><path d="M16 15.5v1.3h-2.4" stroke="${B}" stroke-width="1.4"/>`),
- ellipse:s(`<ellipse cx="12" cy="12" rx="8.5" ry="5.6" stroke="${L}" stroke-width="1.6"/>`),
- diagram:s(`<path d="M15.5 3.5 6.2 17.5h9.3z" stroke="${B}" stroke-width="1.5"/><path d="M12.6 8v9.5M9.4 13h3.2" stroke="${B}" stroke-width="1.2"/><rect x="4" y="18.5" width="16" height="2.5" fill="${B}"/>`),
- clipart:s(`<path d="M9.2 3.5 4 8v8.8l5.2 3.7V11.7L16 8V3.5z" fill="#1A56B7" stroke="#0B3A85" stroke-width="1.1"/><path d="M9.2 11.7 16 8v9.2l-6.8 3.3z" fill="#5A9BE5" stroke="#0B3A85" stroke-width="1.1"/><path d="M16 11.3c2.4.3 4 1.5 4 2.9 0 1.2-1.1 2.3-2.9 2.8" stroke="#0B3A85" stroke-width="1.2"/><path d="m16.4 18.3.9-1.4-1.5-.8" stroke="#0B3A85" stroke-width="1.1"/>`),
- image:s(`<path d="M9 7.5v6.5h6.5" stroke="${B}" stroke-width="1.9"/><path d="m13.2 11.6 2.5 2.4-2.5 2.4" stroke="${B}" stroke-width="1.7"/><path d="M11 9.5h2.5" stroke="${B}" stroke-width="1.3"/>`),
- fill:s(`<path d="m4.6 10.4 6-6 7.2 7.2-5.5 5.5a2 2 0 0 1-2.8 0l-4.9-4.9a1.3 1.3 0 0 1 0-1.8z" fill="#E9F1FC" stroke="${B}" stroke-width="1.5"/><path d="M4.6 10.8h12.8" stroke="${B}" stroke-width="1.3"/><path d="M8.3 3.2c1.4-.8 2.7.2 2.3 1.6" stroke="${N}" stroke-width="1.3"/><path d="M19.4 13.5c1.1 1.2 1.7 2.2 1.7 3a1.7 1.7 0 0 1-3.4 0c0-.8.6-1.8 1.7-3z" fill="${B}"/><path d="m15.2 19.4 2.1 1.4 2.3-1.8" stroke="${N}" stroke-width="1.2"/>`),
- linecolor:s(`<rect x="3.5" y="3.5" width="17" height="17" rx="1.4" stroke="${N}" stroke-width="1.5"/><path d="M6.5 17.5 17.5 6.5" stroke="${B}" stroke-width="1.5"/><path d="M11.8 9.2v3.2h3.2" stroke="${N}" stroke-width="1.3"/>`),
- linestyle:s(`<path d="M8 3.5v17M16 3.5v17" stroke="${N}" stroke-width="1.3"/><path d="M4.5 6.5h15M4.5 17.5h15" stroke="${B}" stroke-width="1.6"/><circle cx="12" cy="12" r="2" stroke="${N}" stroke-width="1.4"/><path d="M4.5 12h4.5M15 12h4.5" stroke="${B}" stroke-width="1.6"/>`),
- dashstyle:s(`<path d="M4.5 7.5h15M4.5 16.5h15" stroke="${N}" stroke-width="1.7"/><path d="m7 4.5-2.8 3 2.8 3M17 13.5l2.8 3-2.8 3" stroke="${B}" stroke-width="1.7"/><path d="M10.5 12h3" stroke="${N}" stroke-width="1.7"/>`),
- arrowstyle:s(`<path d="M12 3.5v12.5" stroke="#F0A14A" stroke-width="3"/><path d="M6.8 13.8 12 20.3l5.2-6.5z" fill="#F0A14A"/>`),
- shadow:s(`<path d="M6.5 3h9.5l3.5 3.5v14.5h-13z" fill="#E6EFFB" stroke="#0B3A85" stroke-width="1.5"/><rect x="9" y="7.5" width="8" height="6.5" fill="#fff" stroke="#0B3A85" stroke-width="1.2"/><path d="M9 11h8M12 7.5V14" stroke="${B}" stroke-width="1"/><path d="M9 16.8h8" stroke="#0B3A85" stroke-width="1.3"/>`),
- /* --- barre d'état --- */
- globe:s(`<circle cx="12" cy="12" r="8.7" stroke="currentColor" stroke-width="1.5"/><path d="M3.3 12h17.4M12 3.3c2.6 2.4 3.6 5.3 3.6 8.7s-1 6.3-3.6 8.7c-2.6-2.4-3.6-5.3-3.6-8.7S9.4 5.7 12 3.3zM5 7.2h14M5 16.8h14" stroke="currentColor" stroke-width="1.2"/>`),
- vPage:s(`<rect x="3.5" y="3.5" width="17" height="17" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9h17M12 9v11.5" stroke="currentColor" stroke-width="1.6"/>`),
- vWeb:s(`<rect x="5" y="3" width="14" height="18" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 6.5h9M7.5 9.5h9" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="12" width="6" height="5" fill="currentColor" opacity=".35"/><path d="M15 12.5h1.5M15 15h1.5" stroke="currentColor" stroke-width="1.4"/>`),
- vOutline:s(`<rect x="5" y="3" width="14" height="18" stroke="currentColor" stroke-width="1.5"/><path d="M8 7h8M8 10.5h8M8 14h8M8 17.5h5" stroke="currentColor" stroke-width="1.5"/>`),
- /* --- divers (menus) --- */
- cut:s(`<circle cx="6.5" cy="17.5" r="2.7" stroke="${N}" stroke-width="1.5"/><circle cx="17.5" cy="17.5" r="2.7" stroke="${N}" stroke-width="1.5"/><path d="M8.3 15.5 17 4M15.7 15.5 7 4" stroke="${N}" stroke-width="1.5"/>`),
- copy:s(`<rect x="8" y="7.5" width="12" height="13" rx="1.2" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M5.5 16.5H4v-13h11.5V5" stroke="${N}" stroke-width="1.5"/>`),
- link:s(`<path d="M10 13.5a4.2 4.2 0 0 0 6.2.4l2.6-2.6a4.2 4.2 0 0 0-6-6L11.5 6.6" stroke="${B}" stroke-width="1.7"/><path d="M14 10.5a4.2 4.2 0 0 0-6.2-.4l-2.6 2.6a4.2 4.2 0 0 0 6 6l1.3-1.3" stroke="${B}" stroke-width="1.7"/>`),
- comment:s(`<path d="M4 5h16v11H10l-4.5 3.7V16H4z" fill="#FFF4C2" stroke="#B08A12" stroke-width="1.5"/><path d="M8 9h8M8 12h5" stroke="#B08A12" stroke-width="1.4"/>`),
- pagebreak:s(`<path d="M5 3v6h14V3M5 21v-6h14v6" stroke="${N}" stroke-width="1.5"/><path d="M3 12h3M9 12h2.5M14.5 12H17M20 12h1" stroke="${B}" stroke-width="1.6"/>`),
- symbol:s(txt('Ω',{s:16,c:N})),
- date:s(`<rect x="3.5" y="5" width="17" height="15.5" rx="1.5" stroke="${N}" stroke-width="1.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="${N}" stroke-width="1.5"/><path d="M7 13h2M11 13h2M15 13h2M7 16.5h2M11 16.5h2" stroke="${B}" stroke-width="1.6"/>`),
- equation:s(txt('π',{s:17,c:N,x:9})+`<path d="M15 9.5h5M17.5 7v5M15 16h5" stroke="${B}" stroke-width="1.5"/>`),
- bookmark:s(`<path d="M7 3.5h10v17l-5-3.8-5 3.8z" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/>`),
- footnote:s(txt('ab',{s:12,y:14,c:N,x:9})+txt('1',{s:8,y:9,c:B,x:18})+`<path d="M4 19.5h16" stroke="${N}" stroke-width="1.3"/>`),
- header:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/><rect x="6.5" y="5" width="11" height="3.5" fill="${B}"/><path d="M7 12h10M7 15h10M7 18h6" stroke="${N}" stroke-width="1.2"/>`),
- footer:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/><rect x="6.5" y="15.5" width="11" height="3.5" fill="${B}"/><path d="M7 6h10M7 9h10M7 12h6" stroke="${N}" stroke-width="1.2"/>`),
- pagenum:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/>`+txt('#',{s:10,y:19,c:B})+`<path d="M7 6.5h10M7 9.5h10M7 12.5h7" stroke="${N}" stroke-width="1.2"/>`),
- hr:s(`<path d="M3 12h18" stroke="${N}" stroke-width="2"/><path d="M6 7h12M6 17h12" stroke="#9FB0C8" stroke-width="1.3"/>`),
- font:s(txt('A',{s:14,y:15,c:N,x:9})+txt('a',{s:11,y:15,c:B,x:17})+`<path d="M4 19.5h16" stroke="${N}" stroke-width="1.2"/>`),
- paragraph:s(`<path d="M13 4v16M17 4v16M17 4h-6.5a4 4 0 0 0 0 8H13" stroke="${N}" stroke-width="1.6"/>`),
- borders:s(`<rect x="4" y="4" width="16" height="16" stroke="${N}" stroke-width="1.2" stroke-dasharray="1.2 2"/><path d="M4 20h16" stroke="${B}" stroke-width="2.4"/>`),
- tabs:s(`<path d="M4 20h16" stroke="${N}" stroke-width="1.5"/><path d="M7 7v8h4M15 7v8" stroke="${B}" stroke-width="1.9"/><path d="M13 15h4" stroke="${B}" stroke-width="1.9"/>`),
- casechg:s(txt('Aa',{s:14,c:N})),
- clear:s(txt('A',{s:14,y:15,c:N,x:10})+`<path d="m14.5 13.5 5.5 5.5M20 13.5 14.5 19" stroke="#D83B32" stroke-width="1.6"/>`),
- spell:s(txt('abc',{s:10,y:11,w:600,c:N})+`<path d="m7 16 3 3 7-7" stroke="#2C8A57" stroke-width="1.9"/>`),
- track:s(`<path d="M4 5h16v11H10l-4.5 3.7V16H4z" stroke="${N}" stroke-width="1.5"/><path d="m8.3 12.6 1-3 5-5 2 2-5 5z" fill="#DCEAFB" stroke="${B}" stroke-width="1.2"/>`),
- accept:s(`<path d="m5 12.5 4.5 4.5L19 7.5" stroke="#1A6B2E" stroke-width="2.2"/>`),
- reject:s(`<path d="m6 6 12 12M18 6 6 18" stroke="#B3261E" stroke-width="2.2"/>`),
- stats:s(`<path d="M5 20V10M10 20V5M15 20v-7M20 20V8" stroke="${B}" stroke-width="2.4"/>`),
- lang:s(`<circle cx="12" cy="12" r="8.7" stroke="${N}" stroke-width="1.5"/><path d="M3.3 12h17.4M12 3.3c2.6 2.4 3.6 5.3 3.6 8.7s-1 6.3-3.6 8.7c-2.6-2.4-3.6-5.3-3.6-8.7S9.4 5.7 12 3.3z" stroke="${N}" stroke-width="1.2"/>`),
- autocorrect:s(txt('A',{s:13,y:13,c:N,x:8})+`<path d="m11.5 16 2.5 2.5 6-6" stroke="#2C8A57" stroke-width="1.9"/>`),
- settings:s(`<circle cx="12" cy="12" r="3" stroke="${N}" stroke-width="1.6"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1" stroke="${N}" stroke-width="1.6"/>`),
- rowabove:s(`<rect x="3.5" y="11" width="17" height="9" stroke="${N}" stroke-width="1.4"/><path d="M3.5 15.5h17M12 11v9" stroke="${N}" stroke-width="1.2"/><path d="M12 3v6M9 6h6" stroke="#2C8A57" stroke-width="1.9"/>`),
- rowbelow:s(`<rect x="3.5" y="4" width="17" height="9" stroke="${N}" stroke-width="1.4"/><path d="M3.5 8.5h17M12 4v9" stroke="${N}" stroke-width="1.2"/><path d="M12 15v6M9 18h6" stroke="#2C8A57" stroke-width="1.9"/>`),
- colleft:s(`<rect x="11" y="3.5" width="9" height="17" stroke="${N}" stroke-width="1.4"/><path d="M15.5 3.5v17M11 12h9" stroke="${N}" stroke-width="1.2"/><path d="M3 12h6M6 9v6" stroke="#2C8A57" stroke-width="1.9"/>`),
- colright:s(`<rect x="4" y="3.5" width="9" height="17" stroke="${N}" stroke-width="1.4"/><path d="M8.5 3.5v17M4 12h9" stroke="${N}" stroke-width="1.2"/><path d="M15 12h6M18 9v6" stroke="#2C8A57" stroke-width="1.9"/>`),
- delrow:s(`<rect x="3.5" y="8" width="17" height="8" stroke="${N}" stroke-width="1.4"/><path d="M12 8v8" stroke="${N}" stroke-width="1.2"/><path d="m15 17 5 5M20 17l-5 5" stroke="#B3261E" stroke-width="1.7"/>`),
- delcol:s(`<rect x="8" y="3.5" width="8" height="17" stroke="${N}" stroke-width="1.4"/><path d="M8 12h8" stroke="${N}" stroke-width="1.2"/><path d="m17 3 5 5M22 3l-5 5" stroke="#B3261E" stroke-width="1.7"/>`),
- deltable:s(`<rect x="3.5" y="4" width="15" height="13" stroke="${N}" stroke-width="1.4"/><path d="M3.5 8.5h15M3.5 12.8h15M8.5 4v13M13.5 4v13" stroke="${N}" stroke-width="1.1"/><path d="m15.5 15.5 5.5 5.5M21 15.5 15.5 21" stroke="#B3261E" stroke-width="1.8"/>`),
- merge:s(`<rect x="3.5" y="5" width="17" height="14" stroke="${N}" stroke-width="1.4"/><path d="M5.5 12h5M13.5 12h5" stroke="${B}" stroke-width="1.6"/><path d="m8.5 9.6 2.2 2.4-2.2 2.4M15.5 9.6 13.3 12l2.2 2.4" stroke="${B}" stroke-width="1.5"/>`),
- split:s(`<rect x="3.5" y="5" width="17" height="14" stroke="${N}" stroke-width="1.4"/><path d="M12 5v14" stroke="${N}" stroke-width="1.3"/><path d="m7.5 9.6-2.2 2.4 2.2 2.4M16.5 9.6l2.2 2.4-2.2 2.4" stroke="${B}" stroke-width="1.5"/>`),
- sort:s(`<path d="M7 4v16M4 16.5 7 20l3-3.5" stroke="${N}" stroke-width="1.6"/>`+txt('A',{s:8,y:10,c:B,x:16})+txt('Z',{s:8,y:19,c:B,x:16})),
- formula:s(txt('fx',{s:14,i:1,f:'Georgia,serif',c:N})),
- props:s(`<rect x="3.5" y="3.5" width="17" height="17" rx="1.4" stroke="${N}" stroke-width="1.4"/><path d="M7 8h10M7 12h10M7 16h6" stroke="${B}" stroke-width="1.5"/>`),
- window:s(`<rect x="3" y="4.5" width="18" height="15" rx="1.5" stroke="${N}" stroke-width="1.5"/><path d="M3 8.5h18" stroke="${N}" stroke-width="1.5"/>`),
- fullscreen:s(`<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" stroke="${N}" stroke-width="1.7"/>`),
- keyboard:s(`<rect x="2.5" y="6" width="19" height="12" rx="1.6" stroke="${N}" stroke-width="1.5"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1M6 12.5h1M16.5 12.5h1M8.5 15.5h7" stroke="${N}" stroke-width="1.6"/>`),
- info:s(`<circle cx="12" cy="12" r="9" stroke="${B}" stroke-width="1.7"/><path d="M12 11v6" stroke="${N}" stroke-width="2"/><circle cx="12" cy="7.6" r="1.2" fill="${N}"/>`),
- zoom:s(`<circle cx="10.5" cy="10.5" r="6.3" stroke="${N}" stroke-width="1.6"/><path d="m15.3 15.3 5 5M8 10.5h5M10.5 8v5" stroke="${N}" stroke-width="1.6"/>`),
- goto:s(`<path d="M4 12h13M13 7l5 5-5 5" stroke="${B}" stroke-width="1.9"/><path d="M20.5 4v16" stroke="${N}" stroke-width="1.6"/>`),
- replace:s(`<path d="M4 7h10M4 12h7M4 17h10" stroke="${N}" stroke-width="1.6"/><path d="m16 13 3 3-3 3M19 16h-6" stroke="${B}" stroke-width="1.6"/>`),
- selectall:s(`<rect x="4" y="4" width="16" height="16" stroke="${B}" stroke-width="1.5" stroke-dasharray="2 1.8"/><path d="M8 9h8M8 12h8M8 15h5" stroke="${N}" stroke-width="1.4"/>`),
- marks:s(`<path d="M13 4v16M17 4v16M17 4h-6.5a4 4 0 0 0 0 8H13" stroke="${B}" stroke-width="1.6"/>`),
- ruler:s(`<rect x="2.5" y="8" width="19" height="8" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M6 8v3M9.5 8v4.5M13 8v3M16.5 8v4.5" stroke="${N}" stroke-width="1.3"/>`),
- home:s(`<path d="M4 11 12 4l8 7v9h-5.5v-6h-5v6H4z" stroke="${B}" stroke-width="1.6"/>`),
- ai:s(`<path d="M12 3.5 13.7 9 19 10.7l-5.3 1.7L12 18l-1.7-5.6L5 10.7 10.3 9z" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><path d="M18.5 15.5 19.2 18l2.3.7-2.3.7-.7 2.4-.7-2.4-2.3-.7 2.3-.7z" fill="${B}"/>`),
- html:s(`<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4.5l-4 15" stroke="${N}" stroke-width="1.7"/>`),
- txtfile:s(`<path d="M5.5 2.5h9l4 4v15h-13z" stroke="${N}" stroke-width="1.5"/><path d="M8.5 11h7M8.5 14h7M8.5 17h5" stroke="${B}" stroke-width="1.4"/>`),
- eraser:s(`<path d="m4.5 14.5 8.5-8.5a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L12 19H8z" fill="#FBE3E5" stroke="${N}" stroke-width="1.4"/><path d="m9 10 5.8 5.8M8 19h12" stroke="${N}" stroke-width="1.4"/>`),
- front:s(`<rect x="3.5" y="3.5" width="11" height="11" fill="#fff" stroke="${N}" stroke-width="1.3"/><rect x="9.5" y="9.5" width="11" height="11" fill="${B}" stroke="${N}" stroke-width="1.3"/>`),
- back:s(`<rect x="9.5" y="9.5" width="11" height="11" fill="#fff" stroke="${N}" stroke-width="1.3"/><rect x="3.5" y="3.5" width="11" height="11" fill="${B}" stroke="${N}" stroke-width="1.3"/>`),
- rotr:s(`<path d="M18 11a6 6 0 1 1-2-4.5" stroke="${N}" stroke-width="1.7"/><path d="M16.5 3v4h-4" stroke="${B}" stroke-width="1.7"/>`),
- rotl:s(`<path d="M6 11a6 6 0 1 0 2-4.5" stroke="${N}" stroke-width="1.7"/><path d="M7.5 3v4h4" stroke="${B}" stroke-width="1.7"/>`),
- fliph:s(`<path d="M12 3v18" stroke="${N}" stroke-width="1.3" stroke-dasharray="2 2"/><path d="M9.5 6v12L3 18z" fill="${B}"/><path d="M14.5 6v12H21z" stroke="${N}" stroke-width="1.4"/>`),
- flipv:s(`<path d="M3 12h18" stroke="${N}" stroke-width="1.3" stroke-dasharray="2 2"/><path d="M6 9.5h12L18 3z" fill="${B}"/><path d="M6 14.5h12L18 21z" stroke="${N}" stroke-width="1.4"/>`),
- wrapfront:s(`<path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="#9FB0C8" stroke-width="1.4"/><rect x="8" y="7.5" width="8" height="9" fill="${B}"/>`),
- wrapbehind:s(`<rect x="8" y="7.5" width="8" height="9" fill="#BFD6F4"/><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="${N}" stroke-width="1.4"/>`),
- wrapinline:s(`<path d="M4 6h16M4 18h16M4 12h3M17 12h3" stroke="${N}" stroke-width="1.4"/><rect x="8.5" y="9" width="7" height="6" fill="${B}"/>`),
- alignL:s(`<path d="M4 3v18" stroke="${N}" stroke-width="1.6"/><rect x="6.5" y="6" width="12" height="4" fill="${B}"/><rect x="6.5" y="14" width="8" height="4" fill="${B}"/>`),
- alignC:s(`<path d="M12 3v18" stroke="${N}" stroke-width="1.6"/><rect x="6" y="6" width="12" height="4" fill="${B}"/><rect x="8" y="14" width="8" height="4" fill="${B}"/>`),
- alignR:s(`<path d="M20 3v18" stroke="${N}" stroke-width="1.6"/><rect x="5.5" y="6" width="12" height="4" fill="${B}"/><rect x="9.5" y="14" width="8" height="4" fill="${B}"/>`),
- trash:s(`<path d="M5 7h14M9.5 7V4.5h5V7M7 7l1 13h8l1-13" stroke="#B3261E" stroke-width="1.6"/>`),
- dup:s(`<rect x="8" y="8" width="12" height="12" rx="1" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="4" y="4" width="12" height="12" rx="1" fill="#fff" stroke="${N}" stroke-width="1.4"/>`),
- sup:s(txt('x',{s:15,y:18,c:N,x:9})+txt('2',{s:9,y:9,c:B,x:17})),
- sub:s(txt('x',{s:15,y:15,c:N,x:9})+txt('2',{s:9,y:21,c:B,x:17})),
- smallcaps:s(txt('Aᴀ',{s:14,c:N})),
- caps:s(txt('AB',{s:12.5,w:600,c:N})),
- lower:s(txt('ab',{s:14,c:N})),
- dstrike:s(txt('abc',{s:12.5,y:16.2,w:600,c:N})+`<path d="M3.5 11h17M3.5 14h17" stroke="${N}" stroke-width="1.1"/>`),
- grow:s(txt('A',{s:16,y:18,c:N,x:9})+`<path d="m15.5 9 2.5-3 2.5 3" stroke="${B}" stroke-width="1.6"/>`),
- shrink:s(txt('A',{s:13,y:18,c:N,x:9})+`<path d="m15.5 6 2.5 3 2.5-3" stroke="${B}" stroke-width="1.6"/>`),
-};})();
-
-/* ===================== Utilitaires sans état ===================== */
-const CM=37.7953, PT=96/72, GAP=22, ZWSP='\u200B';
-const PAPERS={A4:{n:'A4 (21 × 29,7 cm)',w:21,h:29.7},Letter:{n:'Lettre US (21,59 × 27,94 cm)',w:21.59,h:27.94},Legal:{n:'Légal (21,59 × 35,56 cm)',w:21.59,h:35.56},A5:{n:'A5 (14,8 × 21 cm)',w:14.8,h:21}};
-const FONTS=['Times New Roman','Arial','Calibri','Cambria','Georgia','Garamond','Book Antiqua','Palatino Linotype','Verdana','Tahoma','Trebuchet MS','Segoe UI','Helvetica','Century Gothic','Franklin Gothic Medium','Courier New','Consolas','Lucida Console','Comic Sans MS','Impact'];
-const SIZES=[8,9,10,10.5,11,12,14,16,18,20,22,24,26,28,36,48,72];
-const LANGS=[['fr-CA','Français (Canada)'],['fr-FR','Français (France)'],['en-CA','Anglais (Canada)'],['en-US','Anglais (États-Unis)'],['en-GB','Anglais (Royaume-Uni)'],['es-ES','Espagnol'],['de-DE','Allemand'],['it-IT','Italien'],['pt-BR','Portugais (Brésil)']];
-const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const fmtNum=(v,d=1)=>(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('fr-CA',{maximumFractionDigits:d});
-const parseNum=s=>{const v=parseFloat(String(s).replace(',','.').replace(/[^\d.\-]/g,''));return isFinite(v)?v:NaN;};
-function h(tag,cls,attrs,kids){const e=document.createElement(tag);if(cls)e.className=cls;if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}if(kids)for(const c of [].concat(kids))if(c!=null)e.append(c);return e;}
-function toHex(c){if(!c)return null;c=String(c).trim();if(c[0]==='#'){if(c.length===4)c='#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];return c.slice(0,7).toUpperCase();}const m=c.match(/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?/);if(!m)return null;if(m[4]!==undefined&&parseFloat(m[4])===0)return null;return '#'+[m[1],m[2],m[3]].map(x=>Math.round(+x).toString(16).padStart(2,'0')).join('').toUpperCase();}
-function mix(hex,t){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;if(t>0){r+=(255-r)*t;g+=(255-g)*t;b+=(255-b)*t;}else{r*=1+t;g*=1+t;b*=1+t;}return '#'+[r,g,b].map(x=>Math.round(x).toString(16).padStart(2,'0')).join('').toUpperCase();}
-const THEME=['#FFFFFF','#000000','#E7E6E6','#44546A','#4472C4','#ED7D31','#A5A5A5','#FFC000','#5B9BD5','#70AD47'];
-const STANDARD=['#C00000','#FF0000','#FFC000','#FFFF00','#92D050','#00B050','#00B0F0','#0070C0','#002060','#7030A0'];
-const HILITES=[['#FFFF00','Jaune'],['#00FF00','Vert vif'],['#00FFFF','Turquoise'],['#FF00FF','Rose'],['#0000FF','Bleu'],['#FF0000','Rouge'],['#000080','Bleu foncé'],['#008080','Sarcelle'],['#008000','Vert'],['#800080','Violet'],['#800000','Rouge foncé'],['#808000','Jaune foncé'],['#808080','Gris 50 %'],['#C0C0C0','Gris 25 %'],['#000000','Noir']];
-function themeRows(){const rows=[THEME];[.8,.6,.4].forEach(t=>rows.push(THEME.map((c,i)=>mix(c,i===0?-t/2.4:(i===1?t*.62:t)))));[-.25,-.5].forEach(t=>rows.push(THEME.map((c,i)=>mix(c,i===1?Math.abs(t)*.6:t))));return rows;}
-function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
-async function writeFile(blob,name,desc,mime,ext){try{if(window.showSaveFilePicker&&window.self===window.top){const fh=await window.showSaveFilePicker({suggestedName:name,types:[{description:desc,accept:{[mime]:[ext]}}]});const w=await fh.createWritable();await w.write(blob);await w.close();return fh.name||name;}}catch(e){if(e&&e.name==='AbortError')return null;}dlBlob(blob,name);return name;}
-function b64ToBytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
-function bytesToB64(u8){let s='';const ch=0x8000;for(let i=0;i<u8.length;i+=ch)s+=String.fromCharCode.apply(null,u8.subarray(i,i+ch));return btoa(s);}
-function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);if(how==='url')r.readAsDataURL(file);else if(how==='text')r.readAsText(file);else r.readAsArrayBuffer(file);});}
-
-/* ---------- Nettoyage HTML ---------- */
-const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
-function sanitizeHTML(html,internal){
-  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'
 <style id="readox-mobile-global-phase2-documents">
 /* Mobile Phase 2: presentation only. Preserve routing, navigation and historical modules. */
 @media (max-width: 820px) {
@@ -1878,7 +1671,308 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  window.__readoxMobile14Audit=Object.freeze({status,expectedStudio:allowedStudio.slice(),selectors:hiddenSelectors.slice()});
 })();
 </script>
-</body>','text/html');
+
+<style id="readox-r1-mobile-shell">
+@media (max-width:820px){
+ html,body{width:100%!important;max-width:100%!important;overflow-x:clip!important}
+ .topbar{width:100%;max-width:100%;box-sizing:border-box;min-width:0;gap:6px!important;padding-inline:8px!important}
+ .topbar .mob-menu{display:inline-flex!important;flex:0 0 40px}
+ .topbar .search,.topbar .search-wrap{min-width:0!important;max-width:min(38vw,210px)!important}
+ .menubar{max-width:100vw!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;scrollbar-width:thin}
+ .menubar>*{flex-shrink:0}
+ .tabbar{max-width:100vw!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;flex-wrap:nowrap!important;scrollbar-width:thin}
+ .tabbar>*{flex-shrink:0!important;max-width:72vw}
+ .body{width:100%!important;max-width:100vw!important;min-width:0!important;overflow:hidden!important}
+ .stage{width:100%!important;min-width:0!important;flex:1 1 0!important;overflow-x:auto!important;overscroll-behavior-x:contain}
+ .lrail{position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:min(82vw,320px)!important;max-width:320px!important;z-index:85!important;transform:translateX(-105%)!important;transition:transform .2s ease!important;box-shadow:0 10px 32px #07132630;visibility:hidden!important}
+ body.rx-r1-drawer-open .lrail{transform:translateX(0)!important;visibility:visible!important}
+ body.rx-r1-drawer-open #rxR1Scrim{display:block!important}
+ .lrail-scroll{overflow-y:auto!important;min-height:0!important}
+ .rrail{display:none!important}
+ .rpanel{max-width:100vw!important;box-sizing:border-box}
+ #stage iframe{display:block;max-width:100%!important;width:100%!important;min-width:0!important}
+ #rxR1Scrim{display:none;position:absolute;inset:0;background:rgba(8,20,38,.42);z-index:84}
+}
+</style>
+<script id="readox-r1-mobile-shell-js">
+(()=>{'use strict';if(window.__readoxR1Shell)return;
+ const mobile=()=>matchMedia('(max-width:820px)').matches;
+ const init=()=>{
+  const body=document.body,rail=document.getElementById('lrail'),menu=document.getElementById('mobMenu');if(!rail||!menu)return;
+  const scrim=document.createElement('div');scrim.id='rxR1Scrim';scrim.setAttribute('aria-hidden','true');document.querySelector('.body')?.appendChild(scrim);
+  const close=()=>{body.classList.remove('rx-r1-drawer-open');menu.setAttribute('aria-expanded','false')};
+  const open=()=>{body.classList.add('rx-r1-drawer-open');menu.setAttribute('aria-expanded','true')};
+  menu.setAttribute('aria-controls','lrail');menu.setAttribute('aria-expanded','false');
+  menu.addEventListener('click',e=>{if(!mobile())return;e.stopImmediatePropagation();body.classList.contains('rx-r1-drawer-open')?close():open()},true);
+  scrim.addEventListener('click',close);
+  rail.querySelector('#railMini')?.addEventListener('click',e=>{if(!mobile())return;e.stopImmediatePropagation();close()},true);
+  rail.addEventListener('click',e=>{if(mobile()&&e.target.closest('button,[role="button"],a')&&!e.target.closest('#railMini'))close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+  window.addEventListener('resize',()=>{if(!mobile())close()});
+  window.__readoxR1Shell={open,close};
+ };document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
+})();
+</script>
+<style id="readox-r2-visibility-contract">
+/* R2: frontend visibility only; no engine, routes or data are removed. */
+.mtab[data-copilot],.mtab[data-book],.tool-ai,[data-nav="copilot"],[data-nav="book"],
+#rxRight,#rxIaBtn,#cbotFab,#aiFloat,#rxRrCopilot,.rx-ai-floating,.ai-float-overlay,
+.rx-rr-card,.rx-rr-sec,.rx-rr-list,.rx-rr-list2,
+#rxDash .rx-cols,#rxDash .rx-qgrid,#rxDash .rx-sklist {display:none!important}
+/* Legacy shortcut cards are hidden only in their known dashboard containers. */
+#rxDash [data-shortcut="summary"],#rxDash [data-shortcut="translate"],
+#rxDash [data-shortcut="analyze"],#rxDash [data-shortcut="image"],
+#rxDash [data-shortcut="help"],#rxDash [data-shortcut="tips"]{display:none!important}
+</style>
+<script id="readox-r2-visibility-audit">
+(()=>{'use strict';if(window.__readoxR2)return;
+const forbidden=['.mtab[data-copilot]','.mtab[data-book]','.tool-ai','#rxRight','#rxIaBtn','#cbotFab','#aiFloat','#rxRrCopilot','#rxDash .rx-cols','#rxDash .rx-qgrid','#rxDash .rx-sklist'];
+const legacyDescription='Word · InDesign · Livre IA';
+function normalize(){
+ // Only the known home-card subtitle; never rename historical engine identifiers.
+ const dash=document.getElementById('rxDash');
+ if(dash)dash.querySelectorAll('*').forEach(el=>{
+   if(el.children.length===0&&el.textContent.trim()===legacyDescription)el.textContent='Readox Word · Flyer Maker';
+ });
+}
+let scheduled=false;
+function queue(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;normalize()})}
+function audit(){const visible=[];for(const selector of forbidden){document.querySelectorAll(selector).forEach(el=>{const r=el.getBoundingClientRect(),c=getComputedStyle(el);if(c.display!=='none'&&c.visibility!=='hidden'&&r.width>0&&r.height>0)visible.push(selector)})}return {passed:visible.length===0,visible,homeLegacySubtitle:!!document.getElementById('rxDash')?.textContent.includes(legacyDescription)}}
+function init(){normalize();new MutationObserver(queue).observe(document.body,{subtree:true,childList:true});}
+window.__readoxR2={audit,normalize};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+<style id="readox-r4-mobile-interactions">
+@media(max-width:820px){
+  #stage input:not([type="checkbox"]):not([type="radio"]),#stage textarea,#stage select{font-size:max(16px,1em)}
+  #stage button,#stage [role="button"],#stage a{touch-action:manipulation}
+  #stage :focus-visible{outline:2px solid #6255f5;outline-offset:2px}
+  #stage input[type="file"]{max-width:100%;min-width:0}
+  #stage :is(.cv-form,.rxw-scroll,.pdf-page,.page-container){overscroll-behavior:contain}
+  #rxR4MobileNotice{position:fixed;z-index:5000;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 28px);background:#142b46;color:white;border-radius:12px;padding:9px 14px;font:13px/1.35 system-ui,sans-serif;box-shadow:0 5px 20px #0003;pointer-events:none}
+}
+</style>
+<script id="readox-r4-mobile-interactions">
+(()=>{'use strict';if(window.__readoxR4)return;
+ const mobile=()=>matchMedia('(max-width:820px)').matches;
+ let notice,hideTimer=0,lastFile='';
+ function inform(message){if(!mobile())return; if(!notice){notice=document.createElement('div');notice.id='rxR4MobileNotice';notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');notice.hidden=true;document.body.appendChild(notice)}notice.textContent=message;notice.hidden=false;clearTimeout(hideTimer);hideTimer=setTimeout(()=>notice.hidden=true,2600)}
+ function fileChange(e){const input=e.target;if(!mobile()||!input?.matches?.('input[type="file"]'))return;const files=Array.from(input.files||[]);if(!files.length)return;lastFile=files.map(f=>f.name).join(', ');inform(files.length===1?'Fichier sélectionné : '+files[0].name:files.length+' fichiers sélectionnés')}
+ function focusMobile(e){if(!mobile())return;const el=e.target;if(!el?.matches?.('input:not([type="file"]),textarea,[contenteditable="true"]'))return;setTimeout(()=>{if(document.activeElement!==el)return;const rect=el.getBoundingClientRect(),height=window.visualViewport?.height||innerHeight;if(rect.bottom>height-20||rect.top<0)el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'})},250)}
+ function audit(){const w=document.documentElement.clientWidth;return {mobile:mobile(),viewport:w,overflow:document.documentElement.scrollWidth>w+2,lastSelectedFile:lastFile,online:navigator.onLine,wordEngineReady:typeof window.ReadixWordEngine?.mount==='function'}}
+ function init(){document.addEventListener('change',fileChange,true);document.addEventListener('focusin',focusMobile,true);window.addEventListener('offline',()=>inform('Connexion perdue : vérifiez vos sauvegardes'),{passive:true});window.addEventListener('online',()=>inform('Connexion rétablie : vérifiez la synchronisation'),{passive:true})}
+ window.__readoxR4={audit,inform};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
+<script id="readix-word-engine">
+/*! Readix Word Engine A3 — Readix Document Studio. Moteur de traitement de texte local (navigateur). */
+(function(){'use strict';
+const RWE={active:null};
+
+/* Readix Word Engine — jeu d'icônes (reproduction de la maquette) */
+const RXI=(()=>{
+const N='#13305F',B='#0A56B4',L='#2A6CC0',sw='stroke-linecap="round" stroke-linejoin="round"';
+const s=(body,vb='0 0 24 24')=>`<svg viewBox="${vb}" aria-hidden="true" fill="none" ${sw}>${body}</svg>`;
+const txt=(t,o)=>`<text x="${o.x||12}" y="${o.y||17.6}" text-anchor="middle" font-family="${o.f||'Segoe UI,Noto Sans,Arial,sans-serif'}" font-size="${o.s||16}" font-weight="${o.w||400}" ${o.i?'font-style="italic"':''} fill="${o.c||N}">${t}</text>`;
+const lines=(ys,x1,x2,c=N,w=2)=>ys.map((y,i)=>`<path d="M${Array.isArray(x1)?x1[i]:x1} ${y}H${Array.isArray(x2)?x2[i]:x2}" stroke="${c}" stroke-width="${w}"/>`).join('');
+return {
+ chev:s(`<path d="M3.5 6 8 10.5 12.5 6" stroke="currentColor" stroke-width="1.9"/>`,'0 0 16 16'),
+ chevs:s(`<path d="M4 6.5 8 10.5 12 6.5" stroke="currentColor" stroke-width="1.7"/>`,'0 0 16 16'),
+ tri:s(`<path d="M3 5.5h10L8 11z" fill="currentColor"/>`,'0 0 16 16'),
+ grip:`<svg viewBox="0 0 4 18" aria-hidden="true"><circle cx="2" cy="2" r="1.3" fill="currentColor"/><circle cx="2" cy="7" r="1.3" fill="currentColor"/><circle cx="2" cy="12" r="1.3" fill="currentColor"/><circle cx="2" cy="17" r="1.3" fill="currentColor"/></svg>`,
+ logo:s(`<path d="M6 4.5h7.2c3.6 0 5.8 2 5.8 5.2 0 2.5-1.4 4.2-3.7 4.9L19.6 21h-4l-3.8-5.9H9.7V21H6z" fill="#fff"/><path d="M9.7 7.6v4.6h3.3c1.7 0 2.6-.8 2.6-2.3s-.9-2.3-2.6-2.3z" fill="#0157AB"/><path d="M6 4.5 3.2 2.8 3.6 6 6 7.4z" fill="#fff"/><path d="M4.2 8.6 1.9 10l2.3.9z" fill="#fff"/>`),
+ search:s(`<circle cx="10.5" cy="10.5" r="6.3" stroke="currentColor" stroke-width="1.9"/><path d="m15.3 15.3 5 5" stroke="currentColor" stroke-width="1.9"/>`),
+ up:s(`<path d="M5 15 12 8l7 7" stroke="currentColor" stroke-width="2"/>`),
+ down:s(`<path d="m5 9 7 7 7-7" stroke="currentColor" stroke-width="2"/>`),
+ min:s(`<path d="M4 12h16" stroke="#fff" stroke-width="1.4"/>`),
+ max:s(`<rect x="4.5" y="4.5" width="15" height="15" stroke="#fff" stroke-width="1.4"/>`),
+ restore:s(`<rect x="4.5" y="7.5" width="12" height="12" stroke="#fff" stroke-width="1.4"/><path d="M7.5 7.5v-3h12v12h-3" stroke="#fff" stroke-width="1.4"/>`),
+ close:s(`<path d="m5 5 14 14M19 5 5 19" stroke="currentColor" stroke-width="1.4"/>`),
+ x:s(`<path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8"/>`),
+ /* --- barre standard --- */
+ new:s(`<path d="M5.5 2.5h9l4 4v15h-13z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M14.5 2.5v4h4" stroke="${N}" stroke-width="1.5"/>`),
+ open:s(`<path d="M2.5 5.5h6.3l2 2H19v3" fill="#E7A94B" stroke="#B87A22" stroke-width="1.2"/><path d="M2.5 5.5v14h16.2l3-9H6.2l-3.7 9" fill="#F4C875" stroke="#B87A22" stroke-width="1.2"/><path d="M14 4.2c1.5-1.4 3.6-1.3 4.8.2" stroke="#8E6A3A" stroke-width="1.1"/><path d="m18.9 2.9.1 1.8-1.8.2" stroke="#8E6A3A" stroke-width="1.1"/>`),
+ save:s(`<path d="M3.5 3.5h13.5l3.5 3.5v13.5h-17z" fill="#2B4470" stroke="#12254A" stroke-width="1.2"/><rect x="7" y="3.5" width="8.5" height="5.3" fill="#D9E3F1"/><rect x="12.4" y="4.4" width="1.8" height="3.4" fill="#2B4470"/><rect x="6" y="12.4" width="12" height="8.1" fill="#F4F7FB"/><path d="M8 15h8M8 17.6h8" stroke="#9FB0C8" stroke-width="1.1"/>`),
+ saveas:s(`<path d="M3.5 3.5h13.5l3.5 3.5v13.5h-17z" fill="#fff" stroke="${B}" stroke-width="1.5"/><rect x="7" y="3.5" width="8.5" height="5.3" stroke="${B}" stroke-width="1.3"/><rect x="6.5" y="12.5" width="11" height="8" stroke="${N}" stroke-width="1.3"/><path d="M12.4 5v2.3" stroke="${B}" stroke-width="1.3"/>`),
+ print:s(`<path d="M7 8V3.5h10V8" fill="#fff" stroke="${N}" stroke-width="1.5"/><rect x="3" y="8" width="18" height="9" rx="1.8" fill="#DCE6F3" stroke="${N}" stroke-width="1.5"/><path d="M6.5 11h2" stroke="${B}" stroke-width="1.6"/><path d="M7 14.5h10v6H7z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M9.3 17h5.4" stroke="${N}" stroke-width="1.1"/>`),
+ undo:s(`<path d="M8.6 4.8 4.4 9l4.2 4.2" stroke="currentColor" stroke-width="2"/><path d="M4.8 9H14a5.6 5.6 0 0 1 0 11.2h-3" stroke="currentColor" stroke-width="2"/>`),
+ redo:s(`<path d="m15.4 4.8 4.2 4.2-4.2 4.2" stroke="currentColor" stroke-width="2"/><path d="M19.2 9H10a5.6 5.6 0 0 0 0 11.2h3" stroke="currentColor" stroke-width="2"/>`),
+ shapes:s(`<rect x="3.5" y="4" width="17" height="16" rx="1.6" stroke="${N}" stroke-width="1.6"/><path d="M3.8 9.4c4.3.8 8 4.5 9.4 10.4" stroke="${N}" stroke-width="1.6"/><path d="m6.4 16.8 2.6-2.5" stroke="${N}" stroke-width="1.4"/>`),
+ chart:s(`<path d="M3.5 3.5v17h17" stroke="${B}" stroke-width="1.6"/><rect x="6.5" y="11" width="3" height="9.5" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="11.5" y="5" width="3" height="15.5" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="16.5" y="8.5" width="3" height="12" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><path d="M11.9 15.2c.7-1.7 2.3-1.7 2.3.4" stroke="${B}" stroke-width="1.1"/>`),
+ painter:s(`<rect x="10.2" y="2.5" width="4" height="6.2" rx="1.2" stroke="${N}" stroke-width="1.5"/><path d="M8.5 8.7h7.4l1.6 4.4H6.9z" fill="#E5EEF9" stroke="${N}" stroke-width="1.5"/><path d="M7.4 13.1c-.6 2.1-.5 3.4.7 4.1" stroke="${N}" stroke-width="1.5"/><path d="M6 19.4c2.9 2.1 8.4 2.2 11.6-.3" stroke="${B}" stroke-width="1.9"/><path d="m15.6 16.9 2.3 2.2-2.6 1.6" stroke="${B}" stroke-width="1.7"/>`),
+ paste:s(`<rect x="3" y="5" width="15" height="15.5" rx="1.6" fill="#F6CF95" stroke="#C88B35" stroke-width="1.3"/><rect x="7.2" y="3" width="6.6" height="4" rx="1.1" fill="#fff" stroke="#8A6A40" stroke-width="1.2"/><path d="M12.5 11.5h6l2.5 2.5v7.5h-8.5z" fill="#fff" stroke="#1C4B94" stroke-width="1.3"/><path d="m15.4 17.8 1.3 1.3 2.4-2.8" stroke="#D83B32" stroke-width="1.4"/>`),
+ table:s(`<rect x="4" y="3.5" width="16" height="17" rx="1" stroke="${N}" stroke-width="1.6"/><path d="M12 3.5v17" stroke="${N}" stroke-width="1.6"/><path d="M7 8h2M7 12h2M7 16h2M15 8h2M15 12h2M15 16h2" stroke="${B}" stroke-width="1.6" stroke-dasharray="0.1 3"/>`),
+ object:s(`<rect x="2.5" y="4" width="19" height="13.5" rx="1.6" fill="#E3EDF9" stroke="${N}" stroke-width="1.5"/><rect x="5" y="6.5" width="14" height="8.5" fill="#DFF3E4" stroke="#2C8A57" stroke-width="1.1"/><path d="M5 9.3h14M5 12.1h14M9.7 6.5V15M14.3 6.5V15" stroke="#2C8A57" stroke-width=".9"/><path d="M8.5 20.5h7M12 17.5v3" stroke="${N}" stroke-width="1.5"/>`),
+ columns:s(`<rect x="4" y="3" width="16" height="18" stroke="${N}" stroke-width="1.5"/><path d="M12 3v18" stroke="${N}" stroke-width="1.2" stroke-dasharray="1.5 1.6"/><path d="M6.5 7h3M6.5 10h3M14.5 7h3M14.5 10h3" stroke="${B}" stroke-width="1.3"/><path d="m6.8 15.6 2.2 2.2M17.2 15.6 15 17.8" stroke="${N}" stroke-width="1.3"/>`),
+ nav:s(`<rect x="3" y="4" width="18" height="16" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M3 8h18" stroke="${N}" stroke-width="1.5"/><path d="M6 11.2h4M6 14.2h4M6 17.2h4" stroke="${B}" stroke-width="1.6"/><path d="M13 11.2h5M13 14.2h5M13 17.2h5" stroke="${N}" stroke-width="1.3"/><path d="M11.5 8v12" stroke="${N}" stroke-width="1" stroke-dasharray="1.4 1.4"/>`),
+ reading:s(`<rect x="3" y="3.5" width="8" height="17" rx=".8" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/><rect x="13" y="3.5" width="8" height="17" rx=".8" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/><path d="M5 7h4M5 10h4M5 13h2.5M15 7h4M15 10h4M15 13h2.5" stroke="${N}" stroke-width="1.3"/><path d="M5 16.5h4v2H5zM15 16.5h4v2h-4z" fill="${B}"/>`),
+ exportpdf:s(`<path d="M5.5 2.5h9l4 4v15h-13z" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M14.5 2.5v4h4" stroke="${N}" stroke-width="1.5"/><path d="m9.2 15.2 3.3-3.3 1.8 1.8-3.3 3.3H9.2z" stroke="${B}" stroke-width="1.3"/><path d="M15.5 19.6h3.2l-1.6 1.9" stroke="${N}" stroke-width="1.3"/>`),
+ help:s(`<circle cx="12" cy="12" r="9" stroke="${B}" stroke-width="1.8"/><path d="M9.4 9.4a2.7 2.7 0 1 1 3.8 2.4c-.8.4-1.2 1-1.2 1.9v.6" stroke="${N}" stroke-width="2"/><circle cx="12" cy="17.2" r="1.15" fill="${N}"/>`),
+ /* --- barre de mise en forme --- */
+ bold:s(txt('B',{w:700,s:17,c:'#0A1F5C'})),
+ italic:s(txt('I',{i:1,s:17,f:'Georgia,Times New Roman,serif',c:N})),
+ underline:s(txt('U',{s:16,y:16,c:N})+`<path d="M6.5 20.2h11" stroke="${N}" stroke-width="1.5"/>`),
+ strike:s(txt('abc',{s:12.5,y:16.2,w:600,c:N})+`<path d="M3.5 12.5h17" stroke="${N}" stroke-width="1.3"/>`),
+ fontcolor:s(txt('A',{s:17,y:16.5,c:N})),
+ hilite:s(txt('A',{s:17,y:16.5,c:N})+`<path d="M17.5 3.2c.9-.9 1.9-.6 2.4.2M19.2 5.2c.5-.4 1-.2 1.3.2" stroke="${B}" stroke-width="1.2"/>`),
+ left:s(lines([6,10,14,18],4,[20,15,20,14])),
+ center:s(lines([6,10,14,18],[4,7,4,7.5],[20,17,20,16.5])),
+ right:s(lines([6,10,14,18],[4,9,4,10],20)),
+ justify:s(lines([6,10,14,18],4,20)),
+ linespacing:s(`<path d="M5.5 5v14" stroke="${B}" stroke-width="1.6"/><path d="M3.3 7.2 5.5 4.6l2.2 2.6M3.3 16.8l2.2 2.6 2.2-2.6" stroke="${B}" stroke-width="1.5" fill="${B}"/>`+lines([6,10,14,18],10.5,20.5)),
+ bullets:s(`<circle cx="5" cy="6.5" r="1.7" fill="${B}"/><circle cx="5" cy="12" r="1.7" fill="${B}"/><circle cx="5" cy="17.5" r="1.7" fill="${B}"/>`+lines([6.5,12,17.5],9.5,20.5)),
+ numbering:s(`<path d="M4.3 5.2 5.6 4.5v4" stroke="${B}" stroke-width="1.4"/><path d="M4 10.9c.7-.9 2.3-.6 2 .6-.2.8-1.9 1.6-2 2.5h2.2" stroke="${B}" stroke-width="1.2"/><path d="M4.1 16.1h1.8l-1 1.2c1 0 1.5.5 1.1 1.3-.4.6-1.4.6-2 .2" stroke="${B}" stroke-width="1.1"/>`+lines([6.5,12,17.5],9.5,20.5)),
+ multilevel:s(`<path d="M3.5 5.2 6 6.5 3.5 7.8z" fill="${N}"/><path d="M3.5 10.7 6 12l-2.5 1.3z" fill="${N}"/><path d="M3.5 16.2 6 17.5l-2.5 1.3z" fill="${N}"/><path d="M4.8 4.2v14" stroke="${B}" stroke-width=".9" stroke-dasharray="1 1.2"/>`+lines([6.5,12,17.5],8.5,20.5)),
+ outdent:s(lines([5,19],4,20)+lines([10,14],10,20)+`<path d="M8 9.3 4.5 12 8 14.7z" fill="${B}"/><path d="M4.8 12H8" stroke="${B}" stroke-width="1.6"/>`),
+ indent:s(lines([5,19],4,20)+lines([10,14],11,20)+`<path d="M4 12h5" stroke="${B}" stroke-width="1.6"/><path d="M6.8 9.4 9.5 12l-2.7 2.6z" fill="${B}"/><path d="M5 5.9v2M5 16v2" stroke="${B}" stroke-width="1.2"/>`),
+ shading:s(`<path d="M6.5 13.5 11 5c.6-1 1.9-1.1 2.5-.1l2.2 3.7c.5.9 0 2-1 2.3l-4.3 1.2" stroke="${B}" stroke-width="1.5"/><path d="M8.3 10.2c-1.5.7-2.6 2.5-1.8 3.9.7 1.3 2.8 1.3 3.9 0" stroke="${B}" stroke-width="1.5"/><path d="M16.8 11.5c1.4 1.4 2.3 2.6 2.3 3.6a1.8 1.8 0 0 1-3.6 0c0-1 .6-2.2 1.3-3.6z" fill="${B}"/><rect x="4" y="17.8" width="16" height="3" rx=".6" fill="#DCEAFB" stroke="${B}" stroke-width="1.3"/>`),
+ styles:s(txt('A',{s:15,y:14.3,c:B,x:10})+`<path d="M4.4 18.4c2.2-1.6 4.2-1.3 5.3.3 1.3-1.9 3.6-1.9 5.8-.4" stroke="${B}" stroke-width="1.5"/><path d="m15.4 20 5.2-8.3 1.4.9-5.2 8.2-1.8.6z" fill="#fff" stroke="${N}" stroke-width="1.3"/>`),
+ pen:s(`<path d="m4.4 19.6 1-4.2L16.7 4.1a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.6 18.6z" fill="#5AA2EA" stroke="#1F4F92" stroke-width="1.3"/><path d="m5.4 15.4 3.2 3.2" stroke="#1F4F92" stroke-width="1.3"/><path d="m4.4 19.6 1-4.2 3.2 3.2z" fill="#F4D7A8"/><path d="M4.4 19.6 5 17.4 6.6 19z" fill="#1B2948"/><path d="m15.2 5.6 3.2 3.2" stroke="#1F4F92" stroke-width="1.1"/>`),
+ more:s(`<path d="M5 9.5 12 16l7-6.5" stroke="${N}" stroke-width="2"/>`),
+ /* --- règle --- */
+ tabL:s(`<path d="M5 3v8h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
+ tabC:s(`<path d="M2 11h10M7 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
+ tabR:s(`<path d="M9 3v8H2" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/>`,'0 0 14 14'),
+ tabD:s(`<path d="M2 11h10M6 3v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="butt"/><circle cx="10" cy="7" r="1.3" fill="currentColor"/>`,'0 0 14 14'),
+ mkDown:`<svg viewBox="0 0 12 9" aria-hidden="true"><path d="M1 1h10L6 8z" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+ mkUp:`<svg viewBox="0 0 12 9" aria-hidden="true"><path d="M1 8h10L6 1z" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+ mkBox:`<svg viewBox="0 0 12 8" aria-hidden="true"><rect x="1" y=".8" width="10" height="6.4" fill="#fff" stroke="currentColor" stroke-width="1.2"/></svg>`,
+ /* --- barre de dessin --- */
+ drawopts:s(`<path d="M4 5.5h16M4 12h16M4 18.5h16" stroke="${B}" stroke-width="1.7"/><circle cx="8.5" cy="5.5" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/><circle cx="15.5" cy="12" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/><circle cx="9.5" cy="18.5" r="2" fill="#fff" stroke="${B}" stroke-width="1.6"/>`),
+ select:s(`<path d="M8.5 7.5 16.5 11l-3.3 1.2-1.2 3.3z" fill="${B}" stroke="${B}" stroke-width="1.2"/><path d="m13.3 12.4 3.2 3.2" stroke="${B}" stroke-width="1.5"/>`),
+ line:s(`<path d="m5.5 5.5 13 13" stroke="#0B2F7E" stroke-width="2.1"/>`),
+ freeline:s(`<path d="M18.5 5.5 5.5 18.5" stroke="${L}" stroke-width="1.5"/>`),
+ rect:s(`<rect x="4" y="5.5" width="16" height="13" stroke="${L}" stroke-width="1.6"/>`),
+ oval:s(`<circle cx="12" cy="12" r="7.8" stroke="${L}" stroke-width="1.6"/>`),
+ circle:s(`<circle cx="12" cy="12" r="7.8" stroke="${L}" stroke-width="1.6"/>`),
+ wordart:s(txt('A',{s:17,y:18.5,w:600,c:'#13233F',x:11})+`<path d="M18.2 3.8v3.2M16.6 5.4h3.2" stroke="${B}" stroke-width="1.2"/>`),
+ house:s(`<path d="M12 4.2 3.8 11.5h3v8.3h10.4v-8.3h3z" stroke="${B}" stroke-width="1.7"/>`),
+ arrow:s(`<path d="M5.5 5.5 16 16" stroke="#0B2F6B" stroke-width="2.3"/><path d="M19 19h-8.2l8.2-8.2z" fill="#0B2F6B"/>`),
+ textbox:s(`<rect x="4" y="4" width="16" height="16" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M8 8.5V7.2h2.4M8 11V9.5" stroke="${B}" stroke-width="1.4"/><path d="M16 15.5v1.3h-2.4" stroke="${B}" stroke-width="1.4"/>`),
+ ellipse:s(`<ellipse cx="12" cy="12" rx="8.5" ry="5.6" stroke="${L}" stroke-width="1.6"/>`),
+ diagram:s(`<path d="M15.5 3.5 6.2 17.5h9.3z" stroke="${B}" stroke-width="1.5"/><path d="M12.6 8v9.5M9.4 13h3.2" stroke="${B}" stroke-width="1.2"/><rect x="4" y="18.5" width="16" height="2.5" fill="${B}"/>`),
+ clipart:s(`<path d="M9.2 3.5 4 8v8.8l5.2 3.7V11.7L16 8V3.5z" fill="#1A56B7" stroke="#0B3A85" stroke-width="1.1"/><path d="M9.2 11.7 16 8v9.2l-6.8 3.3z" fill="#5A9BE5" stroke="#0B3A85" stroke-width="1.1"/><path d="M16 11.3c2.4.3 4 1.5 4 2.9 0 1.2-1.1 2.3-2.9 2.8" stroke="#0B3A85" stroke-width="1.2"/><path d="m16.4 18.3.9-1.4-1.5-.8" stroke="#0B3A85" stroke-width="1.1"/>`),
+ image:s(`<path d="M9 7.5v6.5h6.5" stroke="${B}" stroke-width="1.9"/><path d="m13.2 11.6 2.5 2.4-2.5 2.4" stroke="${B}" stroke-width="1.7"/><path d="M11 9.5h2.5" stroke="${B}" stroke-width="1.3"/>`),
+ fill:s(`<path d="m4.6 10.4 6-6 7.2 7.2-5.5 5.5a2 2 0 0 1-2.8 0l-4.9-4.9a1.3 1.3 0 0 1 0-1.8z" fill="#E9F1FC" stroke="${B}" stroke-width="1.5"/><path d="M4.6 10.8h12.8" stroke="${B}" stroke-width="1.3"/><path d="M8.3 3.2c1.4-.8 2.7.2 2.3 1.6" stroke="${N}" stroke-width="1.3"/><path d="M19.4 13.5c1.1 1.2 1.7 2.2 1.7 3a1.7 1.7 0 0 1-3.4 0c0-.8.6-1.8 1.7-3z" fill="${B}"/><path d="m15.2 19.4 2.1 1.4 2.3-1.8" stroke="${N}" stroke-width="1.2"/>`),
+ linecolor:s(`<rect x="3.5" y="3.5" width="17" height="17" rx="1.4" stroke="${N}" stroke-width="1.5"/><path d="M6.5 17.5 17.5 6.5" stroke="${B}" stroke-width="1.5"/><path d="M11.8 9.2v3.2h3.2" stroke="${N}" stroke-width="1.3"/>`),
+ linestyle:s(`<path d="M8 3.5v17M16 3.5v17" stroke="${N}" stroke-width="1.3"/><path d="M4.5 6.5h15M4.5 17.5h15" stroke="${B}" stroke-width="1.6"/><circle cx="12" cy="12" r="2" stroke="${N}" stroke-width="1.4"/><path d="M4.5 12h4.5M15 12h4.5" stroke="${B}" stroke-width="1.6"/>`),
+ dashstyle:s(`<path d="M4.5 7.5h15M4.5 16.5h15" stroke="${N}" stroke-width="1.7"/><path d="m7 4.5-2.8 3 2.8 3M17 13.5l2.8 3-2.8 3" stroke="${B}" stroke-width="1.7"/><path d="M10.5 12h3" stroke="${N}" stroke-width="1.7"/>`),
+ arrowstyle:s(`<path d="M12 3.5v12.5" stroke="#F0A14A" stroke-width="3"/><path d="M6.8 13.8 12 20.3l5.2-6.5z" fill="#F0A14A"/>`),
+ shadow:s(`<path d="M6.5 3h9.5l3.5 3.5v14.5h-13z" fill="#E6EFFB" stroke="#0B3A85" stroke-width="1.5"/><rect x="9" y="7.5" width="8" height="6.5" fill="#fff" stroke="#0B3A85" stroke-width="1.2"/><path d="M9 11h8M12 7.5V14" stroke="${B}" stroke-width="1"/><path d="M9 16.8h8" stroke="#0B3A85" stroke-width="1.3"/>`),
+ /* --- barre d'état --- */
+ globe:s(`<circle cx="12" cy="12" r="8.7" stroke="currentColor" stroke-width="1.5"/><path d="M3.3 12h17.4M12 3.3c2.6 2.4 3.6 5.3 3.6 8.7s-1 6.3-3.6 8.7c-2.6-2.4-3.6-5.3-3.6-8.7S9.4 5.7 12 3.3zM5 7.2h14M5 16.8h14" stroke="currentColor" stroke-width="1.2"/>`),
+ vPage:s(`<rect x="3.5" y="3.5" width="17" height="17" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9h17M12 9v11.5" stroke="currentColor" stroke-width="1.6"/>`),
+ vWeb:s(`<rect x="5" y="3" width="14" height="18" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 6.5h9M7.5 9.5h9" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="12" width="6" height="5" fill="currentColor" opacity=".35"/><path d="M15 12.5h1.5M15 15h1.5" stroke="currentColor" stroke-width="1.4"/>`),
+ vOutline:s(`<rect x="5" y="3" width="14" height="18" stroke="currentColor" stroke-width="1.5"/><path d="M8 7h8M8 10.5h8M8 14h8M8 17.5h5" stroke="currentColor" stroke-width="1.5"/>`),
+ /* --- divers (menus) --- */
+ cut:s(`<circle cx="6.5" cy="17.5" r="2.7" stroke="${N}" stroke-width="1.5"/><circle cx="17.5" cy="17.5" r="2.7" stroke="${N}" stroke-width="1.5"/><path d="M8.3 15.5 17 4M15.7 15.5 7 4" stroke="${N}" stroke-width="1.5"/>`),
+ copy:s(`<rect x="8" y="7.5" width="12" height="13" rx="1.2" fill="#fff" stroke="${N}" stroke-width="1.5"/><path d="M5.5 16.5H4v-13h11.5V5" stroke="${N}" stroke-width="1.5"/>`),
+ link:s(`<path d="M10 13.5a4.2 4.2 0 0 0 6.2.4l2.6-2.6a4.2 4.2 0 0 0-6-6L11.5 6.6" stroke="${B}" stroke-width="1.7"/><path d="M14 10.5a4.2 4.2 0 0 0-6.2-.4l-2.6 2.6a4.2 4.2 0 0 0 6 6l1.3-1.3" stroke="${B}" stroke-width="1.7"/>`),
+ comment:s(`<path d="M4 5h16v11H10l-4.5 3.7V16H4z" fill="#FFF4C2" stroke="#B08A12" stroke-width="1.5"/><path d="M8 9h8M8 12h5" stroke="#B08A12" stroke-width="1.4"/>`),
+ pagebreak:s(`<path d="M5 3v6h14V3M5 21v-6h14v6" stroke="${N}" stroke-width="1.5"/><path d="M3 12h3M9 12h2.5M14.5 12H17M20 12h1" stroke="${B}" stroke-width="1.6"/>`),
+ symbol:s(txt('Ω',{s:16,c:N})),
+ date:s(`<rect x="3.5" y="5" width="17" height="15.5" rx="1.5" stroke="${N}" stroke-width="1.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="${N}" stroke-width="1.5"/><path d="M7 13h2M11 13h2M15 13h2M7 16.5h2M11 16.5h2" stroke="${B}" stroke-width="1.6"/>`),
+ equation:s(txt('π',{s:17,c:N,x:9})+`<path d="M15 9.5h5M17.5 7v5M15 16h5" stroke="${B}" stroke-width="1.5"/>`),
+ bookmark:s(`<path d="M7 3.5h10v17l-5-3.8-5 3.8z" fill="#DCEAFB" stroke="${B}" stroke-width="1.5"/>`),
+ footnote:s(txt('ab',{s:12,y:14,c:N,x:9})+txt('1',{s:8,y:9,c:B,x:18})+`<path d="M4 19.5h16" stroke="${N}" stroke-width="1.3"/>`),
+ header:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/><rect x="6.5" y="5" width="11" height="3.5" fill="${B}"/><path d="M7 12h10M7 15h10M7 18h6" stroke="${N}" stroke-width="1.2"/>`),
+ footer:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/><rect x="6.5" y="15.5" width="11" height="3.5" fill="${B}"/><path d="M7 6h10M7 9h10M7 12h6" stroke="${N}" stroke-width="1.2"/>`),
+ pagenum:s(`<rect x="4.5" y="3" width="15" height="18" stroke="${N}" stroke-width="1.5"/>`+txt('#',{s:10,y:19,c:B})+`<path d="M7 6.5h10M7 9.5h10M7 12.5h7" stroke="${N}" stroke-width="1.2"/>`),
+ hr:s(`<path d="M3 12h18" stroke="${N}" stroke-width="2"/><path d="M6 7h12M6 17h12" stroke="#9FB0C8" stroke-width="1.3"/>`),
+ font:s(txt('A',{s:14,y:15,c:N,x:9})+txt('a',{s:11,y:15,c:B,x:17})+`<path d="M4 19.5h16" stroke="${N}" stroke-width="1.2"/>`),
+ paragraph:s(`<path d="M13 4v16M17 4v16M17 4h-6.5a4 4 0 0 0 0 8H13" stroke="${N}" stroke-width="1.6"/>`),
+ borders:s(`<rect x="4" y="4" width="16" height="16" stroke="${N}" stroke-width="1.2" stroke-dasharray="1.2 2"/><path d="M4 20h16" stroke="${B}" stroke-width="2.4"/>`),
+ tabs:s(`<path d="M4 20h16" stroke="${N}" stroke-width="1.5"/><path d="M7 7v8h4M15 7v8" stroke="${B}" stroke-width="1.9"/><path d="M13 15h4" stroke="${B}" stroke-width="1.9"/>`),
+ casechg:s(txt('Aa',{s:14,c:N})),
+ clear:s(txt('A',{s:14,y:15,c:N,x:10})+`<path d="m14.5 13.5 5.5 5.5M20 13.5 14.5 19" stroke="#D83B32" stroke-width="1.6"/>`),
+ spell:s(txt('abc',{s:10,y:11,w:600,c:N})+`<path d="m7 16 3 3 7-7" stroke="#2C8A57" stroke-width="1.9"/>`),
+ track:s(`<path d="M4 5h16v11H10l-4.5 3.7V16H4z" stroke="${N}" stroke-width="1.5"/><path d="m8.3 12.6 1-3 5-5 2 2-5 5z" fill="#DCEAFB" stroke="${B}" stroke-width="1.2"/>`),
+ accept:s(`<path d="m5 12.5 4.5 4.5L19 7.5" stroke="#1A6B2E" stroke-width="2.2"/>`),
+ reject:s(`<path d="m6 6 12 12M18 6 6 18" stroke="#B3261E" stroke-width="2.2"/>`),
+ stats:s(`<path d="M5 20V10M10 20V5M15 20v-7M20 20V8" stroke="${B}" stroke-width="2.4"/>`),
+ lang:s(`<circle cx="12" cy="12" r="8.7" stroke="${N}" stroke-width="1.5"/><path d="M3.3 12h17.4M12 3.3c2.6 2.4 3.6 5.3 3.6 8.7s-1 6.3-3.6 8.7c-2.6-2.4-3.6-5.3-3.6-8.7S9.4 5.7 12 3.3z" stroke="${N}" stroke-width="1.2"/>`),
+ autocorrect:s(txt('A',{s:13,y:13,c:N,x:8})+`<path d="m11.5 16 2.5 2.5 6-6" stroke="#2C8A57" stroke-width="1.9"/>`),
+ settings:s(`<circle cx="12" cy="12" r="3" stroke="${N}" stroke-width="1.6"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1" stroke="${N}" stroke-width="1.6"/>`),
+ rowabove:s(`<rect x="3.5" y="11" width="17" height="9" stroke="${N}" stroke-width="1.4"/><path d="M3.5 15.5h17M12 11v9" stroke="${N}" stroke-width="1.2"/><path d="M12 3v6M9 6h6" stroke="#2C8A57" stroke-width="1.9"/>`),
+ rowbelow:s(`<rect x="3.5" y="4" width="17" height="9" stroke="${N}" stroke-width="1.4"/><path d="M3.5 8.5h17M12 4v9" stroke="${N}" stroke-width="1.2"/><path d="M12 15v6M9 18h6" stroke="#2C8A57" stroke-width="1.9"/>`),
+ colleft:s(`<rect x="11" y="3.5" width="9" height="17" stroke="${N}" stroke-width="1.4"/><path d="M15.5 3.5v17M11 12h9" stroke="${N}" stroke-width="1.2"/><path d="M3 12h6M6 9v6" stroke="#2C8A57" stroke-width="1.9"/>`),
+ colright:s(`<rect x="4" y="3.5" width="9" height="17" stroke="${N}" stroke-width="1.4"/><path d="M8.5 3.5v17M4 12h9" stroke="${N}" stroke-width="1.2"/><path d="M15 12h6M18 9v6" stroke="#2C8A57" stroke-width="1.9"/>`),
+ delrow:s(`<rect x="3.5" y="8" width="17" height="8" stroke="${N}" stroke-width="1.4"/><path d="M12 8v8" stroke="${N}" stroke-width="1.2"/><path d="m15 17 5 5M20 17l-5 5" stroke="#B3261E" stroke-width="1.7"/>`),
+ delcol:s(`<rect x="8" y="3.5" width="8" height="17" stroke="${N}" stroke-width="1.4"/><path d="M8 12h8" stroke="${N}" stroke-width="1.2"/><path d="m17 3 5 5M22 3l-5 5" stroke="#B3261E" stroke-width="1.7"/>`),
+ deltable:s(`<rect x="3.5" y="4" width="15" height="13" stroke="${N}" stroke-width="1.4"/><path d="M3.5 8.5h15M3.5 12.8h15M8.5 4v13M13.5 4v13" stroke="${N}" stroke-width="1.1"/><path d="m15.5 15.5 5.5 5.5M21 15.5 15.5 21" stroke="#B3261E" stroke-width="1.8"/>`),
+ merge:s(`<rect x="3.5" y="5" width="17" height="14" stroke="${N}" stroke-width="1.4"/><path d="M5.5 12h5M13.5 12h5" stroke="${B}" stroke-width="1.6"/><path d="m8.5 9.6 2.2 2.4-2.2 2.4M15.5 9.6 13.3 12l2.2 2.4" stroke="${B}" stroke-width="1.5"/>`),
+ split:s(`<rect x="3.5" y="5" width="17" height="14" stroke="${N}" stroke-width="1.4"/><path d="M12 5v14" stroke="${N}" stroke-width="1.3"/><path d="m7.5 9.6-2.2 2.4 2.2 2.4M16.5 9.6l2.2 2.4-2.2 2.4" stroke="${B}" stroke-width="1.5"/>`),
+ sort:s(`<path d="M7 4v16M4 16.5 7 20l3-3.5" stroke="${N}" stroke-width="1.6"/>`+txt('A',{s:8,y:10,c:B,x:16})+txt('Z',{s:8,y:19,c:B,x:16})),
+ formula:s(txt('fx',{s:14,i:1,f:'Georgia,serif',c:N})),
+ props:s(`<rect x="3.5" y="3.5" width="17" height="17" rx="1.4" stroke="${N}" stroke-width="1.4"/><path d="M7 8h10M7 12h10M7 16h6" stroke="${B}" stroke-width="1.5"/>`),
+ window:s(`<rect x="3" y="4.5" width="18" height="15" rx="1.5" stroke="${N}" stroke-width="1.5"/><path d="M3 8.5h18" stroke="${N}" stroke-width="1.5"/>`),
+ fullscreen:s(`<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" stroke="${N}" stroke-width="1.7"/>`),
+ keyboard:s(`<rect x="2.5" y="6" width="19" height="12" rx="1.6" stroke="${N}" stroke-width="1.5"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1M6 12.5h1M16.5 12.5h1M8.5 15.5h7" stroke="${N}" stroke-width="1.6"/>`),
+ info:s(`<circle cx="12" cy="12" r="9" stroke="${B}" stroke-width="1.7"/><path d="M12 11v6" stroke="${N}" stroke-width="2"/><circle cx="12" cy="7.6" r="1.2" fill="${N}"/>`),
+ zoom:s(`<circle cx="10.5" cy="10.5" r="6.3" stroke="${N}" stroke-width="1.6"/><path d="m15.3 15.3 5 5M8 10.5h5M10.5 8v5" stroke="${N}" stroke-width="1.6"/>`),
+ goto:s(`<path d="M4 12h13M13 7l5 5-5 5" stroke="${B}" stroke-width="1.9"/><path d="M20.5 4v16" stroke="${N}" stroke-width="1.6"/>`),
+ replace:s(`<path d="M4 7h10M4 12h7M4 17h10" stroke="${N}" stroke-width="1.6"/><path d="m16 13 3 3-3 3M19 16h-6" stroke="${B}" stroke-width="1.6"/>`),
+ selectall:s(`<rect x="4" y="4" width="16" height="16" stroke="${B}" stroke-width="1.5" stroke-dasharray="2 1.8"/><path d="M8 9h8M8 12h8M8 15h5" stroke="${N}" stroke-width="1.4"/>`),
+ marks:s(`<path d="M13 4v16M17 4v16M17 4h-6.5a4 4 0 0 0 0 8H13" stroke="${B}" stroke-width="1.6"/>`),
+ ruler:s(`<rect x="2.5" y="8" width="19" height="8" rx="1" stroke="${N}" stroke-width="1.5"/><path d="M6 8v3M9.5 8v4.5M13 8v3M16.5 8v4.5" stroke="${N}" stroke-width="1.3"/>`),
+ home:s(`<path d="M4 11 12 4l8 7v9h-5.5v-6h-5v6H4z" stroke="${B}" stroke-width="1.6"/>`),
+ ai:s(`<path d="M12 3.5 13.7 9 19 10.7l-5.3 1.7L12 18l-1.7-5.6L5 10.7 10.3 9z" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><path d="M18.5 15.5 19.2 18l2.3.7-2.3.7-.7 2.4-.7-2.4-2.3-.7 2.3-.7z" fill="${B}"/>`),
+ html:s(`<path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4.5l-4 15" stroke="${N}" stroke-width="1.7"/>`),
+ txtfile:s(`<path d="M5.5 2.5h9l4 4v15h-13z" stroke="${N}" stroke-width="1.5"/><path d="M8.5 11h7M8.5 14h7M8.5 17h5" stroke="${B}" stroke-width="1.4"/>`),
+ eraser:s(`<path d="m4.5 14.5 8.5-8.5a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L12 19H8z" fill="#FBE3E5" stroke="${N}" stroke-width="1.4"/><path d="m9 10 5.8 5.8M8 19h12" stroke="${N}" stroke-width="1.4"/>`),
+ front:s(`<rect x="3.5" y="3.5" width="11" height="11" fill="#fff" stroke="${N}" stroke-width="1.3"/><rect x="9.5" y="9.5" width="11" height="11" fill="${B}" stroke="${N}" stroke-width="1.3"/>`),
+ back:s(`<rect x="9.5" y="9.5" width="11" height="11" fill="#fff" stroke="${N}" stroke-width="1.3"/><rect x="3.5" y="3.5" width="11" height="11" fill="${B}" stroke="${N}" stroke-width="1.3"/>`),
+ rotr:s(`<path d="M18 11a6 6 0 1 1-2-4.5" stroke="${N}" stroke-width="1.7"/><path d="M16.5 3v4h-4" stroke="${B}" stroke-width="1.7"/>`),
+ rotl:s(`<path d="M6 11a6 6 0 1 0 2-4.5" stroke="${N}" stroke-width="1.7"/><path d="M7.5 3v4h4" stroke="${B}" stroke-width="1.7"/>`),
+ fliph:s(`<path d="M12 3v18" stroke="${N}" stroke-width="1.3" stroke-dasharray="2 2"/><path d="M9.5 6v12L3 18z" fill="${B}"/><path d="M14.5 6v12H21z" stroke="${N}" stroke-width="1.4"/>`),
+ flipv:s(`<path d="M3 12h18" stroke="${N}" stroke-width="1.3" stroke-dasharray="2 2"/><path d="M6 9.5h12L18 3z" fill="${B}"/><path d="M6 14.5h12L18 21z" stroke="${N}" stroke-width="1.4"/>`),
+ wrapfront:s(`<path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="#9FB0C8" stroke-width="1.4"/><rect x="8" y="7.5" width="8" height="9" fill="${B}"/>`),
+ wrapbehind:s(`<rect x="8" y="7.5" width="8" height="9" fill="#BFD6F4"/><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="${N}" stroke-width="1.4"/>`),
+ wrapinline:s(`<path d="M4 6h16M4 18h16M4 12h3M17 12h3" stroke="${N}" stroke-width="1.4"/><rect x="8.5" y="9" width="7" height="6" fill="${B}"/>`),
+ alignL:s(`<path d="M4 3v18" stroke="${N}" stroke-width="1.6"/><rect x="6.5" y="6" width="12" height="4" fill="${B}"/><rect x="6.5" y="14" width="8" height="4" fill="${B}"/>`),
+ alignC:s(`<path d="M12 3v18" stroke="${N}" stroke-width="1.6"/><rect x="6" y="6" width="12" height="4" fill="${B}"/><rect x="8" y="14" width="8" height="4" fill="${B}"/>`),
+ alignR:s(`<path d="M20 3v18" stroke="${N}" stroke-width="1.6"/><rect x="5.5" y="6" width="12" height="4" fill="${B}"/><rect x="9.5" y="14" width="8" height="4" fill="${B}"/>`),
+ trash:s(`<path d="M5 7h14M9.5 7V4.5h5V7M7 7l1 13h8l1-13" stroke="#B3261E" stroke-width="1.6"/>`),
+ dup:s(`<rect x="8" y="8" width="12" height="12" rx="1" fill="#DCEAFB" stroke="${B}" stroke-width="1.4"/><rect x="4" y="4" width="12" height="12" rx="1" fill="#fff" stroke="${N}" stroke-width="1.4"/>`),
+ sup:s(txt('x',{s:15,y:18,c:N,x:9})+txt('2',{s:9,y:9,c:B,x:17})),
+ sub:s(txt('x',{s:15,y:15,c:N,x:9})+txt('2',{s:9,y:21,c:B,x:17})),
+ smallcaps:s(txt('Aᴀ',{s:14,c:N})),
+ caps:s(txt('AB',{s:12.5,w:600,c:N})),
+ lower:s(txt('ab',{s:14,c:N})),
+ dstrike:s(txt('abc',{s:12.5,y:16.2,w:600,c:N})+`<path d="M3.5 11h17M3.5 14h17" stroke="${N}" stroke-width="1.1"/>`),
+ grow:s(txt('A',{s:16,y:18,c:N,x:9})+`<path d="m15.5 9 2.5-3 2.5 3" stroke="${B}" stroke-width="1.6"/>`),
+ shrink:s(txt('A',{s:13,y:18,c:N,x:9})+`<path d="m15.5 6 2.5 3 2.5-3" stroke="${B}" stroke-width="1.6"/>`),
+};})();
+
+/* ===================== Utilitaires sans état ===================== */
+const CM=37.7953, PT=96/72, GAP=22, ZWSP='\u200B';
+const PAPERS={A4:{n:'A4 (21 × 29,7 cm)',w:21,h:29.7},Letter:{n:'Lettre US (21,59 × 27,94 cm)',w:21.59,h:27.94},Legal:{n:'Légal (21,59 × 35,56 cm)',w:21.59,h:35.56},A5:{n:'A5 (14,8 × 21 cm)',w:14.8,h:21}};
+const FONTS=['Times New Roman','Arial','Calibri','Cambria','Georgia','Garamond','Book Antiqua','Palatino Linotype','Verdana','Tahoma','Trebuchet MS','Segoe UI','Helvetica','Century Gothic','Franklin Gothic Medium','Courier New','Consolas','Lucida Console','Comic Sans MS','Impact'];
+const SIZES=[8,9,10,10.5,11,12,14,16,18,20,22,24,26,28,36,48,72];
+const LANGS=[['fr-CA','Français (Canada)'],['fr-FR','Français (France)'],['en-CA','Anglais (Canada)'],['en-US','Anglais (États-Unis)'],['en-GB','Anglais (Royaume-Uni)'],['es-ES','Espagnol'],['de-DE','Allemand'],['it-IT','Italien'],['pt-BR','Portugais (Brésil)']];
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmtNum=(v,d=1)=>(Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('fr-CA',{maximumFractionDigits:d});
+const parseNum=s=>{const v=parseFloat(String(s).replace(',','.').replace(/[^\d.\-]/g,''));return isFinite(v)?v:NaN;};
+function h(tag,cls,attrs,kids){const e=document.createElement(tag);if(cls)e.className=cls;if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;if(k==='text')e.textContent=v;else if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?'':v);}if(kids)for(const c of [].concat(kids))if(c!=null)e.append(c);return e;}
+function toHex(c){if(!c)return null;c=String(c).trim();if(c[0]==='#'){if(c.length===4)c='#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];return c.slice(0,7).toUpperCase();}const m=c.match(/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?/);if(!m)return null;if(m[4]!==undefined&&parseFloat(m[4])===0)return null;return '#'+[m[1],m[2],m[3]].map(x=>Math.round(+x).toString(16).padStart(2,'0')).join('').toUpperCase();}
+function mix(hex,t){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;if(t>0){r+=(255-r)*t;g+=(255-g)*t;b+=(255-b)*t;}else{r*=1+t;g*=1+t;b*=1+t;}return '#'+[r,g,b].map(x=>Math.round(x).toString(16).padStart(2,'0')).join('').toUpperCase();}
+const THEME=['#FFFFFF','#000000','#E7E6E6','#44546A','#4472C4','#ED7D31','#A5A5A5','#FFC000','#5B9BD5','#70AD47'];
+const STANDARD=['#C00000','#FF0000','#FFC000','#FFFF00','#92D050','#00B050','#00B0F0','#0070C0','#002060','#7030A0'];
+const HILITES=[['#FFFF00','Jaune'],['#00FF00','Vert vif'],['#00FFFF','Turquoise'],['#FF00FF','Rose'],['#0000FF','Bleu'],['#FF0000','Rouge'],['#000080','Bleu foncé'],['#008080','Sarcelle'],['#008000','Vert'],['#800080','Violet'],['#800000','Rouge foncé'],['#808000','Jaune foncé'],['#808080','Gris 50 %'],['#C0C0C0','Gris 25 %'],['#000000','Noir']];
+function themeRows(){const rows=[THEME];[.8,.6,.4].forEach(t=>rows.push(THEME.map((c,i)=>mix(c,i===0?-t/2.4:(i===1?t*.62:t)))));[-.25,-.5].forEach(t=>rows.push(THEME.map((c,i)=>mix(c,i===1?Math.abs(t)*.6:t))));return rows;}
+function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+async function writeFile(blob,name,desc,mime,ext){try{if(window.showSaveFilePicker&&window.self===window.top){const fh=await window.showSaveFilePicker({suggestedName:name,types:[{description:desc,accept:{[mime]:[ext]}}]});const w=await fh.createWritable();await w.write(blob);await w.close();return fh.name||name;}}catch(e){if(e&&e.name==='AbortError')return null;}dlBlob(blob,name);return name;}
+function b64ToBytes(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+function bytesToB64(u8){let s='';const ch=0x8000;for(let i=0;i<u8.length;i+=ch)s+=String.fromCharCode.apply(null,u8.subarray(i,i+ch));return btoa(s);}
+function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);if(how==='url')r.readAsDataURL(file);else if(how==='text')r.readAsText(file);else r.readAsArrayBuffer(file);});}
+
+/* ---------- Nettoyage HTML ---------- */
+const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
+function sanitizeHTML(html,internal){
+  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'</body>','text/html');
   const kill='script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template,xml,o\\:p';
   try{doc.body.querySelectorAll(kill).forEach(n=>n.remove());}catch(e){doc.body.querySelectorAll('script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template').forEach(n=>n.remove());}
   const walk=el=>{for(const n of [...el.children]){
@@ -14381,6 +14475,54 @@ bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t
    el.scrollIntoView({block:'nearest',inline:'nearest'});
   });
  },{passive:true});
+})();
+</script>
+
+<style id="readox-r3-mobile-editors">
+@media(max-width:820px){
+ /* Global editor viewport: no desktop-width columns on phone */
+ #stage,.stage{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+ #stage>*,.stage>*{max-width:100%;box-sizing:border-box}
+ #stage .rxds-home{max-width:100%!important;width:100%!important;box-sizing:border-box!important;padding:16px 12px!important;overflow-x:hidden!important}
+ #stage .rxds-home h1,#stage .rxds-home h2{max-width:100%;overflow-wrap:anywhere;font-size:clamp(21px,6vw,30px)!important;line-height:1.18!important}
+ #stage .rxds-home [data-ds]{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+ .cv-builder{display:flex!important;flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important;min-width:0!important;height:100%!important}
+ .cv-form{flex:0 0 auto!important;overflow:visible!important;min-width:0!important;width:100%!important;padding:14px 12px 24px!important;border-right:0!important}
+ .cv-form input,.cv-form textarea,.cv-form select{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;font-size:16px!important}
+ .cv-preview-wrap{flex:0 0 auto!important;min-width:0!important;width:100%!important;min-height:360px!important;overflow:hidden!important}
+ .cv-preview-bar{max-width:100%;overflow-x:auto!important;flex-wrap:nowrap!important;gap:6px!important}
+ .cv-preview-bar button{flex:0 0 auto!important;white-space:nowrap!important}
+ .cv-paper-scroll{max-width:100%;overflow:auto!important;overscroll-behavior:contain}
+ .rxw-host{max-width:100%!important;min-width:0!important;overflow:hidden!important}
+ .rxw{max-width:100%!important;width:100%!important;min-width:0!important}
+ .rxw-titlebar{padding-left:7px!important;max-width:100%!important;gap:4px!important}
+ .rxw-logo{font-size:14px!important;min-width:0!important}
+ .rxw-doctitle{margin-left:3px!important;max-width:30vw!important;font-size:12px!important}
+ .rxw-search{display:none!important}
+ .rxw-winctl button{width:38px!important;max-width:38px!important}
+ .rxw :is(.rxw-tabs,.rxw-ribbon,.rxw-toolbar){max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain}
+ .rxw-scroll{max-width:100%!important;overflow:auto!important;overscroll-behavior:contain}
+ #stage canvas,#stage img{max-width:100%;height:auto}
+ #stage .pdf-page,#stage .page-container{max-width:100%;box-sizing:border-box}
+}
+@media(max-width:390px){.cv-form{padding-inline:9px!important}.rxw-winctl button{width:32px!important}}
+</style>
+<script id="readox-r3-mobile-labels-and-diagnostics">
+(()=>{'use strict';if(window.__readoxR3)return;
+ const mobile=()=>matchMedia('(max-width:820px)').matches;
+ const map=new Map([['Document Studio','Atelier de création'],['CV IA','Créer mon CV avec IA']]);
+ const forbidden=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','INPUT','OPTION','CODE','PRE']);
+ function updateLabels(root=document.body){
+   if(!root)return;
+   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){return n.parentElement&&!forbidden.has(n.parentElement.tagName)&&!n.parentElement.closest('[contenteditable="true"],.rxw-editor,.cv-paper,.cv-paper-scroll,#page')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
+   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+   for(const n of nodes){let v=n.nodeValue;for(const [oldLabel,newLabel] of map){if(v.trim()===oldLabel)v=v.replace(oldLabel,newLabel)}if(v!==n.nodeValue)n.nodeValue=v}
+   document.querySelectorAll('[title],[aria-label]').forEach(el=>{for(const attr of ['title','aria-label']){const v=el.getAttribute(attr);if(map.has(v))el.setAttribute(attr,map.get(v))}});
+ }
+ let pending=false;function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;updateLabels()})}
+ function audit(){const stage=document.getElementById('stage');return {mobile:mobile(),viewport:innerWidth,stageWidth:stage?.getBoundingClientRect().width||null,documentOverflow:document.documentElement.scrollWidth>innerWidth+2,wordEngineLoaded:!!window.ReadixWordEngine,wordEngineMountAvailable:typeof window.ReadixWordEngine?.mount==='function',labels:{oldDocumentStudio:[...document.querySelectorAll('button,a,.mtab')].filter(e=>e.textContent.trim()==='Document Studio').length,oldCv:[...document.querySelectorAll('button,a,.mtab')].filter(e=>e.textContent.trim()==='CV IA').length}}}
+ function init(){updateLabels();new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});window.addEventListener('resize',schedule,{passive:true})}
+ window.__readoxR3={audit,updateLabels};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 </body>
