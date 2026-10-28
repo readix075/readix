@@ -328,13 +328,24 @@ app.post("/api/projects", auth, async (req, res) => {
   const status = String(p.status || "active").slice(0, 40);
   const updatedAt = Number(p.updatedAt) || Date.now();
   try {
-    await pool.query(
+    const expected = Number(req.body && req.body.expectedUpdatedAt) || 0;
+    const existing = await pool.query('SELECT updated_at FROM projects WHERE email=$1 AND id=$2', [req.user.email,id]);
+    const current = existing.rows.length ? Number(existing.rows[0].updated_at)||0 : 0;
+    if(existing.rows.length && current !== expected){
+      return res.status(409).json({error:'Conflit de version : une version plus récente existe sur le serveur',conflict:true,serverUpdatedAt:current});
+    }
+    if(!existing.rows.length && expected>0){
+      return res.status(409).json({error:'Projet distant introuvable : sauvegarde interrompue',conflict:true});
+    }
+    const saved = await pool.query(
       `INSERT INTO projects(email,id,name,description,domain,status,data,updated_at,created_at)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,now())
-       ON CONFLICT (email,id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, domain=EXCLUDED.domain, status=EXCLUDED.status, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at`,
-      [req.user.email, id, name, description, domain, status, JSON.stringify(p), updatedAt]
+       ON CONFLICT (email,id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, domain=EXCLUDED.domain, status=EXCLUDED.status, data=EXCLUDED.data, updated_at=EXCLUDED.updated_at
+       WHERE projects.updated_at=$9 RETURNING id`,
+      [req.user.email, id, name, description, domain, status, JSON.stringify(p), updatedAt, current]
     );
-    res.json({ ok: true });
+    if(!saved.rowCount)return res.status(409).json({error:'Conflit de version : mise à jour simultanée',conflict:true});
+    res.json({ ok: true, updatedAt });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 // Supprime un projet (les conversations liées sont détachées, pas supprimées).
@@ -1113,6 +1124,54 @@ app.post("/api/ai/:feature", auth, async (req, res) => {
     console.log("[AI] échec:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+
+// Phase 7O — génération de compositions graphiques structurées (sans image aplatie).
+app.post('/api/flyer-maker/ai-generate', auth, async (req,res)=>{
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Génération IA non configurée sur le serveur (GEMINI_API_KEY).'});
+ const description=String(req.body?.prompt||'').trim();
+ if(description.length<12||description.length>1800)return res.status(400).json({error:'Description invalide (12 à 1800 caractères).'});
+ const instructions=`Tu es un directeur artistique professionnel. Conçois un flyer vertical de 510x660 pixels selon la demande. Réponds UNIQUEMENT par un objet JSON avec "background" (couleur hexadécimale #RRGGBB) et "items" (tableau de 5 à 25 objets). Chaque objet est indépendant et éditable, de type "text" ou "rect", avec x,y,w,h (nombres en pixels), rotation optionnelle (de -180 à 180), et pour les textes : text, size (9-90), color (#RRGGBB), bold (booléen) ; pour les rectangles : bg (#RRGGBB). Réserve le centre de la page pour une photographie publicitaire éventuelle : zone x=30..480, y=180..455. Place le titre principal en haut (y=35..165), les informations et appel à action dans le pied de page (y=475..635). Aucun texte ne doit recouvrir la zone photo. Tous les objets doivent tenir sur la page, sans chevauchement de textes, avec hiérarchie visuelle soignée, espacements, contraste lisible et titre remarquable. Utilise les rectangles comme blocs décoratifs. N'utilise PAS d'image, de source externe, de HTML, de markdown ni de lien. Écris dans la langue de la demande. Demande du client : ${description}`;
+ try{
+  const model=process.env.GEMINI_FLYER_MODEL||process.env.GEMINI_LAYOUT_MODEL||'gemini-2.5-flash';
+  const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),50000);
+  let upstream;
+  try{upstream=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_API_KEY},body:JSON.stringify({contents:[{parts:[{text:instructions}]}],generationConfig:{responseMimeType:'application/json',temperature:0.65}}),signal:controller.signal});}
+  finally{clearTimeout(timer);}
+  if(!upstream.ok){console.error('[Flyer AI] Gemini status',upstream.status);return res.status(502).json({error:'Le fournisseur IA ne répond pas correctement.'});}
+  const payload=await upstream.json();const raw=payload.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+  let parsed;try{parsed=JSON.parse(raw);}catch(_){return res.status(502).json({error:'La réponse IA n’est pas un JSON valide.'});}
+  if(!parsed||!Array.isArray(parsed.items)||parsed.items.length<1||parsed.items.length>45||!/^#[0-9a-fA-F]{6}$/.test(parsed.background||''))return res.status(502).json({error:'Composition IA invalide.'});
+  for(const it of parsed.items){if(!it||!['text','rect'].includes(it.type)||!['x','y','w','h'].every(k=>Number.isFinite(it[k]))||it.x<0||it.y<0||it.w<8||it.h<8||it.x+it.w>510||it.y+it.h>660)return res.status(502).json({error:'La composition IA contient des éléments hors page.'});}
+  return res.json({background:parsed.background,items:parsed.items});
+ }catch(e){console.error('[Flyer AI]',e.message);return res.status(502).json({error:'Génération IA momentanément indisponible.'});}
+});
+
+
+// Phase 7R — image IA originale, sans compression ni redimensionnement côté serveur.
+// Cette route est distincte du modèle de composition 7O.
+app.post('/api/flyer-maker/ai-image', auth, async (req,res)=>{
+ if(!GEMINI_API_KEY)return res.status(503).json({error:'Service image IA non configuré.'});
+ const prompt=String(req.body?.prompt||'').trim();
+ if(prompt.length<12||prompt.length>1200)return res.status(400).json({error:'Description image invalide.'});
+ const model=process.env.GEMINI_FLYER_IMAGE_MODEL||'gemini-2.5-flash-image';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55000);
+ try{
+  const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
+  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':GEMINI_API_KEY},signal:controller.signal,body:JSON.stringify({contents:[{parts:[{text:'Create a polished high-quality professional advertising photograph or illustration, with NO text, NO letters, NO logos, NO watermarks. Suitable for a vertical promotional flyer. Visual brief: '+prompt}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}})});
+  if(!response.ok)return res.status(502).json({error:'Le service de génération d’image est indisponible.'});
+  const data=await response.json();
+  const parts=data.candidates?.[0]?.content?.parts||[];
+  const image=parts.find(p=>p.inlineData?.data&&/^image\/(png|jpeg|webp)$/.test(p.inlineData.mimeType||''));
+  if(!image)return res.status(502).json({error:'Aucune image n’a été retournée par le modèle.'});
+  const base64=image.inlineData.data,mime=image.inlineData.mimeType;
+  if(base64.length>12000000)return res.status(413).json({error:'Image trop volumineuse pour ce projet.'});
+  // Preserve original bytes and mime type exactly; no recompression.
+  return res.json({mimeType:mime,base64,source:'gemini',preservedOriginal:true});
+ }catch(err){console.error('[Flyer AI Image]',err.message);return res.status(502).json({error:'Génération de l’image momentanément indisponible.'});}
+ finally{clearTimeout(timer);}
 });
 
 // Phase 7A — route explicite du module intégré (aucun changement aux routes IA/PDF/CV).
