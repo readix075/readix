@@ -1542,7 +1542,343 @@ function readFileAs(file,how){return new Promise((res,rej)=>{const r=new FileRea
 /* ---------- Nettoyage HTML ---------- */
 const KEEP_STYLE=['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','font-size','font-family','text-align','margin-left','margin-right','text-indent','line-height','vertical-align','font-variant','text-transform','width','height','margin-top','margin-bottom','border','border-top','border-bottom','border-left','border-right','padding','list-style-type','column-count','column-gap','column-rule','left','top','transform','background'];
 function sanitizeHTML(html,internal){
-  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'</body>','text/html');
+  const doc=new DOMParser().parseFromString('<body>'+(html||'')+'
+<style id="readox-mobile-global-phase2-documents">
+/* Mobile Phase 2: presentation only. Preserve routing, navigation and historical modules. */
+@media (max-width: 820px) {
+ #stage, #stage > div { min-width:0; max-width:100%; box-sizing:border-box; }
+ #stage iframe { max-width:100%; border:0; }
+ .rxw-editor-host,.rxw-editor,.rxw-body { min-width:0; max-width:100%; }
+ .rxw-menubar,.rxw-bar,.rxw-fmtbar,.rxw-drawbar { max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
+ .rxw-menubar button,.rxw-bar button,.rxw-fmtbar button { flex-shrink:0; }
+ .rxw-ed { -webkit-user-select:text; user-select:text; }
+ .rxw-dlg,.rxw-modal { max-width:min(96vw,700px); max-height:calc(100dvh - 32px); overflow:auto; }
+ .rxid[data-rxid-root] { max-width:100%; min-width:0; }
+ .rxid[data-rxid-root] .rxid-menu,.rxid[data-rxid-root] .rxid-control { -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; }
+ .rxid[data-rxid-root] .rxid-stage { padding:16px 14px 70px!important; }
+ .rxid[data-rxid-root] .rxid-body { min-width:0; }
+ .rxid[data-rxid-root] .rxid-canvas { touch-action:pan-x pan-y; }
+ .rxds-home { width:100%; max-width:100%; }
+ input[type="file"] { max-width:100%; }
+}
+@media (max-width: 600px) {
+ .rxid[data-rxid-root] .rxid-body { grid-template-columns:48px minmax(0,1fr)!important; }
+ .rxid[data-rxid-root] .rxid-canvas { grid-column:2!important; }
+ .rxid[data-rxid-root] .rxid-props { display:none!important; }
+ .rxid[data-rxid-root] .rxid-tools { padding:7px 2px!important; }
+ .rxid[data-rxid-root] .rxid-topright { max-width:45vw; overflow-x:auto; }
+ .rxid[data-rxid-root] .rxid-status { gap:9px; overflow-x:auto; }
+ .rxw-menubar,.rxw-fmtbar { scrollbar-width:thin; }
+ .rxw-dlg,.rxw-modal { width:calc(100vw - 20px); max-width:calc(100vw - 20px); }
+}
+/* Existing historical-visibility contract: same on desktop and mobile. */
+#rxRight,#rxIaBtn,#cbotFab,#aiFloat,#rxRrCopilot,.tool-ai,.rx-rr-card,.rx-rr-sec,.rx-rr-list,.rx-rr-list2,
+#rxDash .rx-cols,#rxDash .rx-qgrid,#rxDash .rx-sklist,[data-nav="copilot"],[data-nav="book"],.rx-ai-floating,.ai-float-overlay { display:none!important; }
+</style>
+<style id="readox-mobile-documents-phase3">
+/* Phase 3: document workflows, only at mobile breakpoints. No navigation changes. */
+@media (max-width:820px){
+ input[type="file"]:not([hidden]){max-width:100%;min-width:0;}
+ input[type="file"]:not([hidden])::file-selector-button{min-height:42px;padding:9px 12px;border-radius:8px;touch-action:manipulation}
+ #stage iframe:not([src*="flyer-maker.html"]),#stage embed,#stage object{max-width:100%;}
+ #stage img,#stage canvas{max-width:100%;}
+ .overlay .dialog,#dialog,[role="dialog"]{box-sizing:border-box;max-width:min(96vw,720px);max-height:calc(100dvh - 28px);overflow:auto;overscroll-behavior:contain}
+ .overlay,.dialog{overscroll-behavior:contain}
+ #stage table{max-width:100%}
+ #stage :is(button,input,select,textarea){min-width:0}
+ #stage :is(.pages,.preview,.pdf-preview){max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+@media(max-width:540px){
+ .overlay .dialog,#dialog,[role="dialog"]{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+}
+</style>
+<script id="readox-mobile-documents-phase3-script">
+(function(){'use strict';
+ const mobile=()=>window.matchMedia('(max-width:820px)').matches;
+ // Files remain handled by the pre-existing module-specific import routines.
+ // Resetting a file input is deliberately avoided: it would break onchange readers.
+ document.addEventListener('change',function(ev){
+   const input=ev.target;
+   if(!mobile()||!(input instanceof HTMLInputElement)||input.type!=='file'||!input.files||!input.files.length)return;
+   // No mutation to the FileList, FileReader, or the module's own handlers.
+   input.dataset.rxMobileFileCount=String(input.files.length);
+ },false);
+ // Prevent mobile browsers from trying to scroll the document behind an open dialog.
+ // Native file pickers, save/download actions, and PDF rendering stay untouched.
+})();
+</script>
+
+<style id="readox-mobile-phase4">
+@media (pointer:coarse){
+  button,[role="button"],select,input[type="file"],.rxds-card{touch-action:manipulation}
+  .stage,.rxw-editor,.rxid,.rxds-home{overscroll-behavior-x:contain}
+  .rxw-editor [contenteditable="true"],.doc-zone[contenteditable="true"],textarea,input{user-select:text;-webkit-user-select:text}
+  .rxw-editor button,.rxid button{min-height:36px}
+}
+@media(max-width:820px){
+  html,body{max-width:100%;overflow-x:hidden}
+  #stage{min-width:0;max-width:100%;overscroll-behavior-x:contain}
+  .rxw-editor,.rxid{max-width:100%;min-width:0}
+  .rxw-editor img,.rxid img{max-width:100%}
+  [role="dialog"]{max-width:calc(100vw - 20px);max-height:calc(100dvh - 24px);overflow:auto}
+}
+@supports (height:100dvh){@media(max-width:820px){#stage{max-height:100dvh}}}
+</style>
+<script id="readox-mobile-phase4-keyboard">
+(()=>{'use strict';
+ if(!window.visualViewport||!window.matchMedia('(max-width: 820px)').matches)return;
+ const vv=window.visualViewport;let scheduled=false;
+ const sync=()=>{scheduled=false;document.documentElement.style.setProperty('--rx-mobile-visible-height',Math.round(vv.height)+'px');};
+ const update=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(sync)};
+ vv.addEventListener('resize',update,{passive:true});window.addEventListener('orientationchange',update,{passive:true});update();
+ document.addEventListener('focusin',e=>{
+   const el=e.target;if(!el.matches?.('input,textarea,[contenteditable="true"]'))return;
+   // Let the browser place the caret; do not force scroll on desktop.
+   setTimeout(()=>{if(document.activeElement===el&&vv.height<window.innerHeight*.82)el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},180);
+ });
+})();
+</script>
+
+<style id="readox-mobile-phase5-style">
+@media(max-width:820px){
+ #rx-mobile5-status{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 9px);right:10px;z-index:9900;max-width:min(270px,calc(100vw - 20px));padding:7px 11px;border-radius:10px;background:#162c43;color:#fff;font:12px/1.35 system-ui,sans-serif;box-shadow:0 3px 12px #0004;pointer-events:none}
+ #rx-mobile5-status[data-offline="true"]{background:#713b20}
+}
+@media(min-width:821px){#rx-mobile5-status{display:none!important}}
+</style>
+<script id="readox-mobile-phase5-continuity">
+(()=>{'use strict';
+ // Informational only: never claim that a project is synchronized or saved.
+ const el=document.createElement('div');el.id='rx-mobile5-status';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+ const update=()=>{const online=navigator.onLine;el.dataset.offline=String(!online);el.textContent=online?'Readox · Connexion disponible':'Hors connexion · Enregistrez une copie locale';};
+ const mount=()=>{if(!document.body.contains(el))document.body.appendChild(el);update();};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+ window.addEventListener('online',update);window.addEventListener('offline',update);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+})();
+</script>
+
+<script id="readox-mobile-phase8-project-bridge">
+(()=>{'use strict';
+// Only same-origin embedded Flyer Maker may use this bridge. No historical menu is changed.
+window.addEventListener('message',async e=>{
+ const d=e.data;
+ if(e.origin!==location.origin||!d||d.channel!=='readox-document-phase8')return;
+ const frames=[...document.querySelectorAll('iframe[src*="flyer-maker.html"]')];
+ if(!frames.some(f=>f.contentWindow===e.source))return;
+ const respond=(ok,rest)=>e.source.postMessage({channel:'readox-document-phase8-response',requestId:d.requestId,ok,...rest},location.origin);
+ try{
+  if(!copilotAuthed())throw Error('Connectez-vous à votre compte Readox pour synchroniser.');
+  if(!PROJECT_STATE.loaded)await initProjects();
+  const project=PROJECT_STATE.projects.find(p=>p.id===PROJECT_STATE.activeId);
+  if(!project)throw Error('Sélectionnez d’abord un projet Readox actif.');
+  const documents=Array.isArray(project.documents)?project.documents:[];
+  if(d.action==='list'){
+   respond(true,{documents:documents.filter(x=>x&&x.kind==='readox-flyer-v2'&&x.payload).map(x=>({id:x.id,name:x.name,updatedAt:x.updatedAt}))});return;
+  }
+  if(d.action==='load'){
+   const found=documents.find(x=>x&&x.id===d.payload?.id&&x.kind==='readox-flyer-v2');
+   if(!found||!found.payload)throw Error('Flyer introuvable');
+   respond(true,{document:found.payload});return;
+  }
+  if(d.action!=='save')throw Error('Action inconnue');
+  const doc=d.payload?.document;
+  if(!doc||doc.format!=='readox-flyer'||!Array.isArray(doc.items)||doc.items.length>500)throw Error('Format de document non reconnu');
+  if(JSON.stringify(doc).length>1500000)throw Error('Document trop volumineux pour cette version');
+  const id='rx8-flyer-'+Date.now()+'-'+Math.floor(Math.random()*1e6);
+  project.documents=[...documents,{id,kind:'readox-flyer-v2',name:String(doc.name||'Flyer').slice(0,120),payload:doc,updatedAt:Date.now()}];
+  await saveProject(project);
+  respond(true,{projectName:project.name,id});
+ }catch(err){respond(false,{error:String(err?.message||err)})}
+});
+})();
+</script>
+<style id="readox-mobile-phase9-word-style">
+.rx9-word-actions{position:absolute;right:14px;bottom:16px;z-index:90;display:flex;gap:7px;align-items:center;padding:7px;background:#fff;border:1px solid #d6e0ee;border-radius:12px;box-shadow:0 5px 22px #182a4430}
+.rx9-word-actions button{font:600 12px Arial,sans-serif;border:1px solid #b8cee8;border-radius:8px;background:#f5f9ff;color:#163d6d;padding:9px 10px;cursor:pointer;min-height:40px}
+@media(max-width:700px){.rx9-word-actions{right:8px;bottom:max(8px,env(safe-area-inset-bottom));max-width:calc(100% - 16px)}.rx9-word-actions button{font-size:12px;padding:8px}}
+ .rx9-word-sync-status{font-size:11px;max-width:220px;line-height:1.3;color:var(--muted,#52606d)}@media(max-width:640px){.rx9-word-actions{flex-wrap:wrap}.rx9-word-sync-status{width:100%;max-width:none}}
+</style>
+<script id="readox-mobile-phase9-word-projects">
+(()=>{'use strict';
+// Phase 10: Word snapshots, resource checks and honest server acknowledgement.
+const KIND='readox-word-v1', MAX=1200000;
+function wordRoot(){return document.querySelector('.word-engine-v2')||document.querySelector('.docstudio');}
+function wordTab(){try{const t=activeTab();return t&&t.tool==='docstudio'?t:null;}catch{return null;}}
+function notify(m){if(typeof toast==='function')toast(m);else alert(m);}
+function status(msg){const e=document.querySelector('.rx9-word-sync-status');if(e){e.textContent=msg;e.title=msg;}}
+async function project(){if(!copilotAuthed())throw Error('Connectez-vous à votre compte Readox.');if(!PROJECT_STATE.loaded)await initProjects();const p=PROJECT_STATE.projects.find(x=>x.id===PROJECT_STATE.activeId);if(!p)throw Error('Sélectionnez un projet Readox actif.');return p;}
+function getHTML(t){const root=wordRoot();const ed=root?.querySelector('.rxw-editor[contenteditable="true"],.doceditor[contenteditable="true"]');return ed?ed.innerHTML:String(t.doc||'');}
+function inspectResources(html){
+ const doc=new DOMParser().parseFromString(html,'text/html');const warnings=[];
+ const images=[...doc.querySelectorAll('img')];
+ for(const img of images){const src=img.getAttribute('src')||'';
+   if(/^blob:|^file:/i.test(src))warnings.push('Image temporaire non transférable entre appareils');
+   else if(/^https?:/i.test(src))warnings.push('Image externe : connexion requise pour l’affichage');
+   else if(!src)warnings.push('Image sans source');
+ }
+ if(doc.querySelector('iframe,video,audio,canvas,object,embed'))warnings.push('Objets multimédias non garantis lors de la réouverture');
+ return [...new Set(warnings)];
+}
+async function save(){const t=wordTab();if(!t)return;try{
+ const p=await project(),html=getHTML(t);
+ if(html.length>MAX)throw Error('Document trop volumineux pour la synchronisation actuelle (1,2 million de caractères).');
+ const warnings=inspectResources(html);
+ if(warnings.length&&!confirm('Certaines ressources risquent de ne pas suivre le document sur un autre appareil :\n• '+warnings.join('\n• ')+'\n\nEnregistrer tout de même ?'))return;
+ const name=String(t.name||t.title||'Document Word').slice(0,120),id='rx10-word-'+Date.now()+'-'+Math.floor(Math.random()*1e6);
+ const doc={id,kind:KIND,name,payload:{format:KIND,html},resourceWarnings:warnings,updatedAt:Date.now()};
+ p.documents=[...(Array.isArray(p.documents)?p.documents:[]),doc];
+ status('Enregistrement local…');await saveProject(p);
+ status('Enregistré localement · serveur non confirmé');
+ // Existing server route is authoritative. Never label an offline save as synchronized.
+ if(!navigator.onLine||!PROJECT_STATE.remote){notify('Document enregistré localement. Synchronisation serveur en attente.');return;}
+ // Cancel the delayed duplicate request; send one acknowledged write now.
+ try{if(typeof _projectSyncTimers!=='undefined'&&_projectSyncTimers[p.id])clearTimeout(_projectSyncTimers[p.id]);}catch(_){ }
+ const ok=await apiProjectSave(p);
+ if(ok){status('Sauvegarde serveur confirmée');notify('Document Word enregistré et sauvegarde serveur confirmée.');}
+ else{const sync=window.__readoxMobileSync6?.status?.();status(sync?.conflicts?.includes(p.id)?'Conflit : sauvegarde serveur bloquée':'Enregistré localement · synchronisation en attente');notify('Document conservé localement. Sauvegarde serveur non confirmée.');}
+ }catch(e){status('Sauvegarde non terminée');alert(e.message||String(e));}}
+async function open(){try{const p=await project();const docs=(Array.isArray(p.documents)?p.documents:[]).filter(x=>x&&x.kind===KIND&&x.payload?.format===KIND&&typeof x.payload.html==='string');if(!docs.length){notify('Aucun document Word dans ce projet.');return;}
+ const choices=docs.map((d,i)=>`${i+1}. ${d.name}${d.resourceWarnings?.length?' (ressources à vérifier)':''}`).join('\n');
+ const raw=prompt('Document Word à ouvrir (numéro) :\n'+choices,'1');if(raw===null)return;
+ const index=Number(raw)-1;if(!Number.isInteger(index)||!docs[index]){alert('Numéro invalide.');return;}
+ if(!confirm('Ouvrir ce document dans un nouvel onglet Word ?'))return;
+ const d=docs[index];if(d.payload.html.length>MAX)throw Error('Document trop volumineux.');
+ if(typeof openReadixWordTab!=='function')throw Error('Éditeur Word indisponible.');
+ const safe=typeof sanitizeHTML==='function'?sanitizeHTML(d.payload.html,true):d.payload.html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi,'').replace(/\son\w+\s*=\s*(["']).*?\1/gi,'');
+ openReadixWordTab(safe);notify(d.resourceWarnings?.length?'Document ouvert. Vérifiez les images et objets associés.':'Document Word ouvert.');
+ }catch(e){alert(e.message||String(e));}}
+function mount(){const root=wordRoot(),t=wordTab();if(!root||!t)return;const host=root.querySelector('.rxw-body,.we-body,.docstudio-main')||root;if(host.querySelector(':scope > .rx9-word-actions'))return;
+ const bar=document.createElement('div');bar.className='rx9-word-actions';bar.setAttribute('aria-label','Documents Word du projet Readox');
+ const a=document.createElement('button'),b=document.createElement('button'),state=document.createElement('span');a.type=b.type='button';a.textContent='Enregistrer dans le projet';b.textContent='Ouvrir du projet';state.className='rx9-word-sync-status';state.setAttribute('role','status');state.textContent='';a.onclick=save;b.onclick=open;bar.append(a,b,state);
+ if(getComputedStyle(host).position==='static')host.style.position='relative';host.append(bar);}
+let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;mount()},250)});
+function init(){observer.observe(document.body,{childList:true,subtree:true});mount();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+<style id="readox-mobile-phase11-document-flows">
+/* Phase 11: responsive document I/O surfaces; does not alter navigation or engine routes. */
+@media (max-width:820px){
+  :root{--rx-mobile-visual-height:100dvh}
+  html,body{min-width:0;max-width:100%;-webkit-text-size-adjust:100%}
+  #stage,#rpBody,.rpanel-body{min-width:0;max-width:100%;overflow-wrap:anywhere}
+  input[type=file]{max-width:100%;font-size:16px}
+  input[type=file]::file-selector-button{min-height:42px;max-width:100%;white-space:normal;touch-action:manipulation}
+  [role=dialog],dialog,[aria-modal=true],.rx-ocr-card{max-width:min(94vw,640px)!important;max-height:calc(var(--rx-mobile-visual-height) - 24px)!important;overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
+  .rx-ocr-ov{padding:12px!important;box-sizing:border-box}
+  .rx-ocr-card{min-width:0!important;overflow-wrap:anywhere}
+  .rx-ocr-card a[download],.rx-ocr-card button{min-height:42px;touch-action:manipulation}
+  #stage iframe,#stage embed,#stage object,#stage canvas,#stage video{max-width:100%}
+  #stage img{max-width:100%;height:auto}
+  #stage table{max-width:100%}
+  a[download],button,input[type=submit]{touch-action:manipulation}
+}
+@media(max-width:540px){
+  [role=dialog],dialog,[aria-modal=true],.rx-ocr-card{max-width:calc(100vw - 20px)!important}
+  .rx-ocr-card{padding:clamp(12px,3vw,20px)!important}
+}
+</style>
+<script id="readox-mobile-phase11-document-flows">
+(()=>{'use strict';
+  // Keep import/conversion/export handlers intact. Only adapt viewport and announce chosen files.
+  if(window.__rxMobilePhase11Ready)return;
+  window.__rxMobilePhase11Ready=true;
+  const mobile=()=>window.matchMedia('(max-width: 820px)').matches;
+  let raf=0;
+  function viewport(){
+    if(!mobile()){document.documentElement.style.removeProperty('--rx-mobile-visual-height');return;}
+    const v=window.visualViewport;
+    const height=Math.max(200,Math.round(v?.height||window.innerHeight));
+    document.documentElement.style.setProperty('--rx-mobile-visual-height',height+'px');
+  }
+  function schedule(){if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{raf=0;viewport()})}
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',schedule,{passive:true});
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',schedule,{passive:true});}
+  document.addEventListener('change',e=>{
+    const input=e.target;
+    if(!mobile()||!(input instanceof HTMLInputElement)||input.type!=='file'||!input.files?.length)return;
+    // Native handlers remain responsible for validation, import and conversion.
+    let status=document.getElementById('rx-mobile-file-announcer');
+    if(!status){status=document.createElement('div');status.id='rx-mobile-file-announcer';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';document.body.appendChild(status)}
+    status.textContent=input.files.length===1?'Fichier sélectionné : '+input.files[0].name:input.files.length+' fichiers sélectionnés';
+  },false);
+  schedule();
+})();
+</script>
+<script id="readox-mobile-phase13-resume">
+(()=>{'use strict';
+  if(window.__readoxMobile13Resume)return;
+  let timer=null, lastAttempt=0;
+  const schedule=(reason)=>{
+    if(document.hidden || !navigator.onLine)return;
+    clearTimeout(timer);
+    timer=setTimeout(async()=>{
+      if(document.hidden || !navigator.onLine)return;
+      const sync=window.__readoxMobileSync6;
+      if(!sync || typeof sync.retry!=='function')return;
+      lastAttempt=Date.now();
+      try{await sync.retry();}catch(e){console.warn('Readox: reprise de synchronisation différée',e);}
+    },reason==='online'?250:900);
+  };
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule('visible');else clearTimeout(timer);});
+  window.addEventListener('pageshow',()=>schedule('pageshow'));
+  window.addEventListener('focus',()=>schedule('focus'));
+  window.addEventListener('online',()=>schedule('online'));
+  window.addEventListener('pagehide',()=>{clearTimeout(timer);/* La file de projets reste persistée par la Phase 7. */});
+  window.__readoxMobile13Resume={status:()=>({lastAttempt,online:navigator.onLine,hidden:document.hidden,sync:window.__readoxMobileSync6?.status?.()||null}),retry:()=>schedule('manual')};
+})();
+</script>
+
+<style id="readox-mobile-phase14-visibility">
+/* Shared web/mobile visibility contract: no deletion of historical engines. */
+#stage .rxds-home [data-ds="indesign"],
+#stage .rxds-home [data-ds="book"],
+#stage .rxds-home [data-ds="bookstudio"],
+#stage .rxds-home [data-ds="copilot"],
+#stage .rxds-home [data-ds="aiadvanced"],
+[data-nav="indesign"],[data-nav="bookstudio"],[data-nav="livreia"],
+[data-nav="aiadvanced"],[data-nav="espaceia"],
+#rxRight,#rxIaBtn,#cbotFab,#aiFloat,#rxRrCopilot,.tool-ai,
+.rx-rr-card,.rx-rr-sec,.rx-rr-list,.rx-rr-list2,
+#rxDash .rx-cols,#rxDash .rx-qgrid,#rxDash .rx-sklist,
+[data-nav="copilot"],[data-nav="book"],.rx-ai-floating,.ai-float-overlay {display:none!important}
+</style>
+<script id="readox-mobile-phase14-audit">
+(()=>{'use strict';
+ if(window.__readoxMobile14Audit)return;
+ const hiddenSelectors=[
+ '#rxRight','#rxIaBtn','#cbotFab','#aiFloat','#rxRrCopilot','.tool-ai',
+ '.rx-rr-card','.rx-rr-sec','.rx-rr-list','.rx-rr-list2',
+ '#rxDash .rx-cols','#rxDash .rx-qgrid','#rxDash .rx-sklist',
+ '[data-nav="copilot"]','[data-nav="book"]','[data-nav="indesign"]',
+ '[data-nav="bookstudio"]','[data-nav="livreia"]',
+ '[data-nav="aiadvanced"]','[data-nav="espaceia"]',
+ '.rx-ai-floating','.ai-float-overlay',
+ '#stage .rxds-home [data-ds="indesign"]',
+ '#stage .rxds-home [data-ds="book"]',
+ '#stage .rxds-home [data-ds="bookstudio"]',
+ '#stage .rxds-home [data-ds="copilot"]',
+ '#stage .rxds-home [data-ds="aiadvanced"]'
+ ];
+ const allowedStudio=['word','flyer'];
+ const visible=el=>{const st=getComputedStyle(el);const r=el.getBoundingClientRect();return st.display!=='none'&&st.visibility!=='hidden'&&r.width>0&&r.height>0};
+ const status=()=>{
+  const unexpected=[];const counts={};
+  hiddenSelectors.forEach(sel=>{let nodes=[];try{nodes=[...document.querySelectorAll(sel)]}catch(e){return}
+   counts[sel]=nodes.length;nodes.filter(visible).forEach(el=>unexpected.push({selector:sel,tag:el.tagName,id:el.id||null}));
+  });
+  const studio=[...document.querySelectorAll('#stage .rxds-home [data-ds]')].map(el=>({module:el.getAttribute('data-ds'),visible:visible(el)}));
+  return {viewport:{width:innerWidth,height:innerHeight,mobile:matchMedia('(max-width:820px)').matches},
+   expectedStudio:allowedStudio.slice(),studio,unexpectedVisible:unexpected,pass:unexpected.length===0,
+   selectorsChecked:hiddenSelectors.length,counts,checkedAt:new Date().toISOString()};
+ };
+ // Diagnostic only. Existing CSS remains responsible for hiding legacy UI.
+ window.__readoxMobile14Audit=Object.freeze({status,expectedStudio:allowedStudio.slice(),selectors:hiddenSelectors.slice()});
+})();
+</script>
+</body>','text/html');
   const kill='script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template,xml,o\\:p';
   try{doc.body.querySelectorAll(kill).forEach(n=>n.remove());}catch(e){doc.body.querySelectorAll('script,style,meta,link,iframe,object,embed,form,input,button,select,textarea,title,base,noscript,template').forEach(n=>n.remove());}
   const walk=el=>{for(const n of [...el.children]){
@@ -3521,7 +3857,17 @@ async function idbDel(id){try{const db=await idb();db.transaction("tabs","readwr
 async function idbChatSave(chat){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").put(chat);}catch(e){}}
 async function idbChatAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("copilotChats").objectStore("copilotChats").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
 async function idbChatDel(id){try{const db=await idb();db.transaction("copilotChats","readwrite").objectStore("copilotChats").delete(id);}catch(e){}}
-async function idbProjectSave(p){try{const db=await idb();db.transaction("projects","readwrite").objectStore("projects").put(p);}catch(e){}}
+async function idbProjectSave(p){
+  try{
+    const db=await idb();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction("projects","readwrite");
+      tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||new Error("Échec IndexedDB"));
+      tx.onabort=()=>reject(tx.error||new Error("Transaction interrompue"));
+      tx.objectStore("projects").put(p);
+    });
+  }catch(e){console.warn("Readox: sauvegarde locale du projet non confirmée",e);throw e;}
+}
 async function idbProjectAll(){try{const db=await idb();return await new Promise(r=>{const q=db.transaction("projects").objectStore("projects").getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});}catch(e){return [];}}
 async function idbProjectDel(id){try{const db=await idb();db.transaction("projects","readwrite").objectStore("projects").delete(id);}catch(e){}}
 
@@ -3996,7 +4342,7 @@ async function initCopilotHistory(){
       const remote=await apiCopilotList();
       const map=new Map();remote.forEach(c=>{if(c&&c.id)map.set(c.id,c);});
       const toPush=[];
-      local.forEach(l=>{if(!l||!l.id)return;const r=map.get(l.id);if(!r){map.set(l.id,l);toPush.push(l);}else if((l.updatedAt||0)>(r.updatedAt||0)){map.set(l.id,l);toPush.push(l);}});
+      local.forEach(l=>{if(!l||!l.id)return;const r=map.get(l.id);if(!r){map.set(l.id,l);toPush.push(l);}else if(READOX_SYNC6.pending.has(l.id)||Number(l.updatedAt||0)>Number(r.updatedAt||0)){l.__rxServerUpdatedAt=Number(r.updatedAt)||0;map.set(l.id,l);toPush.push(l);}});
       COPILOT_STATE.chats=[...map.values()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
       COPILOT_STATE.remote=true;
       remote.forEach(c=>idbChatSave(c)); // cache local
@@ -4034,14 +4380,59 @@ function newProject(opts={}){const now=Date.now();return {
 };}
 // Synchronisation Supabase (best-effort ; le local reste le cache de secours).
 async function apiProjectList(){const d=await api("/api/projects");return Array.isArray(d&&d.projects)?d.projects:[];}
-async function apiProjectSave(p){try{await api("/api/projects",{project:p});}catch(e){}}
+// Mobile Phase 7: persistent queue metadata; full payload stays in existing IndexedDB.
+const READOX_SYNC6={pending:new Map(),lastError:null,lastSuccess:null,conflicts:new Map()};
+const RX7_QUEUE_KEY='readox_mobile_project_pending_v7';
+function rx7QueueIds(){try{const x=JSON.parse(localStorage.getItem(RX7_QUEUE_KEY)||'[]');return Array.isArray(x)?x.filter(v=>typeof v==='string').slice(0,300):[]}catch(_){return []}}
+function rx7PersistQueue(){try{localStorage.setItem(RX7_QUEUE_KEY,JSON.stringify([...READOX_SYNC6.pending.keys()]))}catch(e){READOX_SYNC6.lastError='Stockage local indisponible : '+e.message}}
+async function rx7RestoreQueue(){
+  const ids=rx7QueueIds();if(!ids.length)return;
+  const local=await idbProjectAll();const byId=new Map(local.filter(Boolean).map(p=>[p.id,p]));
+  ids.forEach(id=>{if(byId.has(id))READOX_SYNC6.pending.set(id,byId.get(id))});rx7PersistQueue();
+}
+async function apiProjectSave(p){
+  if(!p||!p.id)return false;
+  const id=p.id;
+  try{
+    // The server rejects stale writes and accepts an explicit expected revision.
+    const response=await api('/api/projects',{project:p,expectedUpdatedAt:Number(p.__rxServerUpdatedAt||0)});
+    if(response&&response.conflict){throw Error('Conflit de version : le projet a changé sur un autre appareil')}
+    const queued=READOX_SYNC6.pending.get(id);
+    if(!queued||Number(queued.updatedAt||0)<=Number(p.updatedAt||0))READOX_SYNC6.pending.delete(id);
+    const current=PROJECT_STATE.projects.find(x=>x.id===id);
+    if(current&&Number(current.updatedAt||0)===Number(p.updatedAt||0)){
+      current.__rxServerUpdatedAt=Number(response&&response.updatedAt)||Number(p.updatedAt)||0;
+      await idbProjectSave(current);
+    }
+    READOX_SYNC6.conflicts.delete(id);rx7PersistQueue();
+    READOX_SYNC6.lastSuccess=Date.now();READOX_SYNC6.lastError=null;return true;
+  }catch(e){
+    READOX_SYNC6.pending.set(id,p);rx7PersistQueue();
+    const msg=e&&e.message||'Synchronisation indisponible';
+    if(/409|conflit|conflict/i.test(msg))READOX_SYNC6.conflicts.set(id,msg);
+    READOX_SYNC6.lastError=msg;return false;
+  }
+}
+let rx7RetryBusy=false;
+async function readoxRetryProjectSync6(){
+  if(rx7RetryBusy||!PROJECT_STATE.remote||!copilotAuthed()||!navigator.onLine)return;
+  rx7RetryBusy=true;
+  try{for(const p of [...READOX_SYNC6.pending.values()]){
+    if(READOX_SYNC6.conflicts.has(p.id))continue; // Never overwrite a conflicting cloud version.
+    await apiProjectSave(p);
+  }}finally{rx7RetryBusy=false}
+}
+window.addEventListener('online',()=>{readoxRetryProjectSync6()});
+window.addEventListener('visibilitychange',()=>{if(!document.hidden)readoxRetryProjectSync6()});
+window.__readoxMobileSync6={status:()=>({pending:READOX_SYNC6.pending.size,conflicts:[...READOX_SYNC6.conflicts.keys()],lastSuccess:READOX_SYNC6.lastSuccess,lastError:READOX_SYNC6.lastError,remote:PROJECT_STATE.remote}),retry:readoxRetryProjectSync6};
 async function apiProjectDelete(id){try{await api("/api/projects/"+encodeURIComponent(id),null,"DELETE");}catch(e){}}
 const _projectSyncTimers={};
-function queueProjectSync(p){if(!p||!p.id||!PROJECT_STATE.remote)return;clearTimeout(_projectSyncTimers[p.id]);_projectSyncTimers[p.id]=setTimeout(()=>apiProjectSave(p),700);}
+function queueProjectSync(p){if(!p||!p.id)return;READOX_SYNC6.pending.set(p.id,p);rx7PersistQueue();if(!PROJECT_STATE.remote)return;clearTimeout(_projectSyncTimers[p.id]);_projectSyncTimers[p.id]=setTimeout(()=>apiProjectSave(p),700);}
 async function initProjects(){
   if(PROJECT_STATE.loaded)return;
   const local=(await idbProjectAll()).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   PROJECT_STATE.projects=local;PROJECT_STATE.remote=false;
+  await rx7RestoreQueue();
   if(copilotAuthed()){
     try{
       const remote=await apiProjectList();
@@ -4050,15 +4441,17 @@ async function initProjects(){
       local.forEach(l=>{if(!l||!l.id)return;const r=map.get(l.id);if(!r){map.set(l.id,l);toPush.push(l);}else if((l.updatedAt||0)>(r.updatedAt||0)){map.set(l.id,l);toPush.push(l);}});
       PROJECT_STATE.projects=[...map.values()].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
       PROJECT_STATE.remote=true;
-      remote.forEach(p=>idbProjectSave(p));
+      // Never overwrite a newer local document with a stale remote version.
+      remote.forEach(p=>{const localVersion=local.find(l=>l&&l.id===p.id);if(!localVersion||(!READOX_SYNC6.pending.has(p.id)&&Number(p.updatedAt||0)>=Number(localVersion.updatedAt||0)))idbProjectSave(p);});
       toPush.forEach(p=>apiProjectSave(p));
+      readoxRetryProjectSync6();
     }catch(e){PROJECT_STATE.remote=false;}
   }
   PROJECT_STATE.loaded=true;
 }
 async function saveProject(p){if(!p)return;p.updatedAt=Date.now();await idbProjectSave(p);PROJECT_STATE.projects.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));queueProjectSync(p);}
-async function createProject(opts={}){const p=newProject(opts);PROJECT_STATE.projects.unshift(p);await idbProjectSave(p);if(PROJECT_STATE.remote)apiProjectSave(p);return p;}
-async function deleteProject(id){const idx=PROJECT_STATE.projects.findIndex(p=>p.id===id);if(idx<0)return;PROJECT_STATE.projects.splice(idx,1);try{await idbProjectDel(id);}catch(e){}if(PROJECT_STATE.remote)apiProjectDelete(id);if(PROJECT_STATE.activeId===id)PROJECT_STATE.activeId=null;}
+async function createProject(opts={}){const p=newProject(opts);PROJECT_STATE.projects.unshift(p);await idbProjectSave(p);queueProjectSync(p);return p;}
+async function deleteProject(id){const idx=PROJECT_STATE.projects.findIndex(p=>p.id===id);if(idx<0)return;PROJECT_STATE.projects.splice(idx,1);try{await idbProjectDel(id);}catch(e){}READOX_SYNC6.pending.delete(id);READOX_SYNC6.conflicts.delete(id);rx7PersistQueue();if(PROJECT_STATE.remote)apiProjectDelete(id);if(PROJECT_STATE.activeId===id)PROJECT_STATE.activeId=null;}
 function activeProject(){return PROJECT_STATE.projects.find(p=>p.id===PROJECT_STATE.activeId)||null;}
 // ================= fin Project Engine A1 =================
 
@@ -13932,5 +14325,63 @@ bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t
 .rx7-grid .rxds-card.featured{border-color:#168aff;background:linear-gradient(145deg,rgba(19,119,255,.09),rgba(0,190,215,.04))}
 #stage:has(iframe[src="flyer-maker.html"]){padding:0!important;overflow:hidden!important}
 </style>
+
+<style id="readox-global-mobile-phase1">
+/* Mobile adaptation only. No historical module is reactivated. */
+@media (max-width: 820px){
+ html,body{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+ #stage{min-width:0;max-width:100%;overscroll-behavior:contain}
+ .rxds-home{max-width:100%;box-sizing:border-box;padding-inline:clamp(12px,4vw,24px)!important}
+ .rxds-grid,.rx7-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;max-width:100%}
+ .rxds-card{min-width:0;overflow-wrap:anywhere}
+ input,textarea,select{max-width:100%;box-sizing:border-box;font-size:max(16px,1em)}
+ button,[role="button"]{touch-action:manipulation}
+ iframe[src*="flyer-maker.html"]{width:100%;max-width:100%;border:0}
+ #stage:has(iframe[src*="flyer-maker.html"]){padding:0!important;min-width:0!important}
+}
+@media (max-width: 540px){
+ .rxds-grid,.rx7-grid{grid-template-columns:minmax(0,1fr)!important}
+ .rxds-card{width:100%;min-height:96px}
+ .rxds-home h1{font-size:clamp(23px,7vw,34px)}
+ #stage{padding-inline:0!important}
+}
+/* Reassert the exact existing 7A visibility contract across all viewport sizes.
+   These selectors hide navigation/widgets, not underlying engines or saved documents. */
+#rxRight,#rxIaBtn,#cbotFab,#aiFloat,#rxRrCopilot,.tool-ai,
+.rx-rr-card,.rx-rr-sec,.rx-rr-list,.rx-rr-list2,
+#rxDash .rx-cols,#rxDash .rx-qgrid,#rxDash .rx-sklist,
+[data-nav="copilot"],[data-nav="book"],.rx-ai-floating,.ai-float-overlay{display:none!important}
+</style>
+
+<style id="readox-mobile-phase12-touch">
+/* Phase 12: editor interaction ergonomics, mobile only. Existing navigation and hidden modules unchanged. */
+@media (max-width:820px) and (pointer:coarse){
+ .edbar,.edbar [role=toolbar],.rx-word-toolbar,.rx-toolbar{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+ .edbar button,.edbar select,.rx-word-toolbar button,.rx-toolbar button{min-height:40px;min-width:40px;touch-action:manipulation}
+ .edtext,[contenteditable=true]{-webkit-user-select:text;user-select:text;overflow-wrap:break-word;touch-action:pan-y pinch-zoom;caret-color:currentColor}
+ #stage iframe{max-width:100%;border:0}
+ dialog,[role=dialog],[aria-modal=true]{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ input,textarea,select{font-size:16px!important}
+}
+@media (max-width:540px){
+ .edbar{gap:4px;padding:6px;max-width:100%;box-sizing:border-box}
+ .edbar .sep{display:none}
+}
+</style>
+<script id="readox-mobile-phase12-focus">
+(()=>{'use strict';
+ if(window.__rxMobile12Focus)return;window.__rxMobile12Focus=true;
+ const mobile=()=>matchMedia('(max-width:820px) and (pointer:coarse)').matches;
+ document.addEventListener('focusin',e=>{
+  if(!mobile()||!e.target?.matches?.('input,textarea,[contenteditable="true"]'))return;
+  const el=e.target;requestAnimationFrame(()=>{
+   if(document.activeElement!==el)return;
+   const r=el.getBoundingClientRect(),vh=window.visualViewport?.height||innerHeight;
+   if(r.top>=0&&r.top<vh-48)return;
+   el.scrollIntoView({block:'nearest',inline:'nearest'});
+  });
+ },{passive:true});
+})();
+</script>
 </body>
 </html>
