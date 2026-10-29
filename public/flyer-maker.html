@@ -1368,4 +1368,48 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 <script src="readox-flyer-bridge-c1.js"></script>
+<!-- C3: interface Flyer mobile, commandes raccordées au moteur historique -->
+<style id="readox-c3-mobile-style">
+@media(max-width:820px){
+ #rxc3-sheet{position:fixed;inset:auto 0 0;max-height:min(74dvh,680px);background:#fff;color:#102146;z-index:110;box-shadow:0 -12px 45px #10214635;border-radius:20px 20px 0 0;overflow:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom));box-sizing:border-box}
+ #rxc3-sheet[hidden],#rxc3-backdrop[hidden]{display:none!important}
+ #rxc3-backdrop{position:fixed;inset:0;background:#07152c66;z-index:109}
+ #rxc3-sheet .rxc3-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;font-size:18px;font-weight:750}
+ #rxc3-sheet button{font:inherit;color:#132447;background:#f2f6fd;border:1px solid #e0e8f5;border-radius:12px;min-height:48px;cursor:pointer}
+ #rxc3-sheet .rxc3-close{width:44px;min-height:42px;font-size:22px}
+ #rxc3-sheet .rxc3-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #rxc3-sheet .rxc3-action{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:12px;gap:4px;font-size:13px}
+ #rxc3-sheet .rxc3-symbol{font-size:22px;color:#1769ed}
+ #rxc3-sheet .rxc3-note{font-size:12px;color:#61718e;margin-top:12px}
+ #rxc3-sheet .rxc3-action:disabled{opacity:.45}
+ #rxv4-top{z-index:32}
+}
+@media(min-width:821px){#rxc3-sheet,#rxc3-backdrop{display:none!important}}
+</style>
+<script id="readox-c3-mobile-controller">
+(()=>{'use strict';
+ const mobile=()=>matchMedia('(max-width:820px)').matches;
+ const groups={
+ more:[['▣','Aperçu','preview'],['▤','Enregistrer le projet','save'],['↥','Exporter','export'],['↧','Importer un projet','load'],['⧉','Dupliquer','duplicate'],['✕','Supprimer l’objet','delete'],['↑','Premier plan','front'],['↓','Arrière-plan','back'],['◉','Arrière-plan du flyer','background'],['＋','Zoom avant','zoomIn'],['−','Zoom arrière','zoomOut'],['↶','Annuler','undo'],['↷','Rétablir','redo'],['▣','Nouveau flyer','blank']],
+ text:[['Ｔ','Ajouter un texte','addText'],['B','Gras','bold'],['I','Italique','italic'],['U','Souligner','underline'],['▤','Aligner à gauche','alignLeft'],['☰','Centrer','alignCenter']],
+ shape:[['◇','Ajouter une forme','addShape'],['⧉','Dupliquer','duplicate'],['↑','Premier plan','front'],['↓','Arrière-plan','back']],
+ image:[['▧','Ajouter une image','addImage'],['▣','Importer une image','imagefile'],['⧉','Dupliquer','duplicate']]
+ };
+ let sheet,backdrop,title,grid,note;
+ function init(){if(document.getElementById('rxc3-sheet'))return;
+ backdrop=document.createElement('div');backdrop.id='rxc3-backdrop';backdrop.hidden=true;
+ sheet=document.createElement('section');sheet.id='rxc3-sheet';sheet.hidden=true;sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','Outils Flyer Maker');
+ sheet.innerHTML='<div class="rxc3-head"><span id="rxc3-title">Outils</span><button class="rxc3-close" type="button" aria-label="Fermer le panneau">×</button></div><div class="rxc3-grid"></div><p class="rxc3-note" role="status"></p>';
+ document.body.append(backdrop,sheet);title=sheet.querySelector('#rxc3-title');grid=sheet.querySelector('.rxc3-grid');note=sheet.querySelector('.rxc3-note');
+ backdrop.addEventListener('click',close);sheet.querySelector('.rxc3-close').addEventListener('click',close);
+ sheet.addEventListener('click',e=>{const btn=e.target.closest('[data-c3-command]');if(!btn)return;const id=btn.dataset.c3Command;const target=document.getElementById(id);if(!target||target.disabled){note.textContent='Cet outil est indisponible dans le document actuel.';return}close();target.click();});
+ document.addEventListener('click',e=>{if(!mobile())return;const btn=e.target.closest('#rxv4-bottom [data-rxv4]');if(!btn)return;const a=btn.dataset.rxv4;if(a==='more'){e.preventDefault();e.stopImmediatePropagation();show('more');}else if(a==='text'){e.preventDefault();e.stopImmediatePropagation();show('text');}else if(a==='shape'){e.preventDefault();e.stopImmediatePropagation();show('shape');}else if(a==='image'){e.preventDefault();e.stopImmediatePropagation();show('image');}},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close()});
+ window.ReadoxFlyerMobileC3={show,close,audit:()=>({mobile:mobile(),commands:Object.fromEntries(Object.entries(groups).map(([g,items])=>[g,items.map(x=>({label:x[1],id:x[2],available:!!document.getElementById(x[2])}))]))})};
+ }
+ function show(group){if(!sheet)return;const labels={more:'Plus · Outils',text:'Texte',shape:'Formes',image:'Images'};title.textContent=labels[group]||'Outils';grid.replaceChildren();for(const [symbol,label,id] of groups[group]||[]){const b=document.createElement('button');b.type='button';b.className='rxc3-action';b.dataset.c3Command=id;b.disabled=!document.getElementById(id);const icon=document.createElement('span');icon.className='rxc3-symbol';icon.textContent=symbol;const txt=document.createElement('span');txt.textContent=label;b.append(icon,txt);grid.append(b)}note.textContent='Les commandes utilisent les outils existants du moteur Flyer Maker.';sheet.hidden=false;backdrop.hidden=false;}
+ function close(){if(sheet)sheet.hidden=true;if(backdrop)backdrop.hidden=true}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
 </body></html>
