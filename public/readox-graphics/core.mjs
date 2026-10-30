@@ -1,6 +1,6 @@
 /** Readox Graphics Core v1: headless document model and rendering contract.
  * No UI is created and no existing editor is modified.
- * Konva adapter is optional; install Konva separately to activate its renderer.
+ * Fabric.js adapter is optional; install Fabric.js separately to activate its renderer.
  */
 const clone = x => JSON.parse(JSON.stringify(x));
 const num = (v, fallback=0) => Number.isFinite(Number(v)) ? Number(v) : fallback;

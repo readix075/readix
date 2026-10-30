@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "konva": "^9.3.22"
+    "fabric": "^6.7.1"
   },
   "scripts": {
     "test": "node tests/test.mjs",
-    "check-sdk": "node scripts/check-konva.mjs"
+    "check-sdk": "node scripts/check-fabric.mjs"
   }
 }
