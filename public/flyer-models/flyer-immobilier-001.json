@@ -1,0 +1,72 @@
+{
+  "format": "readox-flyer",
+  "version": 2,
+  "name": "Immobilier",
+  "page": {
+    "width": 510,
+    "height": 660,
+    "background": "#173b39"
+  },
+  "items": [
+    {
+      "id": "immobilier-0",
+      "type": "text",
+      "x": 40,
+      "y": 75,
+      "w": 430,
+      "h": 95,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 52,
+      "text": "MAISON À VENDRE"
+    },
+    {
+      "id": "immobilier-1",
+      "type": "text",
+      "x": 40,
+      "y": 210,
+      "w": 430,
+      "h": 90,
+      "opacity": 100,
+      "color": "#d9f5d4",
+      "size": 31,
+      "text": "VOTRE FUTUR CHEZ-VOUS"
+    },
+    {
+      "id": "immobilier-2",
+      "type": "rect",
+      "x": 40,
+      "y": 350,
+      "w": 430,
+      "h": 7,
+      "opacity": 100,
+      "color": "#b8e2ad",
+      "size": 24,
+      "bg": "#b8e2ad"
+    },
+    {
+      "id": "immobilier-3",
+      "type": "text",
+      "x": 40,
+      "y": 400,
+      "w": 430,
+      "h": 70,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 29,
+      "text": "VISITES SUR RENDEZ-VOUS"
+    },
+    {
+      "id": "immobilier-4",
+      "type": "text",
+      "x": 40,
+      "y": 530,
+      "w": 430,
+      "h": 60,
+      "opacity": 100,
+      "color": "#d9f5d4",
+      "size": 25,
+      "text": "CONTACTEZ NOTRE ÉQUIPE"
+    }
+  ]
+}

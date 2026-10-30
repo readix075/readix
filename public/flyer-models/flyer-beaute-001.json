@@ -1,0 +1,72 @@
+{
+  "format": "readox-flyer",
+  "version": 2,
+  "name": "Beauté",
+  "page": {
+    "width": 510,
+    "height": 660,
+    "background": "#5c2848"
+  },
+  "items": [
+    {
+      "id": "beaute-0",
+      "type": "text",
+      "x": 35,
+      "y": 85,
+      "w": 445,
+      "h": 100,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 48,
+      "text": "BEAUTÉ & BIEN-ÊTRE"
+    },
+    {
+      "id": "beaute-1",
+      "type": "text",
+      "x": 45,
+      "y": 215,
+      "w": 425,
+      "h": 75,
+      "opacity": 100,
+      "color": "#ffd7e7",
+      "size": 30,
+      "text": "PRENEZ SOIN DE VOUS"
+    },
+    {
+      "id": "beaute-2",
+      "type": "rect",
+      "x": 45,
+      "y": 355,
+      "w": 420,
+      "h": 7,
+      "opacity": 100,
+      "color": "#ff9fc4",
+      "size": 24,
+      "bg": "#ff9fc4"
+    },
+    {
+      "id": "beaute-3",
+      "type": "text",
+      "x": 45,
+      "y": 400,
+      "w": 420,
+      "h": 65,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 35,
+      "text": "OFFRE SPÉCIALE"
+    },
+    {
+      "id": "beaute-4",
+      "type": "text",
+      "x": 45,
+      "y": 535,
+      "w": 420,
+      "h": 55,
+      "opacity": 100,
+      "color": "#ffd7e7",
+      "size": 27,
+      "text": "PRENEZ RENDEZ-VOUS"
+    }
+  ]
+}

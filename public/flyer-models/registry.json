@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "restaurant",
+      "name": "Restaurant"
+    },
+    {
+      "id": "promotion",
+      "name": "Promotion"
+    },
+    {
+      "id": "entreprise",
+      "name": "Entreprise"
+    },
+    {
+      "id": "sport",
+      "name": "Sport"
+    },
+    {
+      "id": "voyage",
+      "name": "Voyage"
+    },
+    {
+      "id": "immobilier",
+      "name": "Immobilier"
+    },
+    {
+      "id": "evenement",
+      "name": "Événement"
+    },
+    {
+      "id": "beaute",
+      "name": "Beauté"
+    }
+  ],
+  "models": [
+    {
+      "id": "flyer-restaurant-001",
+      "categoryId": "restaurant",
+      "name": "Restaurant",
+      "preview": "restaurant-preview.jpg",
+      "document": "flyer-restaurant-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-promotion-001",
+      "categoryId": "promotion",
+      "name": "Promotion",
+      "preview": "promotion-preview.jpg",
+      "document": "flyer-promotion-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-entreprise-001",
+      "categoryId": "entreprise",
+      "name": "Entreprise",
+      "preview": "entreprise-preview.jpg",
+      "document": "flyer-entreprise-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-sport-001",
+      "categoryId": "sport",
+      "name": "Sport",
+      "preview": "sport-preview.jpg",
+      "document": "flyer-sport-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-voyage-001",
+      "categoryId": "voyage",
+      "name": "Voyage",
+      "preview": "voyage-preview.jpg",
+      "document": "flyer-voyage-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-immobilier-001",
+      "categoryId": "immobilier",
+      "name": "Immobilier",
+      "preview": "immobilier-preview.jpg",
+      "document": "flyer-immobilier-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-evenement-001",
+      "categoryId": "evenement",
+      "name": "Événement",
+      "preview": "evenement-preview.jpg",
+      "document": "flyer-evenement-001.json",
+      "editable": true
+    },
+    {
+      "id": "flyer-beaute-001",
+      "categoryId": "beaute",
+      "name": "Beauté",
+      "preview": "beaute-preview.jpg",
+      "document": "flyer-beaute-001.json",
+      "editable": true
+    }
+  ]
+}
