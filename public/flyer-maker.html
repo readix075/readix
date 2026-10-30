@@ -722,20 +722,40 @@ function download(blob,ext){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename()+'.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function svgDocument(source){
- const doc=source||state();const pageBg=doc.page?.background||doc.pageBg||"#ffffff";const items=doc.items||[];
- let svg='<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="510" height="660" viewBox="0 0 510 660"><rect width="510" height="660" fill="'+esc(pageBg)+'"/>';
- for(const it of items){
+ // C6: the SAME structured document drives previews, PNG/JPG and PDF.
+ const doc=source||state(), page=doc.page||{};
+ const pw=Number(page.width)||510, ph=Number(page.height)||660;
+ const background=page.background||doc.pageBg||'#ffffff';
+ const safe=(v)=>esc(String(v??''));
+ let svg='<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="'+pw+'" height="'+ph+'" viewBox="0 0 '+pw+' '+ph+'"><rect width="100%" height="100%" fill="'+safe(background)+'"/>';
+ for(const it of doc.items||[]){
   const x=Number(it.x),y=Number(it.y),w=Number(it.w),h=Number(it.h);
-  if(![x,y,w,h].every(Number.isFinite))continue;
-  const angle=Number(it.rotation)||0;
-  const tr=angle?' transform="rotate('+angle+' '+(x+w/2)+' '+(y+h/2)+')"':'';
-  const opacity=' opacity="'+Math.max(0,Math.min(1,(Number(it.opacity??100))/100))+'"';
-  if(it.type==='rect')svg+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+esc(it.bg||'#ffffff')+'"'+opacity+tr+'/>';
-  if(it.type==='image')svg+='<image x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid slice" href="'+esc(it.src)+'"'+opacity+tr+'/>';
+  if(![x,y,w,h].every(Number.isFinite)||w<=0||h<=0)continue;
+  const angle=Number(it.rotation)||0, tr=angle?' transform="rotate('+angle+' '+(x+w/2)+' '+(y+h/2)+')"':'';
+  const opacity=' opacity="'+Math.max(0,Math.min(1,Number(it.opacity??100)/100))+'"';
+  if(it.type==='rect')svg+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+safe(it.bg||'#ffffff')+'"'+opacity+tr+'/>';
+  if(it.type==='image'){
+   const id='clipC6'+String(it.id||'').replace(/[^a-zA-Z0-9]/g,'');
+   svg+='<defs><clipPath id="'+id+'"><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/></clipPath></defs>';
+   svg+='<image x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" preserveAspectRatio="'+(it.objectFit==='contain'?'xMidYMid meet':'xMidYMid slice')+'" href="'+safe(it.src||'')+'" clip-path="url(#'+id+')"'+opacity+tr+'/>';
+  }
   if(it.type==='text'){
-   const size=Number(it.size)||24,lines=String(it.text??'').split(/\r?\n/);
-   svg+='<text x="'+x+'" y="'+(y+size)+'" font-family="'+esc(it.font||'Arial')+'" font-size="'+size+'" font-style="'+(it.italic?'italic':'normal')+'" font-weight="'+(it.bold?'bold':'normal')+'" fill="'+esc(it.color||'#111111')+'"'+opacity+tr+'>';
-   lines.forEach((line,index)=>{svg+='<tspan x="'+x+'" dy="'+(index?'1.05em':'0')+'">'+esc(line)+'</tspan>';});
+   const size=Math.max(1,Number(it.size)||24),family=String(it.font||'Arial'),bold=it.bold?'bold':'normal';
+   const context=document.createElement('canvas').getContext('2d');
+   context.font=(it.italic?'italic ':'')+(it.bold?'bold ':'')+size+'px '+family;
+   const lines=[];
+   for(const para of String(it.text??'').split(/\r?\n/)){
+    let line='';
+    for(const word of para.split(/\s+/)){
+     const candidate=line?line+' '+word:word;
+     if(line&&context.measureText(candidate).width>w){lines.push(line);line=word;}else line=candidate;
+    }
+    lines.push(line);
+   }
+   const clipId='textC6'+String(it.id||'').replace(/[^a-zA-Z0-9]/g,'');
+   svg+='<defs><clipPath id="'+clipId+'"><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/></clipPath></defs>';
+   svg+='<text font-family="'+safe(family)+'" font-size="'+size+'" font-style="'+(it.italic?'italic':'normal')+'" font-weight="'+bold+'" fill="'+safe(it.color||'#111111')+'"'+opacity+tr+' clip-path="url(#'+clipId+')">';
+   lines.forEach((line,index)=>{svg+='<tspan x="'+x+'" y="'+(y+size*(1+index*1.05))+'">'+safe(line)+'</tspan>';});
    svg+='</text>';
   }
  }
@@ -1538,5 +1558,40 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  // Parent app can request a specific saved project after navigation.
  const query=new URLSearchParams(location.search).get('flyerProject');if(query)open(query);
 };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();})();
+</script>
+
+<style id="readox-c6-viewport">
+/* C6: page is fitted without altering its 510x660 logical document coordinates. */
+.canvasarea{min-width:0!important;overflow:hidden!important}
+.scrollcanvas{min-width:0!important;box-sizing:border-box!important;overflow:auto!important}
+#page{flex-shrink:0!important;transform-origin:top left!important}
+@media(min-width:821px){.canvasarea{flex:1 1 0!important}.scrollcanvas{width:100%!important}}
+</style>
+<script id="readox-c6-viewport-script">
+(()=>{'use strict';
+ let scheduled=false;
+ function fit(){
+  const area=document.querySelector('.scrollcanvas'),page=document.getElementById('page');
+  if(!area||!page||typeof window.setZoom!=='function')return;
+  const width=Math.max(160,area.clientWidth-36),height=Math.max(180,area.clientHeight-36);
+  const pct=Math.max(40,Math.min(100,Math.floor(100*Math.min(width/510,height/660))));
+  window.setZoom(pct);
+  area.scrollLeft=0;area.scrollTop=0;
+ }
+ function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;fit()})}
+ function init(){
+  const area=document.querySelector('.scrollcanvas');if(!area)return;
+  const fitBtn=document.createElement('button');fitBtn.type='button';fitBtn.textContent='⤢ Ajuster';fitBtn.title='Afficher la page entière';fitBtn.id='readoxC6Fit';
+  fitBtn.style.cssText='padding:7px 11px;border:1px solid #3885ba;border-radius:8px;background:#123956;color:#fff;cursor:pointer;font:12px Arial';
+  const bar=document.querySelector('.canvasbar');if(bar)bar.appendChild(fitBtn);
+  fitBtn.addEventListener('click',fit);
+  window.addEventListener('resize',schedule,{passive:true});
+  document.addEventListener('readox:flyer:model-opened',()=>setTimeout(fit,70));
+  document.querySelectorAll('.template').forEach(b=>b.addEventListener('click',()=>setTimeout(fit,80)));
+  setTimeout(fit,250);
+  window.__readoxC6={fit,version:'C6'};
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
 </script>
 </body></html>
