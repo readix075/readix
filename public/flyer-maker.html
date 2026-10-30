@@ -48,13 +48,33 @@ body:has(.workspace.library-collapsed) .library-collapse-toggle svg{transform:ro
 const READ0X_C4_MODELS=[{"id": "flyer-restaurant-001", "categoryId": "restaurant", "name": "Restaurant", "preview": "restaurant-preview.jpg", "document": "flyer-restaurant-001.json", "editable": true}, {"id": "flyer-promotion-001", "categoryId": "promotion", "name": "Promotion", "preview": "promotion-preview.jpg", "document": "flyer-promotion-001.json", "editable": true}, {"id": "flyer-entreprise-001", "categoryId": "entreprise", "name": "Entreprise", "preview": "entreprise-preview.jpg", "document": "flyer-entreprise-001.json", "editable": true}, {"id": "flyer-sport-001", "categoryId": "sport", "name": "Sport", "preview": "sport-preview.jpg", "document": "flyer-sport-001.json", "editable": true}, {"id": "flyer-voyage-001", "categoryId": "voyage", "name": "Voyage", "preview": "voyage-preview.jpg", "document": "flyer-voyage-001.json", "editable": true}, {"id": "flyer-immobilier-001", "categoryId": "immobilier", "name": "Immobilier", "preview": "immobilier-preview.jpg", "document": "flyer-immobilier-001.json", "editable": true}, {"id": "flyer-evenement-001", "categoryId": "evenement", "name": "Événement", "preview": "evenement-preview.jpg", "document": "flyer-evenement-001.json", "editable": true}, {"id": "flyer-beaute-001", "categoryId": "beaute", "name": "Beauté", "preview": "beaute-preview.jpg", "document": "flyer-beaute-001.json", "editable": true}];
 let read0xC4Category=null;
 const READ0X_C4_COMPOSITIONS={"sport": {"page": {"background": "#101b29"}, "items": [{"type": "text", "x": 35, "y": 85, "w": 440, "h": 100, "opacity": 100, "color": "#ffffff", "size": 52, "text": "SALLE DE SPORT"}, {"type": "text", "x": 45, "y": 205, "w": 430, "h": 70, "opacity": 100, "color": "#ff784e", "size": 30, "text": "DÉPASSEZ VOS LIMITES"}, {"type": "rect", "x": 40, "y": 340, "w": 430, "h": 8, "opacity": 100, "color": "#ff784e", "size": 24, "bg": "#ff784e"}, {"type": "text", "x": 45, "y": 390, "w": 430, "h": 60, "opacity": 100, "color": "#ffffff", "size": 26, "text": "ABONNEMENT DÉCOUVERTE"}, {"type": "text", "x": 45, "y": 530, "w": 430, "h": 65, "opacity": 100, "color": "#ff784e", "size": 32, "text": "INSCRIVEZ-VOUS"}]}, "voyage": {"page": {"background": "#0b486a"}, "items": [{"type": "text", "x": 35, "y": 80, "w": 440, "h": 140, "opacity": 100, "color": "#ffffff", "size": 49, "text": "DÉCOUVREZ LE CANADA"}, {"type": "text", "x": 40, "y": 260, "w": 430, "h": 70, "opacity": 100, "color": "#baf3ff", "size": 29, "text": "DES PAYSAGES INOUBLIABLES"}, {"type": "rect", "x": 40, "y": 380, "w": 430, "h": 7, "opacity": 100, "color": "#65d9ef", "size": 24, "bg": "#65d9ef"}, {"type": "text", "x": 40, "y": 425, "w": 430, "h": 80, "opacity": 100, "color": "#ffffff", "size": 30, "text": "VOTRE PROCHAINE AVENTURE"}, {"type": "text", "x": 40, "y": 550, "w": 430, "h": 60, "opacity": 100, "color": "#baf3ff", "size": 26, "text": "RÉSERVEZ MAINTENANT"}]}, "immobilier": {"page": {"background": "#173b39"}, "items": [{"type": "text", "x": 40, "y": 75, "w": 430, "h": 95, "opacity": 100, "color": "#ffffff", "size": 52, "text": "MAISON À VENDRE"}, {"type": "text", "x": 40, "y": 210, "w": 430, "h": 90, "opacity": 100, "color": "#d9f5d4", "size": 31, "text": "VOTRE FUTUR CHEZ-VOUS"}, {"type": "rect", "x": 40, "y": 350, "w": 430, "h": 7, "opacity": 100, "color": "#b8e2ad", "size": 24, "bg": "#b8e2ad"}, {"type": "text", "x": 40, "y": 400, "w": 430, "h": 70, "opacity": 100, "color": "#ffffff", "size": 29, "text": "VISITES SUR RENDEZ-VOUS"}, {"type": "text", "x": 40, "y": 530, "w": 430, "h": 60, "opacity": 100, "color": "#d9f5d4", "size": 25, "text": "CONTACTEZ NOTRE ÉQUIPE"}]}, "beaute": {"page": {"background": "#5c2848"}, "items": [{"type": "text", "x": 35, "y": 85, "w": 445, "h": 100, "opacity": 100, "color": "#ffffff", "size": 48, "text": "BEAUTÉ & BIEN-ÊTRE"}, {"type": "text", "x": 45, "y": 215, "w": 425, "h": 75, "opacity": 100, "color": "#ffd7e7", "size": 30, "text": "PRENEZ SOIN DE VOUS"}, {"type": "rect", "x": 45, "y": 355, "w": 420, "h": 7, "opacity": 100, "color": "#ff9fc4", "size": 24, "bg": "#ff9fc4"}, {"type": "text", "x": 45, "y": 400, "w": 420, "h": 65, "opacity": 100, "color": "#ffffff", "size": 35, "text": "OFFRE SPÉCIALE"}, {"type": "text", "x": 45, "y": 535, "w": 420, "h": 55, "opacity": 100, "color": "#ffd7e7", "size": 27, "text": "PRENEZ RENDEZ-VOUS"}]}};
-function read0xC4OpenModel(model){
- const doc=READ0X_C4_COMPOSITIONS[model.categoryId];
- if(doc){snapshot();items=JSON.parse(JSON.stringify(doc.items)).map(it=>({...it,id:uid()}));pageBg=doc.page.background;selected=null;render();}
- else template(model.categoryId==='evenement'?'Événement':model.name);
- try{const title=document.querySelector('#projectName, #name');if(title&&'value' in title)title.value=model.name;}catch(_){}
- document.dispatchEvent(new CustomEvent('readox:flyer:model-opened',{detail:{id:model.id,categoryId:model.categoryId}}));
+async function read0xC4LoadDocument(model){
+ const response=await fetch('flyer-models/'+encodeURIComponent(model.document),{cache:'no-cache'});
+ if(!response.ok)throw Error('Modèle introuvable : '+model.name);
+ const raw=await response.json();
+ if(!Array.isArray(raw.items)||raw.items.length===0)throw Error('Modèle sans objets éditables');
+ return {...raw,name:model.name,page:raw.page||{width:510,height:660,background:raw.pageBg||'#ffffff'}};
 }
+async function read0xC4OpenModel(model){
+ try{
+  const raw=await read0xC4LoadDocument(model);
+  if(!window.__readoxFlyerPhase8?.restore)throw Error('Moteur de document indisponible');
+  window.__readoxFlyerPhase8.restore(raw);
+  document.dispatchEvent(new CustomEvent('readox:flyer:model-opened',{detail:{id:model.id,categoryId:model.categoryId}}));
+ }catch(error){alert('Ouverture impossible : '+error.message);}
+}
+const READ0X_C5_DOC_CACHE=new Map();
+async function read0xC5Preview(model,img){
+ try{
+  let doc=READ0X_C5_DOC_CACHE.get(model.id);
+  if(!doc){doc=await read0xC4LoadDocument(model);READ0X_C5_DOC_CACHE.set(model.id,doc);}
+  const svg=window.__readoxFlyerPhase8?.svg(doc);
+  if(!svg)throw Error('Rendu SVG indisponible');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  img.dataset.c5Source='document';
+ }catch(error){img.dataset.c5Error=error.message;img.alt='Aperçu non disponible : '+model.name;}
+}
+
 function showTemplates(){
  const holder=$('templates');if(!holder)return;
  const q=($('search')?.value||'').trim().toLocaleLowerCase('fr');holder.replaceChildren();
@@ -67,7 +87,7 @@ function showTemplates(){
  for(const entry of visible){
   const model=!!read0xC4Category;const m=model?entry:READ0X_C4_MODELS.find(x=>x.categoryId===entry.id);
   const b=document.createElement('button');b.type='button';b.className='template readox-c4-card';b.dataset.category=model?entry.categoryId:entry.id;
-  const th=document.createElement('div');th.className='thumb';const img=document.createElement('img');img.src=window.READ0X_FLYER_ASSETS[m.preview]||'flyer-assets/'+m.preview;img.alt='Aperçu '+entry.name;img.loading='lazy';th.append(img);b.append(th);
+  const th=document.createElement('div');th.className='thumb';const img=document.createElement('img');img.src=window.READ0X_FLYER_ASSETS[m.preview]||'flyer-assets/'+m.preview;img.alt='Aperçu '+entry.name;img.loading='lazy';read0xC5Preview(m,img);th.append(img);b.append(th);
   const sm=document.createElement('small');sm.textContent=entry.name+(model?'':' · '+READ0X_C4_MODELS.filter(x=>x.categoryId===entry.id).length+' modèle(s)');b.append(sm);
   b.onclick=()=>{if(model)read0xC4OpenModel(entry);else{read0xC4Category=entry.id;showTemplates()}};holder.append(b);
  }
@@ -701,7 +721,8 @@ function restore(raw){
 function download(blob,ext){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename()+'.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-function svgDocument(){
+function svgDocument(source){
+ const doc=source||state();const pageBg=doc.page?.background||doc.pageBg||"#ffffff";const items=doc.items||[];
  let svg='<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="510" height="660" viewBox="0 0 510 660"><rect width="510" height="660" fill="'+esc(pageBg)+'"/>';
  for(const it of items){
   const x=Number(it.x),y=Number(it.y),w=Number(it.w),h=Number(it.h);
@@ -755,7 +776,7 @@ file.onchange=async e=>{
  catch(err){status.textContent='Import refusé';alert('Impossible d’ouvrir le projet : '+err.message);}
  finally{e.target.value='';}
 };
-window.__readoxFlyerPhase8={capture:()=>state(),restore:(raw)=>restore(raw)};
+window.__readoxFlyerPhase8={capture:()=>state(),restore:(raw)=>restore(raw),svg:(doc)=>svgDocument(doc)};
 localSave.addEventListener('click',()=>{
  try{localStorage.setItem(key,JSON.stringify(state()));status.textContent='Projet enregistré dans ce navigateur';}
  catch(err){status.textContent='Stockage indisponible : exporte le fichier JSON';}
@@ -1490,5 +1511,32 @@ const ready=()=>{
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready,{once:true});else ready();
 })();
+</script>
+
+<style id="readox-c5-projects-style">
+#readox-c5-projects{position:fixed;inset:0;background:#07172dd9;z-index:310000;display:none;align-items:center;justify-content:center;padding:14px}
+#readox-c5-projects.open{display:flex}#readox-c5-projects .c5-panel{width:min(560px,100%);max-height:85dvh;overflow:auto;background:#fff;color:#122544;border-radius:16px;padding:20px}
+#readox-c5-projects button{padding:10px 12px;margin:4px;border:1px solid #cbd8ed;border-radius:9px;background:#f4f8ff;color:#102344}
+#readox-c5-projects .c5-item{padding:10px;border-bottom:1px solid #dbe4ef;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}
+</style>
+<script id="readox-c5-projects">
+(()=>{'use strict';const init=()=>{
+ const api=window.__readoxFlyerPhase8;if(!api)return;
+ const key='readox:flyer:c5:projects';const activeKey='readox:flyer:c5:active-id';
+ const list=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(_){return []}};
+ const write=docs=>localStorage.setItem(key,JSON.stringify(docs));
+ function save(){const doc=api.capture();const docs=list();let id=localStorage.getItem(activeKey);let existing=docs.findIndex(x=>x.id===id);if(existing<0){id='flyer-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);localStorage.setItem(activeKey,id)}const entry={id,name:doc.name||'Mon flyer',updatedAt:new Date().toISOString(),document:doc};if(existing<0)docs.unshift(entry);else docs[existing]=entry;write(docs);return entry;}
+ function open(id){const entry=list().find(x=>x.id===id);if(!entry)return false;api.restore(entry.document);localStorage.setItem(activeKey,id);return true;}
+ const modal=document.createElement('div');modal.id='readox-c5-projects';modal.innerHTML='<section class="c5-panel" role="dialog" aria-modal="true"><h2>Mes projets Flyer Maker</h2><p>Retrouvez et reprenez vos créations enregistrées sur cet appareil.</p><div id="c5-list"></div><button id="c5-close">Fermer</button></section>';document.body.append(modal);
+ const show=()=>{const root=modal.querySelector('#c5-list');root.replaceChildren();for(const p of list()){const row=document.createElement('div');row.className='c5-item';const label=document.createElement('span');label.textContent=p.name+' · '+new Date(p.updatedAt).toLocaleString('fr-CA');const actions=document.createElement('span');for(const [labelText,handler] of [['Ouvrir',()=>{open(p.id);modal.classList.remove('open')}],['Supprimer',()=>{if(confirm('Supprimer ce projet ?')){write(list().filter(x=>x.id!==p.id));if(localStorage.getItem(activeKey)===p.id)localStorage.removeItem(activeKey);show()}}]]){const b=document.createElement('button');b.textContent=labelText;b.onclick=handler;actions.append(b)}row.append(label,actions);root.append(row)}if(!list().length)root.textContent='Aucun projet enregistré sur cet appareil.';modal.classList.add('open')};
+ modal.querySelector('#c5-close').onclick=()=>modal.classList.remove('open');modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+ const saveButton=document.getElementById('save');if(saveButton)saveButton.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();try{save()}catch(err){alert('Enregistrement local impossible : '+err.message)}},true);
+ const creations=document.getElementById('navCreations');if(creations)creations.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();show()},true);
+ window.ReadoxFlyerC5Projects={save,list,open,show,remove:(id)=>{write(list().filter(x=>x.id!==id))}};
+ // A new template starts a new project, without overwriting a previous project.
+ document.addEventListener('readox:flyer:model-opened',()=>localStorage.removeItem(activeKey));
+ // Parent app can request a specific saved project after navigation.
+ const query=new URLSearchParams(location.search).get('flyerProject');if(query)open(query);
+};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();})();
 </script>
 </body></html>
