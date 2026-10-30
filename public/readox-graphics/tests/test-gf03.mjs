@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {auditLayout,proposeTextFit,safeTextFixes,applyTextFixes,fitPageToViewport,rotatedBounds} from '../gf03.mjs';
+const doc={page:{width:200,height:300},items:[{id:'a',type:'text',text:'Very long text',x:10,y:10,w:40,h:15,size:20},{id:'b',type:'text',text:'Short',x:175,y:10,w:35,h:25,size:12},{id:'c',type:'image',x:0,y:60,w:200,h:200}]};
+const issues=auditLayout(doc);assert(issues.some(i=>i.code==='TEXT_OVERFLOW'&&i.id==='a'));assert(issues.some(i=>i.code==='OUTSIDE_PAGE'&&i.id==='b'));
+const r=proposeTextFit({...doc.items[0],w:160,h:40});assert(r.fits);
+const changes=safeTextFixes({...doc,items:[{...doc.items[0],w:100,h:40}]});assert(changes.length===1);
+const next=applyTextFixes(doc,changes);assert(next.items[0].size<20);assert.equal(doc.items[0].size,20);
+assert.equal(fitPageToViewport({width:500,height:800},{width:1000,height:600}).percent,69);
+assert(rotatedBounds({x:10,y:10,w:20,h:20,rotation:45}).left<10);
+console.log('GF03: 7 assertions passed');

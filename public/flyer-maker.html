@@ -69,10 +69,15 @@ async function read0xC5Preview(model,img){
  try{
   let doc=READ0X_C5_DOC_CACHE.get(model.id);
   if(!doc){doc=await read0xC4LoadDocument(model);READ0X_C5_DOC_CACHE.set(model.id,doc);}
-  const svg=window.__readoxFlyerPhase8?.svg(doc);
-  if(!svg)throw Error('Rendu SVG indisponible');
-  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-  img.dataset.c5Source='document';
+  if(window.__readoxGF04?.thumbnail){
+    await window.__readoxGF04.thumbnail(doc,img);
+    img.dataset.c5Source='fabric-document';
+   }else{
+    const svg=window.__readoxFlyerPhase8?.svg(doc);
+    if(!svg)throw Error('Rendu SVG indisponible');
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    img.dataset.c5Source='document-fallback';
+   }
  }catch(error){img.dataset.c5Error=error.message;img.alt='Aperçu non disponible : '+model.name;}
 }
 
@@ -1617,4 +1622,19 @@ window.ReadoxSmartLayout={fit,layout,check:()=>{
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
+
+<script id="readox-gf011-state-bridge">
+(()=>{'use strict';
+ window.__readoxGF011State={
+  read:()=>({items:JSON.parse(JSON.stringify(items)),pageBg,selected}),
+  commit:(id,patch)=>{const it=items.find(x=>x.id===id);if(!it)return false;snapshot();Object.assign(it,patch);selected=id;render();return true;},
+  choose:(id)=>{select(id);},
+  refresh:()=>render()
+ };
+})();
+</script>
+<script type="module" src="readox-graphics/gf011-editor-bridge.mjs"></script>
+<script type="module" src="/readox-graphics/gf03-browser.mjs"></script>
+<script type="module" src="/readox-graphics/gf04-renderer.mjs"></script>
+<script defer src="/readox-graphics/gf04-1-commands.js"></script>
 </body></html>

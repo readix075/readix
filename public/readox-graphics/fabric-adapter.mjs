@@ -2,6 +2,8 @@
  * Isolated integration: no legacy editor UI modifications. SDK injected by host.
  */
 import {GraphicsDocument} from './core.mjs';
+import {applyAppearance,makeText,loadFonts} from './gf01.mjs';
+import {normalizeImageSpec,imagePlacement} from './gf02.mjs';
 const N=(x,d=0)=>Number.isFinite(+x)?+x:d;
 const fill=o=>o.bg||o.fill||o.color||'#222222';
 const poly=(sides,w,h,phase=-Math.PI/2)=>Array.from({length:sides},(_,i)=>({x:w/2+Math.cos(phase+2*Math.PI*i/sides)*w/2,y:h/2+Math.sin(phase+2*Math.PI*i/sides)*h/2}));
@@ -19,6 +21,7 @@ function opts(o,interactive){return {left:N(o.x),top:N(o.y),width:Math.max(1,N(o
 export async function createFabricCanvas(fabric,canvasElement,source,{interactive=true}={}){
  if(!fabric?.Canvas||!fabric?.Rect||!fabric?.Textbox||!fabric?.Polygon)throw Error('Fabric.js 6 requis (SDK non chargé)');
  const model=source instanceof GraphicsDocument?source:new GraphicsDocument(source);const page=model.snapshot().page;
+ await loadFonts(model.snapshot().metadata?.fonts||[]);
  const canvas=new fabric.Canvas(canvasElement,{width:page.width,height:page.height,selection:interactive,backgroundColor:page.background});const objects=new Map();let updating=false;
  async function make(o){const p=opts(o,interactive);let obj=null;const f=fill(o);const type=o.type;
   if(rectTypes.has(type))obj=new fabric.Rect({...p,fill:f,rx:N(o.radius,type==='roundedRect'?12:0),ry:N(o.radius,type==='roundedRect'?12:0)});
@@ -28,16 +31,30 @@ export async function createFabricCanvas(fabric,canvasElement,source,{interactiv
   else if(type==='polyline'&&fabric.Polyline)obj=new fabric.Polyline(points(o),{...p,fill:'transparent',stroke:o.stroke||o.color||'#222'});
   else if(lineTypes.has(type)){obj=new fabric.Line([0,0,p.width,p.height],{...p,fill:'transparent',stroke:o.stroke||o.color||'#222',strokeWidth:N(o.strokeWidth,2)});}
   else if(pathTypes.has(type)&&fabric.Path){const d=o.path||`M 0 ${p.height} Q ${p.width/2} 0 ${p.width} ${p.height}`;obj=new fabric.Path(d,{...p,fill:o.fill||'transparent',stroke:o.stroke||o.color||'#222',strokeWidth:N(o.strokeWidth,2)});}
-  else if(textTypes.has(type))obj=new fabric.Textbox(o.text||'',{...p,fontSize:N(o.size,24),fontFamily:o.fontFamily||'Arial',fontWeight:o.bold?'bold':o.fontWeight||'normal',fontStyle:o.italic?'italic':'normal',fill:o.color||'#222',textAlign:o.align||'left'});
-  else if(imageTypes.has(type)&&o.src&&fabric.FabricImage?.fromURL){obj=await fabric.FabricImage.fromURL(o.src,{crossOrigin:'anonymous'});obj.set({...p,scaleX:p.width/Math.max(1,obj.width),scaleY:p.height/Math.max(1,obj.height)});}
+  else if(textTypes.has(type))obj=makeText(fabric,o,p);
+  else if(imageTypes.has(type)&&o.src&&fabric.FabricImage?.fromURL){
+   obj=await fabric.FabricImage.fromURL(o.src,{crossOrigin:'anonymous'});
+   const spec=normalizeImageSpec(o),m=imagePlacement(obj.width,obj.height,p.width,p.height,spec);
+   // Fabric cropX/Y and width/height implement non-destructive cropping. A clipPath
+   // prevents a cover-fit image from painting outside its document frame.
+   obj.set({...p,cropX:m.cropX,cropY:m.cropY,width:m.cropWidth,height:m.cropHeight,
+     scaleX:m.drawWidth/m.cropWidth,scaleY:m.drawHeight/m.cropHeight,
+     flipX:spec.flipX,flipY:spec.flipY});
+   obj.set({left:p.left+m.offsetX,top:p.top+m.offsetY});
+   if(fabric.Rect){const clip=new fabric.Rect({left:p.left,top:p.top,width:p.width,height:p.height,
+     rx:spec.cornerRadius,ry:spec.cornerRadius,absolutePositioned:true});obj.set('clipPath',clip);}
+   obj.set('readoxImageFrame',{x:p.left,y:p.top,w:p.width,h:p.height,fit:spec.fit,crop:spec.crop});
+  }
   else if(vectorTypes.has(type)&&o.svg&&fabric.loadSVGFromString){const parsed=await fabric.loadSVGFromString(o.svg);const els=parsed.objects.filter(Boolean);if(els.length&&fabric.util?.groupSVGElements)obj=fabric.util.groupSVGElements(els,parsed.options||{});if(obj)obj.set({...p,scaleX:p.width/Math.max(1,obj.width),scaleY:p.height/Math.max(1,obj.height)});}
   else if(groupTypes.has(type)&&Array.isArray(o.children)&&fabric.Group){const children=[];for(const child of o.children){const c=await make(child);if(c)children.push(c);}obj=new fabric.Group(children,p);}
   // Explicit, editable geometric placeholder for objects requiring specialized engines.
   if(!obj)obj=new fabric.Rect({...p,fill:'rgba(200,166,106,0.12)',stroke:'#C8A66A',strokeDashArray:[6,4]});
-  obj.set('readoxId',o.id);obj.set('readoxType',type);return obj;
+  applyAppearance(fabric,obj,o);obj.set('readoxId',o.id);obj.set('readoxType',type);return obj;
  }
  async function refresh(){updating=true;try{canvas.clear();objects.clear();const d=model.snapshot();canvas.setDimensions({width:d.page.width,height:d.page.height});canvas.backgroundColor=d.page.background;for(const o of d.items){if(o.visible===false)continue;const ob=await make(o);canvas.add(ob);objects.set(o.id,ob);}canvas.requestRenderAll();}finally{updating=false;}}
- function sync(e){if(updating||!interactive||!e?.target)return;const ob=e.target,id=ob.readoxId;if(!id||!model.get(id))return;const old=model.get(id);const patch={x:N(ob.left),y:N(ob.top),rotation:N(ob.angle),w:Math.max(1,N(ob.width)*N(ob.scaleX,1)),h:Math.max(1,N(ob.height)*N(ob.scaleY,1))};if(textTypes.has(old.type))patch.text=ob.text;model.update(id,patch);}
+ function sync(e){if(updating||!interactive||!e?.target)return;const ob=e.target,id=ob.readoxId;if(!id||!model.get(id))return;const old=model.get(id);const patch={x:N(ob.left),y:N(ob.top),rotation:N(ob.angle),w:Math.max(1,N(ob.width)*N(ob.scaleX,1)),h:Math.max(1,N(ob.height)*N(ob.scaleY,1))};if(textTypes.has(old.type))patch.text=ob.text;
+ if(imageTypes.has(old.type)){const frame=ob.readoxImageFrame;if(frame){patch.w=frame.w*N(ob.scaleX,1)/(Math.max(.0001,frame.w/Math.max(1,ob.width)));patch.h=frame.h*N(ob.scaleY,1)/(Math.max(.0001,frame.h/Math.max(1,ob.height)));patch.x=N(ob.left);patch.y=N(ob.top);}}
+ model.update(id,patch);}
  canvas.on('object:modified',sync);canvas.on('text:changed',sync);await refresh();
  return {canvas,documentModel:model,objects,refresh,destroy:()=>canvas.dispose(),toPNG:(scale=1)=>canvas.toDataURL({format:'png',multiplier:scale}),toJPG:(scale=1)=>canvas.toDataURL({format:'jpeg',quality:.92,multiplier:scale}),toSVG:()=>canvas.toSVG(),getJSON:()=>model.snapshot()};
 }

@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node tests/test.mjs",
     "check-sdk": "node scripts/check-fabric.mjs",
-    "test:types": "node tests/test-fabric-types.mjs"
+    "test:types": "node tests/test-fabric-types.mjs",
+    "test:gf01": "node tests/test-gf01.mjs"
   }
 }
