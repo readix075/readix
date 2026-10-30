@@ -8,7 +8,7 @@ const page=document.getElementById('page');
 let instance=null, mounted=null, pending=0, busy=false, lastSignature='', active=false;
 const emit=(status,detail='')=>{window.__readoxGF011Status={status,detail};document.dispatchEvent(new CustomEvent('readox:gf011:status',{detail:{status,detail}}));};
 function read(){return state.read();}
-function source(){const s=read();return {format:'readox-flyer',version:3,page:{width:510,height:Math.max(660,...s.items.map(i=>Number(i.y||0)+Number(i.h||0))),background:s.pageBg},items:s.items};}
+function source(){const s=read();return {format:'readox-flyer',version:3,page:{width:page.clientWidth||510,height:page.clientHeight||660,background:s.pageBg},items:s.items};}
 function signature(s){return JSON.stringify(s);}
 function hideLegacy(on){page.classList.toggle('gf011-active',on);}
 function ensureCSS(){const css=document.createElement('style');css.textContent=`
@@ -36,10 +36,10 @@ async function setup(fabric,s){
  c.on('selection:updated',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:cleared',()=>{ /* Preserve legacy panel until next explicit selection. */ });
  c.on('object:modified',ev=>{const ob=ev.target,id=ob?.readoxId;if(!id)return;
-  busy=true;try{state.commit(id,{x:Math.round(ob.left),y:Math.round(ob.top),w:Math.max(1,Math.round(ob.width*ob.scaleX)),h:Math.max(1,Math.round(ob.height*ob.scaleY)),rotation:ob.angle||0});}finally{busy=false;}
+  busy=true;try{(window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(ob.left),y:Math.round(ob.top),w:Math.max(1,Math.round(ob.width*ob.scaleX)),h:Math.max(1,Math.round(ob.height*ob.scaleY)),rotation:ob.angle||0});}finally{busy=false;}
   schedule();
  });
- c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{state.commit(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
+ c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
  return {host,...created};
 }
 let fabric;

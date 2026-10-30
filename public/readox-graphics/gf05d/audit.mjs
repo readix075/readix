@@ -1,0 +1,8 @@
+import {bounds} from './geometry.mjs';
+import {unsupportedNodes} from './capabilities.mjs';
+/** Pure audit: does not mutate documents or pretend to reconstruct missing image layers. */
+export function auditDocument(doc){const issues=[...unsupportedNodes(doc)],pages=new Map((doc.pages||[]).map(p=>[p.id,p]));const nodes=doc.nodes||{};
+ for(const [id,n] of Object.entries(nodes)){const p=pages.get(n.pageId);if(!p){issues.push({id,code:'UNKNOWN_PAGE'});continue;}const b=bounds(n);if(!Object.values(b).every(Number.isFinite)){issues.push({id,code:'INVALID_BOUNDS'});continue;}if(b.x<0||b.y<0||b.right>p.width||b.bottom>p.height)issues.push({id,code:'PAGE_OVERFLOW',bounds:b});if(n.assetRef&&!doc.assets?.[n.assetRef])issues.push({id,code:'MISSING_ASSET',assetRef:n.assetRef});if(n.parentId&&!nodes[n.parentId])issues.push({id,code:'MISSING_PARENT'});if(n.children?.some(c=>!nodes[c]))issues.push({id,code:'MISSING_CHILD'});}
+ const visiting=new Set(),visited=new Set();function visit(id){if(visiting.has(id)){issues.push({id,code:'HIERARCHY_CYCLE'});return;}if(visited.has(id))return;visiting.add(id);for(const c of nodes[id]?.children||[])if(nodes[c])visit(c);visiting.delete(id);visited.add(id);}for(const id of Object.keys(nodes))visit(id);
+ return {version:'GF-05D',nodeCount:Object.keys(nodes).length,pageCount:pages.size,issues};}
+export function checkSvgSource(svg){if(typeof svg!=='string')return {ok:false,code:'INVALID_SVG'};if(/<\s*(script|foreignObject|iframe|object|embed)\b|\bon\w+\s*=|\b(?:href|src)\s*=\s*['"]?\s*(?:javascript:|data:text\/html)/i.test(svg))return {ok:false,code:'UNSAFE_SVG'};return {ok:true,warning:'SANITIZER_REQUIRED_BEFORE_RENDER'};}
