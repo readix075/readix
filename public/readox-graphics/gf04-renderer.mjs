@@ -16,7 +16,7 @@ function normalize(raw){
 }
 const toBlob=async(data)=>{const r=await fetch(data);if(!r.ok)throw Error('Conversion impossible');return r.blob();};
 async function render(raw,format='png',scale=1){
- const scene=normalize(raw);const fabric=await sdk();const el=document.createElement('canvas');
+ const source=raw?.format==='readox-graphic-document'?(await import('./gf05a/document-fabric-adapter.mjs')).toFabricSource(raw):{document:raw,warnings:[]};if(source.warnings.length)throw Error('Export fidèle impossible : '+source.warnings.map(w=>w.code).join(','));const scene=normalize(source.document);const fabric=await sdk();const el=document.createElement('canvas');
  const instance=await createFabricCanvas(fabric,el,scene,{interactive:false});
  try{
   if(document.fonts?.ready)await document.fonts.ready;
@@ -28,7 +28,7 @@ async function render(raw,format='png',scale=1){
  }finally{await instance.destroy();}
 }
 async function thumbnail(raw,img){
- const out=await render(raw,'png',Math.min(1,360/(Number(raw?.page?.width)||510)));
+ const out=await render(raw,'png',Math.min(1,360/(Number(raw?.page?.width||raw?.pages?.[0]?.width)||510)));
  img.src=out.data;img.dataset.gf04='fabric';return img;
 }
 async function download(raw,format='png',filename='readox-flyer'){

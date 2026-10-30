@@ -6,6 +6,7 @@ import {validateDocument} from './gf05a/document-validator.mjs';
 const api=window.__readoxFlyerPhase8;
 const state=window.__readoxGF011State;
 const KEY='readox-gf05b-canonical-backup';
+const canonicalSource=()=>window.__readoxGF05C?.snapshot?.()||null;
 const events=[];
 let store=new DocumentStore(newDocument()),busy=false,last='',timer=0;
 const report=(code,message,details={})=>{const event={code,message,...details};events.push(event);if(events.length>100)events.shift();document.dispatchEvent(new CustomEvent('readox:gf05b:diagnostic',{detail:event}));return event;};

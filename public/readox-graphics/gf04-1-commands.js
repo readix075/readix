@@ -2,7 +2,7 @@
 (()=>{'use strict';
  const $=id=>document.getElementById(id);
  const wait=async()=>{if(window.__readoxGF04)return window.__readoxGF04;await new Promise((resolve,reject)=>{let timeout=setTimeout(()=>reject(Error('GF-04 indisponible')),10000);document.addEventListener('readox:gf04:ready',()=>{clearTimeout(timeout);resolve();},{once:true});});return window.__readoxGF04;};
- const scene=()=>{const api=window.__readoxFlyerPhase8;if(!api?.capture)throw Error('Document non initialisé');return api.capture();};
+ const scene=()=>{if(window.__readoxGF05C)return window.__readoxGF05C.snapshot();const api=window.__readoxFlyerPhase8;if(!api?.capture)throw Error('Document non initialisé');return api.capture();};
  const dataBytes=async data=>new Uint8Array(await(await fetch(data)).arrayBuffer());
  function pdfJPEG(bytes,width,height,pixelsW,pixelsH){
   const enc=new TextEncoder(),parts=[],offsets=[0];let len=0;
