@@ -29,7 +29,7 @@ export class GraphicsDocument {
 }
 function normalizeItem(o,i){
  const type=o.type==='rectangle'?'rect':o.type;
- if(!['rect','text','image','ellipse','line'].includes(type))throw new TypeError('Type objet non pris en charge: '+type);
+ if(typeof type!=='string'||!type.trim())throw new TypeError('Type objet invalide');
  return {...o,id:String(o.id||`item-${i}`),type,x:num(o.x),y:num(o.y),w:Math.max(0,num(o.w)),h:Math.max(0,num(o.h)),rotation:num(o.rotation),opacity:clamp(num(o.opacity,100),0,100),visible:o.visible!==false,locked:o.locked===true};
 }
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
