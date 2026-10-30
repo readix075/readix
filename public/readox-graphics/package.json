@@ -1,0 +1,12 @@
+{
+  "name": "readox-graphics",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "konva": "^9.3.22"
+  },
+  "scripts": {
+    "test": "node tests/test.mjs",
+    "check-sdk": "node scripts/check-konva.mjs"
+  }
+}

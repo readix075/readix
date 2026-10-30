@@ -1,0 +1,1 @@
+try {const {default:K}=await import('konva'); if(!K?.Stage)throw Error('SDK invalide');console.log('Konva disponible');} catch(e){console.error('Konva absent : exécuter npm install avec accès réseau dans public/readox-graphics');process.exitCode=1;}

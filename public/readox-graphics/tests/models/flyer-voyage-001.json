@@ -1,0 +1,72 @@
+{
+  "format": "readox-flyer",
+  "version": 2,
+  "name": "Voyage",
+  "page": {
+    "width": 510,
+    "height": 660,
+    "background": "#0b486a"
+  },
+  "items": [
+    {
+      "id": "voyage-0",
+      "type": "text",
+      "x": 35,
+      "y": 80,
+      "w": 440,
+      "h": 140,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 49,
+      "text": "DÉCOUVREZ LE CANADA"
+    },
+    {
+      "id": "voyage-1",
+      "type": "text",
+      "x": 40,
+      "y": 260,
+      "w": 430,
+      "h": 70,
+      "opacity": 100,
+      "color": "#baf3ff",
+      "size": 29,
+      "text": "DES PAYSAGES INOUBLIABLES"
+    },
+    {
+      "id": "voyage-2",
+      "type": "rect",
+      "x": 40,
+      "y": 380,
+      "w": 430,
+      "h": 7,
+      "opacity": 100,
+      "color": "#65d9ef",
+      "size": 24,
+      "bg": "#65d9ef"
+    },
+    {
+      "id": "voyage-3",
+      "type": "text",
+      "x": 40,
+      "y": 425,
+      "w": 430,
+      "h": 80,
+      "opacity": 100,
+      "color": "#ffffff",
+      "size": 30,
+      "text": "VOTRE PROCHAINE AVENTURE"
+    },
+    {
+      "id": "voyage-4",
+      "type": "text",
+      "x": 40,
+      "y": 550,
+      "w": 430,
+      "h": 60,
+      "opacity": 100,
+      "color": "#baf3ff",
+      "size": 26,
+      "text": "RÉSERVEZ MAINTENANT"
+    }
+  ]
+}
