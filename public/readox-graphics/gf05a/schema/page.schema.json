@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "page.schema.json",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "width": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "height": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "background": {
+      "type": "string"
+    },
+    "rootIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "width",
+    "height",
+    "rootIds"
+  ],
+  "additionalProperties": true
+}

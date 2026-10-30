@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "text.schema.json",
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+    "typography": {
+      "type": "object"
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "metadata.schema.json",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "templateId": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "additionalProperties": true
+}

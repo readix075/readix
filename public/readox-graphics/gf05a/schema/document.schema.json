@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "document.schema.json",
+  "properties": {
+    "format": {
+      "const": "readox-graphic-document"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^3\\."
+    },
+    "documentId": {
+      "type": "string"
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "page.schema.json"
+      }
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "node.schema.json"
+      }
+    },
+    "assets": {
+      "type": "object"
+    },
+    "styles": {
+      "type": "object"
+    },
+    "relations": {
+      "type": "array"
+    },
+    "constraints": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "format",
+    "schemaVersion",
+    "documentId",
+    "pages",
+    "nodes"
+  ],
+  "additionalProperties": true
+}

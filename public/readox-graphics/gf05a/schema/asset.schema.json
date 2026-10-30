@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "asset.schema.json",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "uri": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "uri"
+  ],
+  "additionalProperties": true
+}

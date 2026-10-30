@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "image.schema.json",
+  "properties": {
+    "assetRef": {
+      "type": "string"
+    },
+    "image": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "assetRef"
+  ],
+  "additionalProperties": true
+}
