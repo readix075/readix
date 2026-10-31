@@ -1,9 +1,9 @@
 /** VFE — Amorçage navigateur. Intégration strictement additive :
  * aucun panneau, bouton, route ou module existant n'est remplacé.
  * L'ancien chemin de rendu reste actif ; VFE expose ses services sous
- * window.__readoxVFE et ne s'active que si le flag est présent
- * (?vfe=1 dans l'URL ou localStorage 'readox-vfe' = '1').
- * Rollback : retirer la balise script ou le flag restaure l'état antérieur.
+ * window.__readoxVFE. Le service VFE est activé par défaut en TEST.
+ * ?vfe=0 le désactive pour la session ; localStorage 'readox-vfe'='0'
+ * le désactive durablement. Le rendu historique reste conservé.
  */
 import { AssetManager, sha256Hex, defaultFetcher } from './asset-manager.mjs';
 import { SceneController } from './scene-controller.mjs';
@@ -12,7 +12,10 @@ import { preflight, createConsoleCollector } from './diagnostics.mjs';
 import { validateZoneCoverage, ZONES, POSTER_FORMAT, namingContract } from './zone-contract.mjs';
 import { compareBuffers, heatmap } from './fidelity.mjs';
 
-const enabled = /[?&]vfe=1/.test(location.search) || localStorage.getItem('readox-vfe') === '1';
+const params = new URLSearchParams(location.search);
+const explicit = params.get('vfe');
+const stored = localStorage.getItem('readox-vfe');
+const enabled = explicit === '1' ? true : explicit === '0' ? false : stored !== '0';
 const collector = createConsoleCollector();
 
 const assets = new AssetManager({ hasher: sha256Hex, fetcher: defaultFetcher });
