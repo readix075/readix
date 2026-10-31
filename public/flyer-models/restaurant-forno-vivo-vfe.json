@@ -1,0 +1,116 @@
+{
+  "id": "REST-FORNO-VFE-002",
+  "name": "FORNO VIVO — Référence photographique (édition partielle)",
+  "pageBg": "#100c08",
+  "page": {
+    "width": 510,
+    "height": 765,
+    "background": "#100c08"
+  },
+  "items": [
+    {
+      "id": "FV-REF-IMAGE",
+      "type": "image",
+      "x": 29,
+      "y": 0,
+      "w": 452,
+      "h": 765,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#11100d",
+      "color": "#ffffff",
+      "size": 16,
+      "bold": false,
+      "src": "/flyer-assets/forno-vivo-reference-crop.jpg"
+    },
+    {
+      "id": "FV-FOOT-BG",
+      "type": "rect",
+      "x": 29,
+      "y": 711,
+      "w": 452,
+      "h": 54,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#100c08",
+      "color": "#ffffff",
+      "size": 16,
+      "bold": false
+    },
+    {
+      "id": "FV-PHONE",
+      "type": "text",
+      "x": 49,
+      "y": 726,
+      "w": 150,
+      "h": 24,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#11100d",
+      "color": "#ffffff",
+      "size": 16,
+      "bold": true,
+      "text": "514 123-4567",
+      "font": "Arial"
+    },
+    {
+      "id": "FV-PHONE-SUB",
+      "type": "text",
+      "x": 49,
+      "y": 748,
+      "w": 170,
+      "h": 14,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#11100d",
+      "color": "#ffffff",
+      "size": 9,
+      "bold": false,
+      "text": "Commandes et réservations",
+      "font": "Arial"
+    },
+    {
+      "id": "FV-ADDRESS",
+      "type": "text",
+      "x": 251,
+      "y": 728,
+      "w": 212,
+      "h": 19,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#11100d",
+      "color": "#ffffff",
+      "size": 12,
+      "bold": true,
+      "text": "123 Rue Saint-Laurent",
+      "font": "Arial"
+    },
+    {
+      "id": "FV-CITY",
+      "type": "text",
+      "x": 251,
+      "y": 746,
+      "w": 170,
+      "h": 15,
+      "rotation": 0,
+      "opacity": 100,
+      "bg": "#11100d",
+      "color": "#ffffff",
+      "size": 10,
+      "bold": false,
+      "text": "Montréal, QC",
+      "font": "Arial"
+    }
+  ],
+  "vfe": {
+    "stage": "reference-first-hybrid",
+    "source": "user-supplied-reference",
+    "editability": "partial",
+    "limitations": [
+      "La photographie de fond est aplatie : textes/logo/pizza internes non éditables séparément",
+      "Le pied de page est éditable, les autres zones demandent des assets indépendants",
+      "Le format logique reste 510x765 pour compatibilité éditeur historique; la référence cible 1024x1536 reste à migrer"
+    ],
+    "referenceSha256": "12534c8f941ca25919fc05da00d9173be8595999de423e28b2acb5bb42aaa239"
+  }
+}
