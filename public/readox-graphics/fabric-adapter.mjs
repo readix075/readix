@@ -18,7 +18,7 @@ const groupTypes=new Set(['group','layerGroup','maskGroup','table','chart']);
 const vectorTypes=new Set(['svg','icon','symbol','customShape','qrCode','barcode']);
 function points(o){if(Array.isArray(o.points)&&o.points.length>=2)return o.points.map(p=>({x:N(p.x),y:N(p.y)}));const w=N(o.w,100),h=N(o.h,100);switch(o.type){case 'triangle':return poly(3,w,h);case 'pentagon':return poly(5,w,h);case 'hexagon':return poly(6,w,h);case 'octagon':return poly(8,w,h);case 'diamond':return poly(4,w,h,0);case 'star':return star(w,h,N(o.spikes,5));case 'chevron':return [{x:0,y:0},{x:w*.65,y:0},{x:w,y:h/2},{x:w*.65,y:h},{x:0,y:h},{x:w*.35,y:h/2}];case 'speechBubble':case 'callout':return [{x:0,y:0},{x:w,y:0},{x:w,y:h*.8},{x:w*.45,y:h*.8},{x:w*.25,y:h},{x:w*.3,y:h*.8},{x:0,y:h*.8}];default:return poly(4,w,h);}}
 function opts(o,interactive){return {left:N(o.x),top:N(o.y),width:Math.max(1,N(o.w,100)),height:Math.max(1,N(o.h,100)),angle:N(o.rotation),opacity:Math.max(0,Math.min(1,N(o.opacity,100)/100)),selectable:interactive&&!o.locked,evented:interactive&&!o.locked,hasControls:interactive&&!o.locked,visible:o.visible!==false,stroke:o.stroke||undefined,strokeWidth:N(o.strokeWidth,1)};}
-export async function createFabricCanvas(fabric,canvasElement,source,{interactive=true}={}){
+export async function createFabricCanvas(fabric,canvasElement,source,{interactive=true,externalCommit=false}={}){
  if(!fabric?.Canvas||!fabric?.Rect||!fabric?.Textbox||!fabric?.Polygon)throw Error('Fabric.js 6 requis (SDK non chargé)');
  const model=source instanceof GraphicsDocument?source:new GraphicsDocument(source);const page=model.snapshot().page;
  await loadFonts(model.snapshot().metadata?.fonts||[]);
@@ -55,6 +55,6 @@ export async function createFabricCanvas(fabric,canvasElement,source,{interactiv
  function sync(e){if(updating||!interactive||!e?.target)return;const ob=e.target,id=ob.readoxId;if(!id||!model.get(id))return;const old=model.get(id);const patch={x:N(ob.left),y:N(ob.top),rotation:N(ob.angle),w:Math.max(1,N(ob.width)*N(ob.scaleX,1)),h:Math.max(1,N(ob.height)*N(ob.scaleY,1))};if(textTypes.has(old.type))patch.text=ob.text;
  if(imageTypes.has(old.type)){const frame=ob.readoxImageFrame;if(frame){patch.w=frame.w*N(ob.scaleX,1)/(Math.max(.0001,frame.w/Math.max(1,ob.width)));patch.h=frame.h*N(ob.scaleY,1)/(Math.max(.0001,frame.h/Math.max(1,ob.height)));patch.x=N(ob.left);patch.y=N(ob.top);}}
  model.update(id,patch);}
- canvas.on('object:modified',sync);canvas.on('text:changed',sync);await refresh();
+ if(!externalCommit){canvas.on('object:modified',sync);canvas.on('text:changed',sync);}await refresh();
  return {canvas,documentModel:model,objects,refresh,destroy:()=>canvas.dispose(),toPNG:(scale=1)=>canvas.toDataURL({format:'png',multiplier:scale}),toJPG:(scale=1)=>canvas.toDataURL({format:'jpeg',quality:.92,multiplier:scale}),toSVG:()=>canvas.toSVG(),getJSON:()=>model.snapshot()};
 }

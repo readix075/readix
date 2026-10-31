@@ -29,17 +29,17 @@ async function setup(fabric,s){
  const host=document.createElement('div');host.className='gf011-host';
  const canvas=document.createElement('canvas');host.append(canvas);page.append(host);
  let created;
- try{created=await createFabricCanvas(fabric,canvas,s,{interactive:true});}
+ try{created=await createFabricCanvas(fabric,canvas,s,{interactive:true,externalCommit:true});}
  catch(e){host.remove();throw e;}
  const c=created.canvas;
  c.on('selection:created',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:updated',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:cleared',()=>{ /* Preserve legacy panel until next explicit selection. */ });
  c.on('object:modified',ev=>{const ob=ev.target,id=ob?.readoxId;if(!id)return;
-  busy=true;try{(window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(ob.left),y:Math.round(ob.top),w:Math.max(1,Math.round(ob.width*ob.scaleX)),h:Math.max(1,Math.round(ob.height*ob.scaleY)),rotation:ob.angle||0});}finally{busy=false;}
+  busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(ob.left),y:Math.round(ob.top),w:Math.max(1,Math.round(ob.width*ob.scaleX)),h:Math.max(1,Math.round(ob.height*ob.scaleY)),rotation:ob.angle||0});}finally{busy=false;}
   schedule();
  });
- c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
+ c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
  return {host,...created};
 }
 let fabric;

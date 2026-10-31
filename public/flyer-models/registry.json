@@ -36,18 +36,11 @@
   ],
   "models": [
     {
-      "id": "rest-001",
+      "id": "REST-FORNO-001",
+      "name": "FORNO VIVO — Pizza artisanale",
       "categoryId": "restaurant",
-      "name": "Le Gourmet — Menu du jour",
-      "document": "flyer-restaurant-001.json",
-      "preview": "rest001-plat-principal.jpg"
-    },
-    {
-      "id": "rest-002",
-      "categoryId": "restaurant",
-      "name": "Bella Napoli — Pizzeria artisanale",
-      "document": "flyer-restaurant-002.json",
-      "preview": "rest002-pizza-principale.jpg"
+      "document": "restaurant-forno-vivo.json",
+      "preview": "forno-vivo-preview.png"
     }
   ]
 }
