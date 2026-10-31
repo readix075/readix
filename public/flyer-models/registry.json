@@ -1,38 +1,17 @@
 {
-  "version": 1,
+  "format": "readox-flyer-registry",
+  "version": 2,
+  "updatedAt": "2026-10-31",
+  "authority": "Ce registre est la source unique et autoritaire du catalogue Flyer Maker (cahier v5.2 §7.4). L'interface ne maintient aucune liste parallèle de modèles.",
   "categories": [
-    {
-      "id": "restaurant",
-      "name": "Restaurant"
-    },
-    {
-      "id": "promotion",
-      "name": "Promotion"
-    },
-    {
-      "id": "entreprise",
-      "name": "Entreprise"
-    },
-    {
-      "id": "sport",
-      "name": "Sport"
-    },
-    {
-      "id": "voyage",
-      "name": "Voyage"
-    },
-    {
-      "id": "immobilier",
-      "name": "Immobilier"
-    },
-    {
-      "id": "evenement",
-      "name": "Événement"
-    },
-    {
-      "id": "beaute",
-      "name": "Beauté"
-    }
+    { "id": "restaurant", "name": "Restaurant" },
+    { "id": "promotion", "name": "Promotion" },
+    { "id": "entreprise", "name": "Entreprise" },
+    { "id": "sport", "name": "Sport" },
+    { "id": "voyage", "name": "Voyage" },
+    { "id": "immobilier", "name": "Immobilier" },
+    { "id": "evenement", "name": "Événement" },
+    { "id": "beaute", "name": "Beauté" }
   ],
   "models": [
     {
@@ -40,7 +19,38 @@
       "name": "FORNO VIVO — Composition photographique à calques",
       "categoryId": "restaurant",
       "document": "restaurant-forno-vivo-layered.json",
-      "preview": "forno-vivo-layered-preview.png"
+      "preview": "forno-vivo-layered-preview.png",
+      "format": { "width": 510, "height": 765, "unit": "px" },
+      "assets": ["forno-bg-separated.jpg", "forno-pizza-photo-cutout.png", "forno-red-brush.png"],
+      "license": "TO_VERIFY",
+      "status": "en-validation",
+      "statusReason": "Modèle pilote à calques livré le 2026-10-31 ; publication soumise à la porte de la phase 8 (tests utilisateur réels). Ouvrable comme scène d'essai hors catalogue actif.",
+      "version": "1.0.0",
+      "languages": ["fr"],
+      "conformity": {
+        "editability": "layered-partial",
+        "items": 51,
+        "gates": { "phase8": "pending" }
+      }
+    },
+    {
+      "id": "REST-FORNO-VFE-002",
+      "name": "FORNO VIVO — Photo (édition partielle)",
+      "categoryId": "restaurant",
+      "document": "restaurant-forno-vivo-vfe.json",
+      "preview": "forno-vivo-reference-crop.jpg",
+      "format": { "width": 510, "height": 765, "unit": "px" },
+      "assets": ["forno-vivo-reference-crop.jpg"],
+      "license": "TO_VERIFY",
+      "status": "retire",
+      "statusReason": "Modèle photographique partiellement aplati (bug « image unique », 6 objets seulement) : retiré du catalogue actif le 2026-10-31 conformément au cahier v5.2 §11. Fichier document et historique préservés, aucune donnée supprimée.",
+      "version": "0.9.0",
+      "languages": ["fr"],
+      "conformity": {
+        "editability": "partial",
+        "items": 6,
+        "gates": { "phase8": "failed-image-unique" }
+      }
     }
   ]
 }

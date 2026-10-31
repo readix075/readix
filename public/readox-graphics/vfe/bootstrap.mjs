@@ -61,11 +61,46 @@ const api = {
   console: collector
 };
 
+/** Phase 1 (cahier v5.2 §12) — Scène unique : chaque mutation de l'éditeur
+ * (sélection, texte, forme, image, undo/redo, ouverture de modèle) est reflétée
+ * dans le SceneController VFE, qui devient l'observateur canonique de la scène.
+ * Point d'observation unique : MutationObserver sur #page, qui couvre render(),
+ * les glisser-déplacer (styles inline) et le changement de fond de page, sans
+ * modifier les closures historiques. Débouclage par empreinte FNV-1a du graphe
+ * capturé : une resynchronisation n'a lieu que si la scène a réellement changé. */
+const sceneSync = { count: 0, lastHash: null, lastSyncAt: null, lastReason: null, errors: [] };
+function fnv1a(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16); }
+function syncSceneNow(reason = 'manual') {
+  const cap = window.__readoxFlyerPhase8?.capture?.();
+  if (!cap) return false;
+  const hash = fnv1a(JSON.stringify(cap));
+  if (hash === sceneSync.lastHash) return false;
+  try {
+    controller.openProject(cap);
+    sceneSync.lastHash = hash; sceneSync.count++;
+    sceneSync.lastSyncAt = new Date().toISOString(); sceneSync.lastReason = reason;
+    return true;
+  } catch (e) { sceneSync.errors.push(String(e?.message || e).slice(0, 200)); return false; }
+}
+let syncTimer = 0;
+function scheduleSceneSync(reason) { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncSceneNow(reason), 150); }
+function installSceneSync() {
+  const pageEl = document.getElementById('page');
+  if (!pageEl || typeof MutationObserver === 'undefined') return false;
+  const observer = new MutationObserver(() => scheduleSceneSync('dom-mutation'));
+  observer.observe(pageEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'src'] });
+  document.addEventListener('readox:flyer:model-opened', () => scheduleSceneSync('model-opened'));
+  return true;
+}
+api.sceneSync = sceneSync;
+api.syncSceneNow = syncSceneNow;
+
 window.__readoxVFE = api;
 if (enabled) {
   collector.install();
   loadManifest().then(n => {
-    if (syncFromLegacy()) document.dispatchEvent(new CustomEvent('readox:vfe:ready', { detail: { assets: n } }));
+    if (syncSceneNow('init')) document.dispatchEvent(new CustomEvent('readox:vfe:ready', { detail: { assets: n } }));
+    installSceneSync();
   });
 }
 document.dispatchEvent(new CustomEvent('readox:vfe:loaded', { detail: { enabled } }));

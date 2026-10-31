@@ -187,6 +187,36 @@ export class SceneController {
     }, { selection: [] });
   }
 
+  /** Phase 2 (cahier v5.2 §5.1/§5.3) — Commande canonique de changement de format.
+   * Stratégies : 'adapter' (échelle uniforme centrée, tailles de texte comprises,
+   * aucune déformation), 'recadrer' (objets inchangés), 'recomposer' (refus honnête
+   * sans solveur de contraintes : REFLOW_REQUIRES_CONSTRAINT_SOLVER). Transaction
+   * annulable comme toute commande du contrôleur. */
+  setFormat(target, strategy = 'adapter') {
+    const MODE = { adapter: 'scale', recadrer: 'crop', recomposer: 'reflow' };
+    const mode = MODE[strategy];
+    if (!mode) fail('FORMAT_STRATEGY_UNKNOWN', strategy);
+    const result = resizePage(this.core.doc.pages[0], target.width, target.height, mode);
+    if (!result.supported) fail(result.code);
+    // recadrer : les objets gardent leurs coordonnées absolues (pas de translation de centrage).
+    const dx = strategy === 'recadrer' ? 0 : result.dx;
+    const dy = strategy === 'recadrer' ? 0 : result.dy;
+    return this.apply('page.setFormat', doc => {
+      const page = doc.pages[0];
+      for (const n of Object.values(doc.nodes)) {
+        if (n.parentId) continue;
+        n.geometry.x = n.geometry.x * result.scale + dx;
+        n.geometry.y = n.geometry.y * result.scale + dy;
+        if (strategy === 'adapter') {
+          n.geometry.width *= result.scale;
+          n.geometry.height *= result.scale;
+          if (n.typography?.fontSize) n.typography.fontSize = Math.max(4, n.typography.fontSize * result.scale);
+        }
+      }
+      page.width = result.width; page.height = result.height;
+    }, { selection: [] });
+  }
+
   // ---- Projet : sauvegarde / réouverture / migration ----
 
   saveProject(name = 'Sans titre') {
