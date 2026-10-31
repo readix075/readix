@@ -36,11 +36,11 @@
   ],
   "models": [
     {
-      "id": "REST-FORNO-VFE-002",
-      "name": "FORNO VIVO — Photo (édition partielle)",
+      "id": "REST-FORNO-VFE-003",
+      "name": "FORNO VIVO — Composition photographique à calques",
       "categoryId": "restaurant",
-      "document": "restaurant-forno-vivo-vfe.json",
-      "preview": "forno-vivo-reference-crop.jpg"
+      "document": "restaurant-forno-vivo-layered.json",
+      "preview": "forno-vivo-layered-preview.png"
     }
   ]
 }
