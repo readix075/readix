@@ -95,7 +95,7 @@ function showTemplates(){
   const model=!!read0xC4Category;const m=model?entry:null;
   const b=document.createElement('button');b.type='button';b.className='template readox-c4-card';b.dataset.category=model?entry.categoryId:entry.id;
   const th=document.createElement('div');th.className='thumb';const img=document.createElement('img');if(m){img.src=window.READ0X_FLYER_ASSETS[m.preview]||'flyer-assets/'+m.preview;img.alt='Aperçu '+entry.name;img.loading='lazy';read0xC5Preview(m,img);th.append(img);}else{th.textContent='📁';th.setAttribute('aria-hidden','true');th.style.cssText='display:flex;align-items:center;justify-content:center;font-size:36px';}b.append(th);
-  const sm=document.createElement('small');sm.textContent=entry.name+(model?'':' · '+READ0X_C4_MODELS.filter(x=>x.categoryId===entry.id).length+' modèle(s)');b.append(sm);
+  const sm=document.createElement('small');const publishedCount=READ0X_C4_MODELS.filter(x=>x.categoryId===entry.id).length;const testCount=(window.ReadoxFlyerCatalog.test||[]).filter(x=>x.categoryId===entry.id).length;sm.textContent=entry.name+(model?'':' · '+publishedCount+' publié(s)'+(testCount?' · '+testCount+' TEST':''));b.append(sm);
   b.onclick=()=>{if(model)read0xC4OpenModel(entry);else{read0xC4Category=entry.id;showTemplates()}};holder.append(b);
  }
  // BG-L1 (cahier BG-COMP-1.0 §8) : section TEST — modèles visibles uniquement dans
