@@ -8,9 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Moteur PDF : CDN d'abord, repli local garanti (C4-22 — l'app doit survivre à une panne CDN) -->
+<script>function __rxCdnFallback(g,src){if(!window[g])document.write('<script src="'+src+'"><\/script>')}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>__rxCdnFallback("pdfjsLib","vendor/pdf.min.js")</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>__rxCdnFallback("PDFLib","vendor/pdf-lib.min.js")</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>__rxCdnFallback("JSZip","vendor/jszip.min.js")</script>
 <style>
 :root{
   --bg:#EEF1F7; --surface:#FFFFFF; --surface-2:#F5F7FB; --elevated:#FFFFFF;
@@ -334,9 +339,10 @@ textarea.field{resize:none;overflow:hidden;line-height:1.15}
 .movDel{position:absolute;top:-11px;right:-11px;width:22px;height:22px;border:2px solid #fff;background:var(--danger);color:#fff;border-radius:50%;font-size:11px;display:none;place-items:center;pointer-events:auto;z-index:11}
 .movEl.selEl .movDel{display:grid}
 .edtext{cursor:move;user-select:none;min-width:40px;min-height:18px}
-.edtext[contenteditable="true"]{cursor:text;user-select:text}
-.edtext:empty::before{content:attr(data-ph);opacity:.42;pointer-events:none}
-.edtext:focus::before{content:""}
+.edtx{display:inline-block;min-width:20px;min-height:14px;outline:none}
+.edtx[contenteditable="true"]{cursor:text;user-select:text}
+.edtx:empty::before{content:attr(data-ph);opacity:.42;pointer-events:none}
+.edtx:focus::before{content:""}
 /* barre d'édition (Modifier) */
 .edbar{position:sticky;top:0;z-index:9;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:14px auto 0;max-width:940px;box-shadow:var(--shadow-sm)}
 .edmode{height:32px;padding:0 11px;border:1px solid var(--line-strong);background:var(--surface-2);border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
@@ -1686,6 +1692,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  .stage{width:100%!important;min-width:0!important;flex:1 1 0!important;overflow-x:auto!important;overscroll-behavior-x:contain}
  .lrail{position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:min(82vw,320px)!important;max-width:320px!important;z-index:85!important;transform:translateX(-105%)!important;transition:transform .2s ease!important;box-shadow:0 10px 32px #07132630;visibility:hidden!important}
  body.rx-r1-drawer-open .lrail{transform:translateX(0)!important;visibility:visible!important}
+ /* Le tiroir doit aussi s'ouvrir depuis le lecteur/accueil (sinon le catalogue est injoignable sur mobile — C4-02) */
+ body.rx-shell.rx-home.rx-r1-drawer-open .lrail{display:flex!important}
  body.rx-r1-drawer-open #rxR1Scrim{display:block!important}
  .lrail-scroll{overflow-y:auto!important;min-height:0!important}
  .rrail{display:none!important}
@@ -3922,7 +3930,7 @@ window.ReadixWordEngine=RWE;
 try{window.RXW_API={get ed(){return ed},layout:function(){layout()},getHTML:function(){return ed.innerHTML},setHTML:function(html){ed.innerHTML=sanitizeHTML(html,true);ensureBlocks();layout()},getMeta:function(){return normMeta(host.getMeta())},selText:function(){var s=ed.ownerDocument.getSelection();return s?s.toString():''},focus:function(){ed.focus()}};}catch(e){}
 </script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>[...(r||document).querySelectorAll(s)];
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
@@ -4085,13 +4093,28 @@ async function renderPageTo(page,scale,container,cls){
 }
 
 /* ---------- ouvrir un PDF dans l'onglet actif ---------- */
-async function openPdfBytes(bytes,name){
+async function openPdfBytes(bytes,name,password){
+  // Validation AVANT toute mutation d'état : un échec de chargement ne doit
+  // ni renommer l'onglet courant ni y stocker des octets invalides (C4-04).
+  const data=u8(bytes).slice(0);
+  let pdf;
+  try{ pdf=await pdfjsLib.getDocument(password?{data:data.slice(0),password}:{data:data.slice(0)}).promise; }
+  catch(e){
+    if(e&&e.name==="PasswordException"){
+      const pw=prompt("Ce PDF est protégé par mot de passe. Saisissez le mot de passe pour l'ouvrir :");
+      if(pw){return openPdfBytes(bytes,name,pw);}
+      toast("Ouverture annulée : ce PDF est protégé par mot de passe.","warn");return;
+    }
+    toast("PDF illisible : le fichier est corrompu ou n'est pas un PDF valide.","err");return;
+  }
   let t=activeTab();
-  if(!t){t=createTab(name);} 
-  t.bytes=u8(bytes);t.name=name||t.name;
-  try{ t.pdf=await pdfjsLib.getDocument({data:u8(bytes).slice(0)}).promise; }catch(e){toast("PDF illisible.","err");return;}
+  if(!t){t=createTab(name);}
+  t.bytes=u8(bytes);t.name=name||t.name;t.pdf=pdf;
   if(t.tool==="home"){t.tool="view";APP.tool="view";pushHist({tool:"view",page:t.page||1});}else APP.tool=t.tool;
   renderTabs();renderTools();renderView();updateHeader();updateNavBtns();
+  // Mobile : un PDF ouvert prend la main sur l'écran natif — les coques v2/v5
+  // (plein écran) doivent s'effacer, sinon elles interceptent tous les gestes.
+  try{ if(matchMedia("(max-width:820px)").matches){const v2=document.getElementById("rxv2");if(v2)v2.style.setProperty("display","none");const v5=document.getElementById("rxv5");if(v5)v5.classList.remove("is-open");} }catch(e){}
   scheduleAutosave();
 }
 $("#hiddenFile").onchange=async e=>{const f=e.target.files[0];if(f){await openPdfBytes(await readAB(f),f.name);}e.target.value="";};
@@ -5854,6 +5877,10 @@ function openTool(id){
   if(id==="docstudio"){let t=activeTab();if(!t||t.pdf){t=createTab("Nouveau document.docx");} t.tool="docstudio";APP.tool="docstudio";if(!t.doc) t.doc=defaultDocHTML();pushHist({tool:"docstudio",page:1});renderTabs();renderTools();renderView();updateHeader();return;}
   let t=activeTab();if(!t){t=createTab();}
   t.tool=id;APP.tool=id;pushHist({tool:id,page:t.page||1});
+  // correctif C4-D12 : les panneaux du lecteur (vignettes, signets, recherche,
+  // infos) sont propres au lecteur — hors de celui-ci, le panneau latéral est
+  // refermé pour ne pas recouvrir les boutons d'action des autres outils.
+  if(id!=="view"){const rp=$("#rpanel");if(rp&&rp.classList.contains("open")){rp.classList.remove("open");curPanel=null;$$(".rrail .ico").forEach(x=>x.classList.remove("on"));}}
   renderTabs();renderTools();renderView();updateHeader();
   $("#floatsig").classList.toggle("show",id==="fillsign"&&!!t.pdf);
 }
@@ -5866,6 +5893,10 @@ async function renderFillSign(t,stage){
   const sign=el("button","btn ghost sm","✍ Signature");sign.onclick=()=>{ $("#floatsig").classList.add("show"); openSignaturePad(); };
   const save=el("button","btn sm","Enregistrer le PDF rempli");save.onclick=doSave;
   bar.append(info,sp,sign,save);stage.appendChild(bar);
+  // Limite annoncée (C4-07) : la signature apposée est une image apposée sur la page,
+  // pas une signature cryptographique vérifiable.
+  const limite=el("div","actionbar");limite.style.cssText="background:var(--surface-2,#f4f6fb);font-size:12px";
+  limite.innerHTML='<span class="info">Signature apposée : <b>visuelle uniquement</b> (image sur la page) — elle ne constitue pas une signature numérique cryptographique vérifiable.</span>';stage.appendChild(limite);
   const pages=el("div","pages");stage.appendChild(pages);
   t.fields=[];let n=0;const scale=1.5*(t.zoom||1);
   for(let i=1;i<=t.pdf.numPages;i++){
@@ -6080,6 +6111,11 @@ async function renderEditPdf(t,stage){
   for(let i=1;i<=t.pdf.numPages;i++){const p=await t.pdf.getPage(i);const {wrap}=await renderPageTo(p,scale,pages,"page");
     const layer=el("div","flayer");layer.style.pointerEvents="auto";layer.dataset.page=i;wrap.appendChild(layer);
     layer.addEventListener("pointerdown",e=>{ if(e.target!==layer)return;
+      // correctif C4-D11 : ce gestionnaire crée/sélectionne l'élément ; sans
+      // stopPropagation, l'écouteur document (désélection au clic hors élément)
+      // se déclenche juste après et désélectionne aussitôt l'élément créé —
+      // B/I/U, police, taille et couleur ne s'appliquaient alors plus.
+      e.stopPropagation();
       const r=layer.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
       if(EDMODE==="select"){if(_sel){_sel.classList.remove("selEl");_sel=null;}return;}
       if(EDMODE==="image"){pend={layer,pg:wrap,x,y};imgInput.click();return;}
@@ -6106,8 +6142,14 @@ function addEl(layer,pg,type,x,y,opts){
   it.style.left=Math.max(0,x)+"px";it.style.top=Math.max(0,y)+"px";
   if(type==="text"){it.classList.add("edtext");it.dataset.ph="Texte";it.dataset.color="#111111";it.dataset.size="14";it.dataset.font="Helvetica";
     it.style.color="#111111";it.style.caretColor="#111111";it.style.fontSize="14px";it.style.fontFamily=fontCss("Helvetica");it.textContent="";
-    it.addEventListener("dblclick",()=>{it.setAttribute("contenteditable","true");it.focus();});
-    it.addEventListener("blur",()=>{it.removeAttribute("contenteditable");});
+    // Hôte de saisie dédié : le conteneur ne contient que des contrôles non éditables
+    // (bouton ✕, poignées) — sans ce span, aucune position de curseur n'existe et la
+    // frappe est perdue (défaut C4-D4).
+    const tx=el("span","edtx");tx.dataset.ph="Texte";tx.contentEditable="false";it.appendChild(tx);
+    const editer=()=>{tx.contentEditable="true";setTimeout(()=>{tx.focus();const s=getSelection(),r=document.createRange();r.selectNodeContents(tx);r.collapse(false);s.removeAllRanges();s.addRange(r);},0);};
+    it.addEventListener("dblclick",editer);
+    tx.addEventListener("blur",()=>{tx.contentEditable="false";});
+    it._edtx=tx;it._editer=editer;
   }
   else if(type==="image"){it.style.width="160px";it.style.height="120px";const im=el("img");im.src=opts.src;im.style.cssText="width:100%;height:100%;object-fit:contain;pointer-events:none;display:block";it.appendChild(im);it.dataset.src=opts.src;}
   else{it.dataset.color=EDCOLOR;const shp=el("div","edshape");
@@ -6116,18 +6158,22 @@ function addEl(layer,pg,type,x,y,opts){
     else if(type==="hl"){it.style.width="120px";it.style.height="20px";shp.style.cssText=`width:100%;height:100%;background:${EDCOLOR};opacity:.4;pointer-events:none`;}
     else if(type==="mask"||type==="redact"){it.style.width="120px";it.style.height="30px";const col=type==="redact"?"#000000":EDCOLOR;it.dataset.color=col;shp.style.cssText=`width:100%;height:100%;background:${col};pointer-events:none`;}
     it.appendChild(shp);}
-  const del=el("button","movDel","✕");del.onpointerdown=e=>e.stopPropagation();del.onclick=e=>{e.stopPropagation();removeEl(it);};it.appendChild(del);
+  const del=el("button","movDel","✕");del.contentEditable="false";del.onpointerdown=e=>e.stopPropagation();del.onclick=e=>{e.stopPropagation();removeEl(it);};it.appendChild(del);
   layer.appendChild(it);makeMovable(it,pg,()=>markDirty());selectEl(it);markDirty();
   pushAction(activeTab(),{undo:()=>{if(_sel===it)_sel=null;it.remove();},redo:()=>layer.appendChild(it)});
-  if(type==="text"){it.setAttribute("contenteditable","true");setTimeout(()=>it.focus(),0);}
+  if(type==="text"&&it._editer){it._editer();}
   setEdMode("select");
 }
 function removeEl(it){const t=activeTab();const parent=it.parentNode;const next=it.nextSibling;it.remove();if(_sel===it)_sel=null;markDirty();pushAction(t,{undo:()=>parent.insertBefore(it,next),redo:()=>it.remove()});}
+// Caractères encodables en WinAnsi (polices standard PDF) : le reste devient « ? ».
+function winAnsiSafe(s){const extra={"\u2013":1,"\u2014":1,"\u2018":1,"\u2019":1,"\u201A":1,"\u201C":1,"\u201D":1,"\u201E":1,"\u2020":1,"\u2021":1,"\u2022":1,"\u2026":1,"\u2030":1,"\u2039":1,"\u203A":1,"\u20AC":1,"\u2122":1,"\u0152":1,"\u0153":1,"\u0160":1,"\u0161":1,"\u0178":1,"\u017D":1,"\u017E":1,"\u02C6":1,"\u02DC":1,"\u0192":1};
+  return [...String(s==null?"":s)].map(ch=>{const cp=ch.codePointAt(0);if(cp<0x20&&ch!=="\n"&&ch!=="\t")return "";if(cp===0x7F)return "";if(cp<=0xFF)return ch;return extra[ch]?ch:"?";}).join("");}
 async function doSaveEdit(t){
   try{ toast("Génération du PDF…");
     const {PDFDocument,rgb,StandardFonts,degrees}=PDFLib;
     const doc=await PDFDocument.load(u8(t.bytes).slice(0));
     const fontCache={};
+    let annotationsSubstituees=0;
     const scale=1.5*(t.zoom||1);
     for(const it of $$(".flayer .movEl")){
       const pageNum=+it.parentNode.dataset.page;if(!pageNum)continue;
@@ -6137,8 +6183,19 @@ async function doSaveEdit(t){
       try{
         if(type==="text"){const c=hexRgb(it.dataset.color);const s=(parseFloat(it.dataset.size)||14)/scale;
           const f=await pickFont(doc,it.dataset.font||"Helvetica",it.dataset.bold==="1",it.dataset.italic==="1",fontCache);
-          const txt=it.textContent||"";pg.drawText(txt,{x:xPt+2/scale,y:height-yTop-s,size:s,font:f,color:rgb(c.r,c.g,c.b)});
-          if(it.dataset.underline==="1"&&txt){let tw=0;try{tw=f.widthOfTextAtSize(txt,s);}catch(e){tw=txt.length*s*0.5;}pg.drawRectangle({x:xPt+2/scale,y:height-yTop-s-1,width:tw,height:Math.max(.6,s*0.06),color:rgb(c.r,c.g,c.b)});}}
+          // Le texte saisi vit dans l'hôte dédié .edtx ; le bouton « ✕ » et les
+          // poignées sont des contrôles non éditables (défaut C4-D4).
+          const hote=it.querySelector(".edtx");
+          const txt=hote?hote.textContent:[...it.childNodes].filter(n=>!(n.nodeType===1&&n.classList&&(n.classList.contains("movDel")||n.classList.contains("movH")))).map(n=>n.textContent).join("");
+          let sortie=txt,substitue=false;
+          try{ pg.drawText(sortie,{x:xPt+2/scale,y:height-yTop-s,size:s,font:f,color:rgb(c.r,c.g,c.b)}); }
+          catch(e1){
+            // Caractères hors WinAnsi : substitution honnête par « ? », signalée à l'utilisateur.
+            sortie=winAnsiSafe(txt);substitue=sortie!==txt;
+            pg.drawText(sortie,{x:xPt+2/scale,y:height-yTop-s,size:s,font:f,color:rgb(c.r,c.g,c.b)});
+          }
+          if(substitue)annotationsSubstituees=(annotationsSubstituees||0)+1;
+          if(it.dataset.underline==="1"&&sortie){let tw=0;try{tw=f.widthOfTextAtSize(sortie,s);}catch(e){tw=sortie.length*s*0.5;}pg.drawRectangle({x:xPt+2/scale,y:height-yTop-s-1,width:tw,height:Math.max(.6,s*0.06),color:rgb(c.r,c.g,c.b)});}}
         else if(type==="image"){const src=it.dataset.src;const im=/png/i.test(src.slice(0,20))?await doc.embedPng(src):await doc.embedJpg(src);pg.drawImage(im,{x:xPt,y:yPt,width:wPt,height:hPt});}
         else if(type==="rect"){const c=hexRgb(it.dataset.color);pg.drawRectangle({x:xPt,y:yPt,width:wPt,height:hPt,borderColor:rgb(c.r,c.g,c.b),borderWidth:1.5});}
         else if(type==="mask"){const c=hexRgb(it.dataset.color);pg.drawRectangle({x:xPt,y:yPt,width:wPt,height:hPt,color:rgb(c.r,c.g,c.b)});}
@@ -6147,7 +6204,8 @@ async function doSaveEdit(t){
       }catch(e){}
     }
     const ok=await saveBytes(await doc.save(),(t.name||"document").replace(/\.pdf$/i,"")+"-modifie.pdf");
-    if(ok){t.dirty=false;updateSaveDot();toast("PDF modifié enregistré.","ok");}
+    if(ok){t.dirty=false;updateSaveDot();toast("PDF modifié enregistré.","ok");
+      if(annotationsSubstituees>0)toast(annotationsSubstituees+" annotation(s) contenaient des caractères non pris en charge par la police PDF : ils ont été remplacés par « ? ».","warn");}
   }catch(e){toast("Erreur : "+e.message,"err");}
 }
 
@@ -6198,12 +6256,17 @@ function renderSplit(t,stage){
 async function renderRedact(t,stage){
   if(!t.pdf){renderOpenerInto(stage,t);return;}
   const bar=el("div","actionbar");
-  bar.innerHTML='<span class="info">Cliquez sur une page pour ajouter une zone noire, puis déplacez/redimensionnez-la. À l\'enregistrement, les zones sont aplaties (contenu masqué).</span><span class="sp"></span>';
+  bar.innerHTML='<span class="info">Cliquez sur une page pour ajouter une zone de caviardage, puis déplacez/redimensionnez-la. À l\'enregistrement, chaque page caviardée est aplatie en image : le contenu sous les zones est définitivement supprimé (limite assumée : le reste du texte de ces pages n\'est alors plus sélectionnable).</span><span class="sp"></span>';
   const save=el("button","btn sm","Enregistrer (caviardé)");bar.append(save);stage.appendChild(bar);
   const pages=el("div","pages");stage.appendChild(pages);const scale=1.5*(t.zoom||1);
   for(let i=1;i<=t.pdf.numPages;i++){const p=await t.pdf.getPage(i);const {wrap}=await renderPageTo(p,scale,pages,"page");
     const layer=el("div","flayer");layer.style.pointerEvents="auto";layer.dataset.page=i;wrap.appendChild(layer);
-    layer.addEventListener("pointerdown",e=>{if(e.target!==layer)return;const r=layer.getBoundingClientRect();
+    layer.addEventListener("pointerdown",e=>{if(e.target!==layer)return;
+      // correctif C4-D11 : garder la zone nouvellement posée sélectionnée
+      // (bouton ✕ et poignées visibles immédiatement) — sinon l'écouteur
+      // document la désélectionnait aussitôt après sa création.
+      e.stopPropagation();
+      const r=layer.getBoundingClientRect();
       const it=el("div","movEl");it.dataset.type="redact";it.dataset.color="#000000";
       it.style.cssText=`left:${e.clientX-r.left}px;top:${e.clientY-r.top}px;width:140px;height:26px`;
       const shp=el("div","edshape");shp.style.cssText="width:100%;height:100%;background:#000;pointer-events:none";it.appendChild(shp);
@@ -6212,11 +6275,37 @@ async function renderRedact(t,stage){
       pushAction(t,{undo:()=>it.remove(),redo:()=>layer.appendChild(it)});
     });
   }
-  save.onclick=async()=>{try{const {PDFDocument,rgb}=PDFLib;const doc=await PDFDocument.load(u8(t.bytes).slice(0));
-    for(const it of $$(".flayer .movEl")){const pn=+it.parentNode.dataset.page;if(!pn)continue;const pg=doc.getPage(pn-1);const {height}=pg.getSize();
-      const x=parseFloat(it.style.left)/scale,yt=parseFloat(it.style.top)/scale,w=it.offsetWidth/scale,h=it.offsetHeight/scale;
-      pg.drawRectangle({x,y:height-yt-h,width:w,height:h,color:rgb(0,0,0)});}
-    const ok=await saveBytes(await doc.save(),(t.name||"doc").replace(/\.pdf$/i,"")+"-caviarde.pdf");if(ok){t.dirty=false;updateSaveDot();toast("PDF caviardé enregistré.","ok");}
+  save.onclick=async()=>{try{
+    // Caviardage RÉEL (C4-16 / §5.7) : les pages portant des zones sont re-rendues
+    // en image via pdf.js avec les zones peintes en noir, puis réinsérées SANS leur
+    // contenu textuel d'origine — le texte caviardé n'existe plus dans le fichier.
+    const zonesParPage={};
+    for(const it of $$(".flayer .movEl")){const pn=+it.parentNode.dataset.page;if(!pn)continue;
+      (zonesParPage[pn]=zonesParPage[pn]||[]).push({x:parseFloat(it.style.left)/scale,yt:parseFloat(it.style.top)/scale,w:it.offsetWidth/scale,h:it.offsetHeight/scale});}
+    const numeros=Object.keys(zonesParPage).map(Number);
+    if(!numeros.length){toast("Aucune zone de caviardage posée.","warn");return;}
+    toast("Caviardage définitif en cours…");
+    const {PDFDocument}=PDFLib;
+    const src=await PDFDocument.load(u8(t.bytes).slice(0));
+    const out=await PDFDocument.create();
+    const copies=await out.copyPages(src,src.getPageIndices());
+    for(let i=0;i<copies.length;i++){
+      const pn=i+1;
+      if(!zonesParPage[pn]){out.addPage(copies[i]);continue;}
+      // page caviardée : rendu raster à 2× puis peinture des zones, insertion en image pleine page
+      const p=await t.pdf.getPage(pn);
+      const R=2,vp=p.getViewport({scale:R});
+      const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;
+      const cx=cv.getContext("2d");
+      await p.render({canvasContext:cx,viewport:vp}).promise;
+      cx.fillStyle="#000";
+      for(const z of zonesParPage[pn])cx.fillRect(z.x*R,z.yt*R,z.w*R,z.h*R);
+      const img=await out.embedPng(cv.toDataURL("image/png"));
+      const np=out.addPage([vp.width/R,vp.height/R]);
+      np.drawImage(img,{x:0,y:0,width:vp.width/R,height:vp.height/R});
+    }
+    const ok=await saveBytes(await out.save(),(t.name||"doc").replace(/\.pdf$/i,"")+"-caviarde.pdf");
+    if(ok){t.dirty=false;updateSaveDot();toast("PDF caviardé enregistré : "+numeros.length+" page(s) aplatie(s), le contenu sous les zones est définitivement supprimé.","ok");}
   }catch(e){toast("Erreur : "+e.message,"err");}};
 }
 
@@ -9056,6 +9145,13 @@ body.rx-shell .topbar #themeBtn { display: none !important; }
 /* rail droit uniquement à l'accueil ; sur les vues outil, le rail fin d'origine reste */
 body.rx-shell.rx-home .body { padding-right: var(--rx-right); }
 body.rx-shell.rx-home .rrail { display: none !important; }
+/* correctif C4-D10 : dans le lecteur (outil « view »), le rail fin d'origine
+   (zoom +/−, recherche dans le document, vignettes, signets, infos) reste visible
+   sur ordinateur — l'intention d'origine était de ne le masquer qu'à l'accueil.
+   Portée limitée au desktop : le mobile (≤1024px) conserve ses règles actuelles. */
+@media (min-width: 1025px) {
+  body.rx-shell.rx-home.rx-reading .rrail { display: flex !important; }
+}
 /* à l'accueil, le tableau de bord occupe toute la largeur : on masque le rail d'outils natif (conservé sur les vues outil) */
 body.rx-shell.rx-home .lrail { display: none !important; }
 
@@ -9780,7 +9876,7 @@ body.rx-shell.rx-home .rx-right { display: flex; }
   try { window.openImageStudio = openImageStudio; } catch (e) {}
 
   var raf = 0;
-  function tick() { try { document.body.classList.toggle("rx-home", isHome()); } catch (e) {} syncActive(); maybeDash(); syncZoom(); try { pruneRailStudios(); } catch (e) {} }
+  function tick() { try { document.body.classList.toggle("rx-home", isHome()); document.body.classList.toggle("rx-reading", isHome() && tool() === "view"); } catch (e) {} syncActive(); maybeDash(); syncZoom(); try { pruneRailStudios(); } catch (e) {} }
   function observe() {
     var stage = byId("stage");
     if (stage) { new MutationObserver(function () { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; tick(); }); }).observe(stage, { childList: true }); }
@@ -14222,6 +14318,9 @@ const items=defs[name]||[];const pop=document.createElement('div');pop.className
 pop.querySelectorAll('[data-menu-cmd]').forEach(b=>b.onclick=()=>{const c=b.dataset.menuCmd,it=selectedItem(s);pop.remove();if(c==='new')return showModal(root,t,stage);if(c==='importimage')return chooseImage(t,stage);if(c==='importproject')return importProject(t,stage);if(c==='save'){t.dirty=false;try{window.scheduleAutosave&&window.scheduleAutosave()}catch(e){}return render(t,stage)}if(c==='export'){const blob=new Blob([JSON.stringify({format:'Readix InDesign',version:25,state:s},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(t.name||'document').replace(/\.[^.]+$/,'')+'.rxd';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);return}if(c==='print'){document.querySelectorAll('.readix-print-host.rxid-print-host').forEach(x=>x.remove());const host=document.createElement('div');host.className='readix-print-host rxid-print-host';root.querySelectorAll('.rxid-page').forEach(p=>{const cp=p.cloneNode(true);cp.querySelectorAll('.rxid-handle,.rxid-rotate-handle,.rxid-user-guide,.rxid-col-guide,.rxid-margin,.rxid-note').forEach(x=>x.remove());host.appendChild(cp)});document.body.appendChild(host);const cleanup=()=>{host.remove();window.removeEventListener('afterprint',cleanup)};window.addEventListener('afterprint',cleanup);window.print();return}if(c==='pages'||c==='layers'||c==='props'){const q=root.querySelector(`[data-panel="${c}"]`);return q&&q.click()}if(c==='addpage'){s.pages++;s.current=s.pages;dirty(t);return render(t,stage)}if(c==='facing'){s.facing=!s.facing;dirty(t);return render(t,stage)}if(['rulers','grid','margins'].includes(c)){const q=root.querySelector(`[data-view="${c}"]`);return q&&q.click()}if(c==='zoom100'){s.zoom=100;dirty(t);return render(t,stage)}if(c==='lockguides'){s.guidesLocked=!s.guidesLocked;dirty(t);toast(s.guidesLocked?'Repères verrouillés.':'Repères déverrouillés.','ok');return render(t,stage)}if(['dup','front','back','del'].includes(c)){const q=root.querySelector(`[data-obj-act="${c}"]`);return q?q.click():toast('Sélectionnez d’abord un objet.','warn')}if(['title','subtitle','body','caption'].includes(c)){const q=root.querySelector(`[data-txt-preset="${c}"]`);return q?q.click():toast('Sélectionnez un bloc de texte.','warn')}if(c==='justify'){if(!it||!['text','note'].includes(it.type))return toast('Sélectionnez un bloc de texte.','warn');it.textAlign='justify';dirty(t);return render(t,stage)}if(c==='table'){const a=s.pageItems[s.current]||(s.pageItems[s.current]=[]),id='obj'+(s.nextItemId++);a.push({id,type:'table',layerId:s.activeLayer,x:mmPx(25,s),y:mmPx(35,s),w:mmPx(150,s),h:mmPx(80,s),z:a.length+1,rows:3,cols:3,cells:Array.from({length:9},(_,i)=>'Cellule '+(i+1)),cellBorder:'#6b7f96',cellBorderWidth:1,cellPadding:5,cellFill:'#ffffff',fill:'transparent',stroke:'transparent',strokeWidth:0});s.selected=id;dirty(t);return render(t,stage)}if(c==='help'){const msg=Object.values(TOOL_DEFS).map(d=>d.name+' : '+d.role).join(' | ');return toast(msg,'ok')}if(c==='about')return toast('Readox InDesign R2026 · Phase 34.1 — PAO éditoriale avancée des outils et options, commandes contextualisées et moteur unifié.','ok');if(c==='undo'){if((t.idHistory||[]).length<2)return toast('Rien à annuler.','warn');const cur=t.idHistory.pop();t.idRedo.push(cur);{const view={current:s.current,zoom:s.zoom};t.idState=JSON.parse(t.idHistory[t.idHistory.length-1]);t.idState.current=Math.min(t.idState.pages||1,view.current);t.idState.zoom=view.zoom;}return render(t,stage)}if(c==='redo'){if(!(t.idRedo||[]).length)return toast('Rien à rétablir.','warn');const nxt=t.idRedo.pop();{const view={current:s.current,zoom:s.zoom};t.idState=JSON.parse(nxt);t.idState.current=Math.min(t.idState.pages||1,view.current);t.idState.zoom=view.zoom;}t.idHistory.push(nxt);return render(t,stage)}})}
 function showModal(root,t,stage){if(root.querySelector('[data-id-modal]'))return;const s=ensure(t);root.insertAdjacentHTML('beforeend',`<div class="rxid-modal-bg" data-id-modal><div class="rxid-modal"><div class="rxid-modal-head"><div><b>Readix<sup>InDesign</sup></b><h2>Nouveau document</h2></div><button data-id-close>×</button></div><div class="rxid-modal-body"><div class="rxid-preview"><div data-preview-page></div><span>Aperçu</span></div><div class="rxid-form"><section><h3>Document</h3><label>Préréglage<select data-id-preset><option>Personnalisé</option><option>Livre</option><option>Magazine</option><option>Brochure</option></select></label><div class="rxid-grid"><label>Intention<select data-id-intent><option>Impression</option><option>Web</option><option>PDF interactif</option></select></label><label>Nombre de pages<input data-id-pages type="number" min="1" value="${s.pages}"></label></div><label class="rxid-check"><input data-id-facing type="checkbox" ${s.facing?'checked':''}> Pages en vis-à-vis</label><label class="rxid-check"><input data-id-primary type="checkbox" ${s.primaryText?'checked':''}> Cadre de texte principal</label></section><section><h3>Taille de page</h3><div class="rxid-grid"><label>Format<select data-id-format>${Object.keys(FORMATS).map(x=>`<option ${x===s.format?'selected':''}>${x}</option>`).join('')}<option>Personnalisé</option></select></label><label>Orientation<select data-id-orientation><option ${s.orientation==='Portrait'?'selected':''}>Portrait</option><option ${s.orientation==='Paysage'?'selected':''}>Paysage</option></select></label><label>Largeur<input data-id-width value="${s.width}"></label><label>Hauteur<input data-id-height value="${s.height}"></label></div></section><section><h3>Colonnes</h3><div class="rxid-grid"><label>Nombre<input data-id-cols value="${s.columns}"></label><label>Gouttière<input data-id-gutter value="${s.gutter}"></label></div></section><section><h3>Marges</h3><div class="rxid-grid"><label>Haut<input data-id-mtop value="${s.margins.top}"></label><label>Bas<input data-id-mbottom value="${s.margins.bottom}"></label><label>Intérieur<input data-id-minside value="${s.margins.inside}"></label><label>Extérieur<input data-id-moutside value="${s.margins.outside}"></label></div></section><section><h3>Fond perdu</h3><label class="rxid-check"><input data-id-bleed-link type="checkbox"> Lier les 4 valeurs</label><div class="rxid-grid"><label>Haut<input data-id-bleed-top value="${s.bleed.top}"></label><label>Bas<input data-id-bleed-bottom value="${s.bleed.bottom}"></label><label>Intérieur<input data-id-bleed-inside value="${s.bleed.inside}"></label><label>Extérieur<input data-id-bleed-outside value="${s.bleed.outside}"></label></div><h3>Slug</h3><label class="rxid-check"><input data-id-slug-link type="checkbox"> Lier les 4 valeurs</label><div class="rxid-grid"><label>Haut<input data-id-slug-top value="${s.slug.top}"></label><label>Bas<input data-id-slug-bottom value="${s.slug.bottom}"></label><label>Intérieur<input data-id-slug-inside value="${s.slug.inside}"></label><label>Extérieur<input data-id-slug-outside value="${s.slug.outside}"></label></div></section></div></div><div class="rxid-modal-foot"><label class="rxid-check"><input data-id-preview-toggle type="checkbox" checked> Aperçu</label><span></span><button data-id-close>Annuler</button><button class="primary" data-id-create>Créer le document</button></div></div></div>`);const bg=root.querySelector('[data-id-modal]');const fmt=bg.querySelector('[data-id-format]'),ori=bg.querySelector('[data-id-orientation]'),w=bg.querySelector('[data-id-width]'),h=bg.querySelector('[data-id-height]'),prev=bg.querySelector('[data-preview-page]');const preview=()=>{const landscape=ori.value==='Paysage';prev.style.width=landscape?'190px':'135px';prev.style.height=landscape?'135px':'190px'};preview();const preset=bg.querySelector('[data-id-preset]'),intent=bg.querySelector('[data-id-intent]'),previewToggle=bg.querySelector('[data-id-preview-toggle]');const applyPreset=()=>{const P={Livre:{format:'A5',pages:8,facing:true,cols:1,gutter:4.233},Magazine:{format:'A4',pages:8,facing:true,cols:3,gutter:5},Brochure:{format:'A4',pages:4,facing:true,cols:2,gutter:5}}[preset.value];if(!P)return;bg.querySelector('[data-id-pages]').value=P.pages;bg.querySelector('[data-id-facing]').checked=P.facing;bg.querySelector('[data-id-cols]').value=P.cols;bg.querySelector('[data-id-gutter]').value=P.gutter;fmt.value=P.format;let d=[...FORMATS[P.format]];if(ori.value==='Paysage')d.reverse();w.value=d[0];h.value=d[1];preview()};preset.onchange=applyPreset;if(previewToggle)previewToggle.onchange=()=>{bg.querySelector('.rxid-preview').style.visibility=previewToggle.checked?'visible':'hidden'};const linkGroup=(kind)=>{const box=bg.querySelector('[data-id-'+kind+'-link]'),els=[...bg.querySelectorAll('[data-id-'+kind+'-top],[data-id-'+kind+'-bottom],[data-id-'+kind+'-inside],[data-id-'+kind+'-outside]')];els.forEach(el=>el.addEventListener('input',()=>{if(box&&box.checked)els.forEach(x=>{if(x!==el)x.value=el.value})}))};linkGroup('bleed');linkGroup('slug');bg.querySelectorAll('[data-id-close]').forEach(b=>b.onclick=()=>bg.remove());fmt.onchange=()=>{if(FORMATS[fmt.value]){let d=[...FORMATS[fmt.value]];if(ori.value==='Paysage')d.reverse();w.value=d[0];h.value=d[1]}};ori.onchange=()=>{const x=w.value;w.value=h.value;h.value=x;preview()};bg.querySelector('[data-id-create]').onclick=()=>{s.pages=Math.max(1,Math.round(num(bg.querySelector('[data-id-pages]').value,1)));s.current=1;s.facing=bg.querySelector('[data-id-facing]').checked;s.primaryText=bg.querySelector('[data-id-primary]').checked;s.format=fmt.value;s.orientation=ori.value;s.width=Math.max(20,num(w.value,210));s.height=Math.max(20,num(h.value,297));s.columns=Math.max(1,Math.round(num(bg.querySelector('[data-id-cols]').value,1)));s.gutter=Math.max(0,num(bg.querySelector('[data-id-gutter]').value,4.233));s.margins={top:num(bg.querySelector('[data-id-mtop]').value,12.7),bottom:num(bg.querySelector('[data-id-mbottom]').value,12.7),inside:num(bg.querySelector('[data-id-minside]').value,12.7),outside:num(bg.querySelector('[data-id-moutside]').value,12.7)};s.preset=bg.querySelector('[data-id-preset]').value;s.intent=bg.querySelector('[data-id-intent]').value;s.colorIntent=s.intent==='Impression'?'print-cmyk':'screen-rgb';s.bleed={top:Math.max(0,num(bg.querySelector('[data-id-bleed-top]').value,0)),bottom:Math.max(0,num(bg.querySelector('[data-id-bleed-bottom]').value,0)),inside:Math.max(0,num(bg.querySelector('[data-id-bleed-inside]').value,0)),outside:Math.max(0,num(bg.querySelector('[data-id-bleed-outside]').value,0))};s.slug={top:Math.max(0,num(bg.querySelector('[data-id-slug-top]').value,0)),bottom:Math.max(0,num(bg.querySelector('[data-id-slug-bottom]').value,0)),inside:Math.max(0,num(bg.querySelector('[data-id-slug-inside]').value,0)),outside:Math.max(0,num(bg.querySelector('[data-id-slug-outside]').value,0))};s.pageItems={};s.selected=null;s.selectedIds=[];s.guidesV=[];s.guidesH=[];s.guidesLocked=false;s.layers=[{id:'layer1',name:'Calque 1',visible:true,locked:false}];s.activeLayer='layer1';s.nextItemId=1;t.idHistory=[];t.idRedo=[];if(s.primaryText){for(let pn=1;pn<=s.pages;pn++){const id='obj'+(s.nextItemId++);s.pageItems[pn]=[{id,type:'text',layerId:s.activeLayer,x:mmPx(s.margins.inside,s),y:mmPx(s.margins.top,s),w:Math.max(100,mmPx(s.width-s.margins.inside-s.margins.outside,s)),h:Math.max(100,mmPx(s.height-s.margins.top-s.margins.bottom,s)),rot:0,z:1,fill:'transparent',stroke:'#b8c6d6',strokeWidth:1,text:'',fontFamily:'Georgia',fontSize:14,lineHeight:1.55,textAlign:'left',textColor:'#17283a',textColumns:s.columns,textColumnGap:mmPx(s.gutter,s),textInset:7}]}}t.name=t.name||'Document InDesign.rxd';dirty(t);bg.remove();render(t,stage);toast('Document Readix InDesign créé.','ok')};}
 window.ReadixInDesign={version:'34.1',render,renderHome,ensure,toolDefinitions:TOOL_DEFS};
+/* wrapper bindPanel : poignées recréées après chaque rendu */
+const __rxBindPanel=bindPanel;
+bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t,stage,root)}catch(e){}};
 })();
 
   
@@ -14354,9 +14453,6 @@ function rxPageHandles(t,stage,root){
     dirty(t);render(t,stage);
   })}
 }
-/* wrapper bindPanel : poignées recréées après chaque rendu */
-const __rxBindPanel=bindPanel;
-bindPanel=function(t,stage,root){__rxBindPanel(t,stage,root);try{rxPageHandles(t,stage,root)}catch(e){}};
 </script>
 
 
@@ -14655,7 +14751,7 @@ const root=document.getElementById('rxv5'),main=document.getElementById('v5-main
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function nativeBack(){root.classList.remove('is-open');document.getElementById('rxv2')?.style.setProperty('display','flex');window.__readoxV2?.showHome()}
 function open(screenName){if(!matchMedia('(max-width:820px)').matches)return;root.classList.add('is-open');document.getElementById('rxv2')?.style.setProperty('display','none');screen=screenName;draw()}
-function nav(name){if(name==='back'){if(screen==='pdf-catalog')return open('pdf-tools');if(screen==='pdf-tools')return open('pdf');if(screen==='cv-models')return open('cv');if(screen==='cv-preview')return open('cv-models');return nativeBack()}if(name==='close')return nativeBack();if(name==='pdf-tools')return open('pdf-tools');if(name==='pdf-catalog')return open('pdf-catalog');if(name==='cv-models')return open('cv-models');if(name==='cv-preview')return open('cv-preview');if(name==='pdf-open'){pdfPicker.click();return}if(name.startsWith('pdf:')){nativeBack();const tool=name.slice(4);if(typeof window.openTool==='function')window.openTool(tool);else{const btn=[...document.querySelectorAll('.tool')].find(x=>x.dataset.tool===tool);btn?.click()}return}if(name==='next'){sync();step=Math.min(3,step+1);draw();return}if(name==='previous'){sync();step=Math.max(0,step-1);draw();return}if(name==='select-model'){category=event?.target?.dataset?.model||category;open('cv-preview');return}if(name==='export'){sync();window.__readoxV5CV?.export('pdf',cv);return}if(name==='share'){if(navigator.share)navigator.share({title:'Mon CV',url:location.href}).catch(()=>{});else window.__readoxV5CV?.export('pdf',cv);return}}
+function nav(name){if(name==='back'){if(screen==='pdf-catalog')return open('pdf-tools');if(screen==='pdf-tools')return open('pdf');if(screen==='cv-models')return open('cv');if(screen==='cv-preview')return open('cv-models');return nativeBack()}if(name==='close')return nativeBack();if(name==='pdf-tools')return open('pdf-tools');if(name==='pdf-catalog')return open('pdf-catalog');if(name==='cv-models')return open('cv-models');if(name==='cv-preview')return open('cv-preview');if(name==='pdf-open'){pdfPicker.click();return}if(name.startsWith('pdf:')){root.classList.remove('is-open');const v2=document.getElementById('rxv2');if(v2)v2.style.setProperty('display','none');const tool=name.slice(4);if(typeof window.openTool==='function')window.openTool(tool);else{const btn=[...document.querySelectorAll('.tool')].find(x=>x.dataset.tool===tool);btn?.click()}return}if(name==='next'){sync();step=Math.min(3,step+1);draw();return}if(name==='previous'){sync();step=Math.max(0,step-1);draw();return}if(name==='select-model'){category=event?.target?.dataset?.model||category;open('cv-preview');return}if(name==='export'){sync();window.__readoxV5CV?.export('pdf',cv);return}if(name==='share'){if(navigator.share)navigator.share({title:'Mon CV',url:location.href}).catch(()=>{});else window.__readoxV5CV?.export('pdf',cv);return}}
 function sync(){if(!cv)return;main.querySelectorAll('[data-cv]').forEach(el=>{const parts=el.dataset.cv.split('.');if(parts.length===2)cv[parts[0]][parts[1]]=el.value;else cv[parts[0]]=el.value});window.__readoxV5CV?.save(cv)}
 function field(label,key,value,area=false){return `<label class="v5-field">${label}${area?`<textarea data-cv="${key}">${esc(value)}</textarea>`:`<input data-cv="${key}" value="${esc(value)}">`}</label>`}
 function draw(){footer.hidden=true;footer.innerHTML='';main.scrollTop=0;
@@ -14674,6 +14770,14 @@ if(screen==='cv-preview'){title.textContent='Aperçu du CV';main.innerHTML='<div
 root.addEventListener('click',e=>{const b=e.target.closest('[data-v5]');if(!b)return;if(b.dataset.v5==='category'){category=b.dataset.model;draw();return}nav(b.dataset.v5)});
 document.addEventListener('click',e=>{if(!matchMedia('(max-width:820px)').matches)return;const btn=e.target.closest('#rxv2 [data-v2]');if(!btn)return;const v=btn.dataset.v2;if(v!=='pdf'&&v!=='cv')return;e.preventDefault();e.stopImmediatePropagation();if(v==='cv'){cv=null;step=0}open(v)},true);
 window.__readoxV5={open,close:nativeBack,audit:()=>({screen,open:root.classList.contains('is-open'),cvBridge:!!window.__readoxV5CV})};
+// Retour à l'accueil mobile : quand la navigation native revient à « home » alors que
+// la coque v2 avait été masquée par une transition outil, on la restaure (C4-02).
+if(!window.__rxV5RvWrapped){window.__rxV5RvWrapped=true;
+ const rv0=window.renderView;
+ if(typeof rv0==='function'){window.renderView=function(){const r=rv0.apply(this,arguments);try{
+   if(matchMedia('(max-width:820px)').matches){const v2=document.getElementById('rxv2');const ap=(typeof APP!=='undefined')?APP:null;const cur=ap&&ap.tool;
+     if(v2&&v2.style.display==='none'&&(cur==='home'||cur==='')&&window.__readoxV2)window.__readoxV2.showHome();}
+ }catch(e){}return r};}}
 })();
 </script>
 <style id="readox-v2-phase6-mobile-safety">
