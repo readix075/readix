@@ -8,12 +8,15 @@
 
 export const REGISTRY_URL = '/flyer-models/registry.json';
 
-/** Statuts reconnus. Seul `publie` apparaît dans le catalogue actif. */
+/** Statuts reconnus. Seul `publie` apparaît dans le catalogue actif.
+ * `test` (BG-L1, cahier BG-COMP-1.0 §8) : modèle visible uniquement dans la
+ * section TEST de sa catégorie — jamais dans le catalogue actif. */
 export const MODEL_STATUS = Object.freeze({
   PUBLISHED: 'publie',
   IN_VALIDATION: 'en-validation',
   RETIRED: 'retire',
-  DRAFT: 'brouillon'
+  DRAFT: 'brouillon',
+  TEST: 'test'
 });
 
 /** Champs obligatoires d'un modèle selon §7.4. */
@@ -49,6 +52,12 @@ export function normalizeRegistry(raw) {
 /** Modèles du catalogue actif : statut « publie » uniquement. */
 export function activeModels(registry) {
   return normalizeRegistry(registry).models.filter(m => m.status === MODEL_STATUS.PUBLISHED);
+}
+
+/** Modèles en TEST (BG-COMP-1.0) : visibles dans la section TEST de leur
+ * catégorie, distincts du catalogue actif, marqués comme non publiés. */
+export function testModels(registry) {
+  return normalizeRegistry(registry).models.filter(m => m.status === MODEL_STATUS.TEST);
 }
 
 /** Nombre de modèles actifs par catégorie (les catégories vides existent quand même). */

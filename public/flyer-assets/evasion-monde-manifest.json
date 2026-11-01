@@ -1,0 +1,70 @@
+{
+  "id": "VOY-EVASION-MONDE-TEST-001",
+  "status": "TEST",
+  "note": "Images dérivées de la référence fournie, reconstitution par détourage et inpainting approximatifs ; droits commerciaux à vérifier. Les ressources n’incluent pas les textes de l’affiche comme couches de rendu.",
+  "assets": [
+    {
+      "path": "/flyer-assets/evasion-paris.jpg",
+      "sha256": "abf141f4a93db5b2b3223051d8784b2d2810548cd787e5177476b4fe2ff285b7",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 42460
+    },
+    {
+      "path": "/flyer-assets/evasion-marrakech.jpg",
+      "sha256": "66f6f8a1dca230641381a1b7c3cc440c760bbab0b5bc1878e54fca7f13226cf4",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 41334
+    },
+    {
+      "path": "/flyer-assets/evasion-bali.jpg",
+      "sha256": "3eb44cddcd11c47740351f2696e427eb3731df841ec02184b7e045f0e1ffb913",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 42664
+    },
+    {
+      "path": "/flyer-assets/evasion-beach-background.jpg",
+      "sha256": "a3d842002fe65c8411bc9cda3e68f7d41c377db47e50e732a7279374db042cdf",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 128132
+    },
+    {
+      "path": "/flyer-assets/evasion-traveler-cutout.png",
+      "sha256": "fbc650bc2c409a5e437700e7bb02bb258d8b9d7213cee2cba3114b06d3959ebb",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 420316
+    },
+    {
+      "path": "/flyer-assets/evasion-airplane-cutout.png",
+      "sha256": "8a2169bb944005a0bc4e874de7a4f1ee9e90b03f2d1f97719b813420b37fa830",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 50867
+    },
+    {
+      "path": "/flyer-assets/evasion-red-brush.png",
+      "sha256": "050c1970faeb581ab163709231040ebe092c5f0fddba27c6113adce7dafca698",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 2879
+    },
+    {
+      "path": "/flyer-assets/evasion-yellow-brush.png",
+      "sha256": "d3e3eb12b931ea5c38a6a1b88318f88ea8c9475cac8926e6015769cd6d8c5f74",
+      "provenance": "Référence fournie par utilisateur, reconstruction algorithmique",
+      "license": "TO_VERIFY",
+      "bytes": 1311
+    },
+    {
+      "path": "/flyer-assets/evasion-monde-preview.png",
+      "sha256": "aabd6cec5756be03ab10cbeac803a12ede3fa611b3f696180312a10083057ab6",
+      "provenance": "Vignette de référence fournie",
+      "license": "TO_VERIFY",
+      "bytes": 290320
+    }
+  ]
+}

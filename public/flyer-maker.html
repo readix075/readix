@@ -86,6 +86,7 @@ function showTemplates(){
  const holder=$('templates');if(!holder)return;
  const q=($('search')?.value||'').trim().toLocaleLowerCase('fr');holder.replaceChildren();
  const filters=document.querySelector('.filters');if(filters)filters.style.display='none';
+ if(window.ReadoxFlyerCatalog?.error){const warn=document.createElement('p');warn.setAttribute('role','alert');warn.textContent='Catalogue indisponible : '+window.ReadoxFlyerCatalog.error+' — Actualisez la page.';holder.append(warn);}
  const old=holder.parentElement.querySelector('.readox-c4-back');if(old)old.remove();
  if(read0xC4Category){
   const back=document.createElement('button');back.type='button';back.className='readox-c4-back';back.textContent='← Toutes les catégories';back.onclick=()=>{read0xC4Category=null;showTemplates()};holder.before(back);
@@ -120,7 +121,7 @@ $('search').oninput=showTemplates;document.querySelectorAll('[data-cat]').forEac
 // Phase 1 (cahier v5.2 §7.4) : registry.json est la source unique et autoritaire du catalogue.
 // Aucune liste parallèle de modèles n'est maintenue dans cette page ; en cas d'échec
 // de chargement, le catalogue reste vide plutôt que d'afficher des données obsolètes.
-import('/flyer-models/catalog.mjs').then(async m=>{try{const reg=await m.loadRegistry();READ0X_C4_CATEGORIES=m.registryCategories(reg);READ0X_C4_MODELS=m.activeModels(reg);window.ReadoxFlyerCatalog.categories=READ0X_C4_CATEGORIES;window.ReadoxFlyerCatalog.models=READ0X_C4_MODELS;window.ReadoxFlyerCatalog.registry=reg;window.ReadoxFlyerCatalog.test=m.testModels(reg);showTemplates();}catch(e){console.error('CATALOGUE_REGISTRY',e.message);showTemplates();}}).catch(e=>{console.error('CATALOGUE_MODULE',e.message);showTemplates();});
+import('/flyer-models/catalog.mjs').then(async m=>{try{const reg=await m.loadRegistry();READ0X_C4_CATEGORIES=m.registryCategories(reg);READ0X_C4_MODELS=m.activeModels(reg);window.ReadoxFlyerCatalog.categories=READ0X_C4_CATEGORIES;window.ReadoxFlyerCatalog.models=READ0X_C4_MODELS;window.ReadoxFlyerCatalog.registry=reg;window.ReadoxFlyerCatalog.test=m.testModels(reg);window.ReadoxFlyerCatalog.error=null;showTemplates();}catch(e){console.error('CATALOGUE_REGISTRY',e.message);window.ReadoxFlyerCatalog.error=e.message;showTemplates();}}).catch(e=>{console.error('CATALOGUE_MODULE',e.message);window.ReadoxFlyerCatalog.error=e.message;showTemplates();});
 </script><script id="flyer-7a-enhancements">
 (()=>{'use strict';
 const el=id=>document.getElementById(id);let future=[];let zoom=100;
@@ -1596,21 +1597,35 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 const ready=()=>{
  const page=document.getElementById('page');if(!page)return;
  // Existing renderer handles positioning; enter direct editing with a double tap/click.
+ // Editeur externe au canevas : le rendu peut remplacer les objets sans detruire la saisie.
+ let activeEditor=null;
  const edit=(el)=>{
-   const id=el?.dataset?.id;const obj=typeof items!=='undefined'&&items.find(x=>x.id===id);if(!obj||obj.type!=='text')return;
+   const id=el?.dataset?.id;
+   const obj=typeof items!=='undefined'&&items.find(x=>x.id===id);
+   if(!obj||!['text','textbox','richText','textOnPath'].includes(obj.type))return;
+   if(activeEditor){activeEditor.commit();}
    if(typeof select==='function')select(id);
    const live=page.querySelector('.element[data-id="'+id+'"]');if(!live)return;
-   live.dataset.editing='true';live.contentEditable='true';live.spellcheck=true;
-   live.style.whiteSpace='pre-wrap';live.style.overflow='visible';
-   live.focus();const range=document.createRange();range.selectNodeContents(live);range.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
-   let before=obj.text;
-   live.addEventListener('pointerdown',e=>e.stopImmediatePropagation(),true);
-   const commit=()=>{
-     const val=live.innerText.replace(/\n$/,'');live.contentEditable='false';delete live.dataset.editing;
-     if(val!==before){if(typeof snapshot==='function')snapshot();obj.text=val;if(typeof render==='function')render();}
+   const bounds=live.getBoundingClientRect();
+   const field=document.createElement('textarea');
+   field.id='readox-stable-text-editor';field.setAttribute('aria-label','Modifier le texte du flyer');
+   field.value=String(obj.text||'');field.spellcheck=true;
+   Object.assign(field.style,{position:'fixed',zIndex:'999999',left:Math.max(0,bounds.left)+'px',top:Math.max(0,bounds.top)+'px',width:Math.max(120,bounds.width)+'px',height:Math.max(70,bounds.height)+'px',fontFamily:getComputedStyle(live).fontFamily,fontSize:getComputedStyle(live).fontSize,fontWeight:getComputedStyle(live).fontWeight,color:getComputedStyle(live).color,background:'rgba(5,19,35,.95)',border:'2px solid #20a5ff',borderRadius:'5px',padding:'4px',resize:'both',whiteSpace:'pre-wrap',lineHeight:'1.2',boxShadow:'0 6px 20px #0008'});
+   document.body.append(field);
+   const before=String(obj.text||'');let done=false;
+   const commit=(cancel=false)=>{
+     if(done)return;done=true;
+     const value=cancel?before:field.value;
+     field.remove();activeEditor=null;
+     if(value!==before){snapshot();obj.text=value;}
+     if(typeof render==='function')render();
    };
-   live.addEventListener('blur',commit,{once:true});
-   live.addEventListener('keydown',e=>{if(e.key==='Escape'){live.innerText=before;live.blur();}if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))live.blur();});
+   activeEditor={commit};
+   field.addEventListener('pointerdown',e=>e.stopPropagation());
+   field.addEventListener('click',e=>e.stopPropagation());
+   field.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();commit(true);}else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();commit();}});
+   field.addEventListener('blur',()=>commit(),{once:true});
+   field.focus();field.setSelectionRange(field.value.length,field.value.length);
  };
  page.addEventListener('dblclick',e=>edit(e.target.closest('.element')));
  let lastTap=0,lastId='';page.addEventListener('touchend',e=>{const el=e.target.closest('.element');if(!el)return;const now=Date.now();if(lastId===el.dataset.id&&now-lastTap<360){e.preventDefault();edit(el);}lastTap=now;lastId=el.dataset.id;},{passive:false});
