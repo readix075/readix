@@ -4,7 +4,17 @@ const finite=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
 export function normalizeImageSpec(item={}) {
  const crop=item.crop&&typeof item.crop==='object'?item.crop:{};
  const fit=IMAGE_FIT.includes(item.fit)?item.fit:'cover';
- return {src:String(item.src||''),fit,crop:{x:Math.max(0,Math.min(1,finite(crop.x))),y:Math.max(0,Math.min(1,finite(crop.y))),w:Math.max(.001,Math.min(1,finite(crop.w,1))),h:Math.max(.001,Math.min(1,finite(crop.h,1)))},flipX:!!item.flipX,flipY:!!item.flipY,filters:Array.isArray(item.filters)?item.filters:[],cornerRadius:Math.max(0,finite(item.cornerRadius,item.radius||0)),assetId:item.assetId||null};
+ // Compatibilité de schéma : le recadrage canonique P3 s'exprime en retraits de bords
+ // {l,t,r,b} (fractions 0..1) ; le schéma VFE historique en région {x,y,w,h}. Si les
+ // clés de région sont présentes elles priment, sinon les retraits sont convertis.
+ // Une seule source de vérité : item.crop, jamais de copie parallèle.
+ const hasRegion=['x','y','w','h'].some(k=>crop[k]!=null);
+ const cropRegion=hasRegion
+  ?{x:Math.max(0,Math.min(1,finite(crop.x))),y:Math.max(0,Math.min(1,finite(crop.y))),w:Math.max(.001,Math.min(1,finite(crop.w,1))),h:Math.max(.001,Math.min(1,finite(crop.h,1)))}
+  :(()=>{const l=Math.max(0,Math.min(1,finite(crop.l))),t=Math.max(0,Math.min(1,finite(crop.t))),r=Math.max(0,Math.min(1,finite(crop.r))),b=Math.max(0,Math.min(1,finite(crop.b)));return {x:l,y:t,w:Math.max(.001,Math.min(1,1-l-r)),h:Math.max(.001,Math.min(1,1-t-b))};})();
+ // Le masque P4 {type:'roundedRect',radius} est honoré comme coins arrondis du cadre.
+ const maskRadius=item.mask&&item.mask.type==='roundedRect'?finite(item.mask.radius):0;
+ return {src:String(item.src||''),fit,crop:cropRegion,flipX:!!item.flipX,flipY:!!item.flipY,filters:Array.isArray(item.filters)?item.filters:[],cornerRadius:Math.max(0,finite(item.cornerRadius,item.radius||maskRadius||0)),assetId:item.assetId||null};
 }
 export function imagePlacement(imageWidth,imageHeight,frameWidth,frameHeight,spec={}) {
  const s=normalizeImageSpec(spec),iw=Math.max(1,finite(imageWidth,1)),ih=Math.max(1,finite(imageHeight,1)),fw=Math.max(1,finite(frameWidth,1)),fh=Math.max(1,finite(frameHeight,1));

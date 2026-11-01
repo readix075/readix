@@ -15,14 +15,30 @@
   const xref=len;add('xref\n0 6\n0000000000 65535 f \n');for(let i=1;i<=5;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
   return new Blob(parts,{type:'application/pdf'});
  }
- function save(blob,ext){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='readox-flyer.'+ext;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
- async function output(fmt){const engine=await wait(),doc=scene();if(fmt==='pdf'){
-   const result=await engine.render(doc,'jpeg',6);const b=await dataBytes(result.data);const p=result.scene.page;save(pdfJPEG(b,p.width,p.height,Math.round(p.width*6),Math.round(p.height*6)),'pdf');return;
-  }await engine.download(doc,fmt==='jpg'?'jpeg':fmt,'readox-flyer');}
+ function save(blob,ext){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=projectName()+'.'+ext;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+ async function output(fmt){const engine=await wait(),doc=scene();const dpi=window.__readoxFlyerExportDpi||{};
+  if(fmt==='pdf'){
+   const result=await engine.render(doc,'jpeg',6);let b=await dataBytes(result.data);const p=result.scene.page;
+   // P2-K2 : métadonnée DPI dans le JPEG embarqué (432 ppp effectifs à l'échelle 6).
+   if(dpi.jpegWithDpi)b=new Uint8Array(await (await dpi.jpegWithDpi(new Blob([b],{type:'image/jpeg'}),432)).arrayBuffer());
+   save(pdfJPEG(b,p.width,p.height,Math.round(p.width*6),Math.round(p.height*6)),'pdf');
+   return {dims:p.width+'×'+p.height+' pt'};
+  }
+  if(fmt==='svg'){const out=await engine.render(doc,'svg',1);save(new Blob([out.data],{type:'image/svg+xml;charset=utf-8'}),'svg');return {dims:out.scene.page.width+'×'+out.scene.page.height+' px, vectoriel'};}
+  // PNG/JPG : échelle 3 (216 ppp effectifs), métadonnée DPI inscrite (P2-K2).
+  const scale=3,result=await engine.render(doc,fmt==='jpg'?'jpeg':'png',scale),p=result.scene.page;
+  let blob=new Blob([await dataBytes(result.data)],{type:result.mime});
+  if(fmt==='jpg'&&dpi.jpegWithDpi)blob=await dpi.jpegWithDpi(blob,216);
+  if(fmt==='png'&&dpi.pngWithDpi)blob=await dpi.pngWithDpi(blob,216);
+  save(blob,fmt==='jpg'?'jpg':'png');
+  return {dims:Math.round(p.width*scale)+'×'+Math.round(p.height*scale)+' px (216 ppp)'};
+ }
+ // BG-L10 : nom de fichier issu du nom du projet (champ du panneau d'export).
+ function projectName(){const v=document.querySelector('input[aria-label="Nom du projet"]')?.value||'';return v.trim().replace(/[\\/:*?"<>|]/g,'-').slice(0,80)||'readox-flyer';}
  function dialog(){let el=$('gf041-dialog');if(el)return el;el=document.createElement('div');el.id='gf041-dialog';el.hidden=true;el.style.cssText='position:fixed;inset:0;background:#061527cc;z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px';
- el.innerHTML='<section role="dialog" aria-modal="true" aria-label="Export graphique" style="background:#fff;color:#14233b;border-radius:16px;padding:22px;max-width:390px;width:100%"><h2>Exporter le document</h2><p>Rendu issu de la scène graphique Fabric.js.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-format="png">PNG</button><button data-format="jpg">JPG</button><button data-format="pdf">PDF</button><button data-close>Annuler</button></div><p id="gf041-error" role="alert"></p></section>';
+ el.innerHTML='<section role="dialog" aria-modal="true" aria-label="Export graphique" style="background:#fff;color:#14233b;border-radius:16px;padding:22px;max-width:390px;width:100%"><h2>Exporter le document</h2><p>Rendu issu de la scène graphique Fabric.js. PNG/JPG à 216 ppp (échelle 3), PDF à 432 ppp effectifs (texte rasterisé, limite déclarée).</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-format="png">PNG</button><button data-format="jpg">JPG</button><button data-format="svg">SVG</button><button data-format="pdf">PDF</button><button data-close>Annuler</button></div><p id="gf041-error" role="status"></p></section>';
  const style=document.createElement('style');style.textContent='#gf041-dialog[hidden]{display:none!important}#gf041-dialog button{padding:11px;border-radius:8px;border:1px solid #aec1d8;background:#edf4ff;color:#102442;cursor:pointer}';document.head.append(style);document.body.append(el);
- el.addEventListener('click',async e=>{if(e.target===el||e.target.closest('[data-close]')){el.hidden=true;return;}const b=e.target.closest('[data-format]');if(!b)return;const err=$('gf041-error');err.textContent='Génération en cours…';b.disabled=true;try{await output(b.dataset.format);el.hidden=true;}catch(ex){err.textContent='Export impossible : '+ex.message;}finally{b.disabled=false;}});return el;}
+ el.addEventListener('click',async e=>{if(e.target===el||e.target.closest('[data-close]')){el.hidden=true;return;}const b=e.target.closest('[data-format]');if(!b)return;const err=$('gf041-error');err.textContent='Génération en cours…';b.disabled=true;try{const done=await output(b.dataset.format);err.textContent='Export '+b.dataset.format.toUpperCase()+' généré'+(done?.dims?' — '+done.dims:'');el.hidden=true;}catch(ex){err.textContent='Export impossible : '+ex.message;}finally{b.disabled=false;}});return el;}
  async function preview(){const engine=await wait(),doc=scene();const out=await engine.render(doc,'png',1.5);let overlay=$('gf041-preview');if(!overlay){overlay=document.createElement('div');overlay.id='gf041-preview';overlay.style.cssText='position:fixed;inset:0;background:#071427ed;z-index:999998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:12px';overlay.innerHTML='<button type="button" style="padding:10px 18px;cursor:pointer">Fermer l’aperçu</button><img alt="Aperçu du document" style="max-width:95vw;max-height:85vh;object-fit:contain">';overlay.querySelector('button').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};document.body.append(overlay);}overlay.querySelector('img').src=out.data;}
  function init(){const exp=$('export'),prev=$('preview');if(exp)exp.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();dialog().hidden=false;},true);
  if(prev)prev.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();try{await preview();}catch(err){alert('Aperçu Fabric.js impossible : '+err.message);}},true);

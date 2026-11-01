@@ -27,28 +27,45 @@ async function sdk(){
 }
 async function setup(fabric,s){
  const host=document.createElement('div');host.className='gf011-host';
+ // Chargement asynchrone des images : un canevas à moitié construit ne doit
+ // JAMAIS absorber le pointage (intention d'origine du pont). Tant que la
+ // construction n'est pas terminée, les événements traversent vers l'instance
+ // précédente (ou le DOM legacy au premier montage).
+ host.style.pointerEvents='none';
  const canvas=document.createElement('canvas');host.append(canvas);page.append(host);
  let created;
  try{created=await createFabricCanvas(fabric,canvas,s,{interactive:true,externalCommit:true});}
  catch(e){host.remove();throw e;}
  const c=created.canvas;
+ // Un objet verrouillé absorbe le pointage : pas de rectangle de sélection depuis lui.
+ c.on('mouse:down',ev=>{c.selection=!(ev.target&&ev.target.selectable===false);});
  c.on('selection:created',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:updated',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:cleared',()=>{ /* Preserve legacy panel until next explicit selection. */ });
  c.on('object:modified',ev=>{const ob=ev.target,id=ob?.readoxId;if(!id)return;
-  busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(ob.left),y:Math.round(ob.top),w:Math.max(1,Math.round(ob.width*ob.scaleX)),h:Math.max(1,Math.round(ob.height*ob.scaleY)),rotation:ob.angle||0});}finally{busy=false;}
+  // Inverse de l'ajustement de l'adaptateur : Fabric pivote autour de (left,top),
+  // le document canonique pivote au centre. centre = (left,top) + R_θ(w/2,h/2).
+  // À angle 0 : x=left, y=top, strictement identique à l'historique.
+  const w2=Math.max(1,Math.round(ob.width*ob.scaleX)),h2=Math.max(1,Math.round(ob.height*ob.scaleY));
+  const tM=(ob.angle||0)*Math.PI/180;
+  const cxM=ob.left+Math.cos(tM)*w2/2-Math.sin(tM)*h2/2,cyM=ob.top+Math.sin(tM)*w2/2+Math.cos(tM)*h2/2;
+  busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(cxM-w2/2),y:Math.round(cyM-h2/2),w:w2,h:h2,rotation:ob.angle||0});}finally{busy=false;}
   schedule();
  });
  c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
  return {host,...created};
 }
 let fabric;
-async function update(){if(busy||!fabric||!page)return;const s=source(),sig=signature(s);if(sig===lastSignature&&instance)return;
+async function update(){if(busy||!fabric||!page)return;const s=source(),sig=signature(s);if(sig===lastSignature&&instance){
+  // Le rendu legacy vide #page (replaceChildren) et peut détacher l'hôte Fabric :
+  // le ré-ancrer plutôt que de laisser le miroir hors du DOM.
+  if(!instance.host.isConnected)page.append(instance.host);return;}
  if(!s.items.length){if(instance){await instance.destroy();instance.host.remove();instance=null;}hideLegacy(false);lastSignature=sig;return;}
  // Async image loading: never leave a partially rendered canvas covering the legacy editor.
  busy=true;try{
   const next=await setup(fabric,s);
   const previous=instance;instance=next;hideLegacy(true);
+  next.host.style.pointerEvents=''; // construction terminée : le miroir devient interactif
   if(previous){await previous.destroy();previous.host.remove();}
   lastSignature=sig;active=true;emit('active',`${s.items.length} objets Fabric`);
  }catch(e){hideLegacy(!!instance);emit('fallback',String(e.message||e));console.warn('[GF-01.1]',e);}finally{busy=false;}
@@ -56,7 +73,14 @@ async function update(){if(busy||!fabric||!page)return;const s=source(),sig=sign
 function schedule(){clearTimeout(pending);pending=setTimeout(update,130);}
 async function start(){if(!page||!state)return emit('fallback','Éditeur ou état introuvable');ensureCSS();
  // Observe DOM changes made by existing render(), including template loading and undo/redo.
- const observer=new MutationObserver(mutations=>{if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1&&n.classList?.contains('element'))))schedule();});
+ const observer=new MutationObserver(mutations=>{
+  // render() vide #page (replaceChildren) : ré-ancrer l'instance courante
+  // IMMÉDIATEMENT (microtâche de mutation, avant tout événement utilisateur)
+  // pour que la surface interactive ne disparaisse jamais pendant la
+  // reconstruction — l'ancienne géométrie, complète, sert jusqu'au basculement.
+  if(instance&&!instance.host.isConnected)page.append(instance.host);
+  if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1&&n.classList?.contains('element'))))schedule();
+ });
  observer.observe(page,{childList:true});
  try{fabric=await sdk();emit('sdk-ready','Fabric.js chargé');schedule();}
  catch(e){emit('fallback',e.message);console.warn('[GF-01.1] Le moteur historique reste disponible.',e);}
