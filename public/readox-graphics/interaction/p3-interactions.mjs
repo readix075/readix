@@ -366,6 +366,16 @@ export function installP3Interactions() {
   const zoomLabel = document.getElementById('zoomLabel');
   (zoomLabel?.parentElement || document.querySelector('.canvasbar'))?.appendChild(pageToggle);
 
+  // — Phase 4.1 (P4.1-C) : option explicite « Règles » — affichage/masquage fonctionnel,
+  // persisté (readox.p3.rulers), désactivé par défaut. La variable rulersVisible est
+  // déclarée plus bas dans cette même portée ; le clic n'est possible qu'après l'init.
+  const rulersToggle = document.createElement('button');
+  rulersToggle.id = 'p3-rulers-toggle'; rulersToggle.type = 'button';
+  rulersToggle.textContent = '📏 Règles'; rulersToggle.title = 'Afficher/masquer les règles de précision (désactivées par défaut)';
+  rulersToggle.setAttribute('aria-pressed', 'false');
+  rulersToggle.onclick = () => { rulersVisible = !rulersVisible; rulersToggle.setAttribute('aria-pressed', String(rulersVisible)); persistRulers(); applyRulersVisibility(); };
+  (zoomLabel?.parentElement || document.querySelector('.canvasbar'))?.appendChild(rulersToggle);
+
   function setPageMode(on) {
     pageMode = on;
     pageToggle.setAttribute('aria-pressed', String(on));
@@ -502,7 +512,15 @@ export function installP3Interactions() {
   corner.style.top = barH + 'px';
   const rulerVTop = () => Number.parseFloat(rulerV.style.top) || (barH + 24);
 
+  // — Phase 4.1 (P4.1-C) : règles MASQUÉES PAR DÉFAUT — option explicite persistée,
+  // réversible, identique sur ordinateur et téléphone. Aucune barre ne chevauche
+  // plus la page sans demande de l'utilisateur.
+  let rulersVisible = (() => { try { return localStorage.getItem('readox.p3.rulers') === '1'; } catch { return false; } })();
+  const persistRulers = () => { try { localStorage.setItem('readox.p3.rulers', rulersVisible ? '1' : '0'); } catch { /* stockage indisponible */ } };
+  const applyRulersVisibility = () => { for (const r of [rulerH, rulerV, corner]) r.style.display = rulersVisible ? '' : 'none'; if (rulersVisible) drawRulers(); };
+
   function drawRulers() {
+    if (!rulersVisible) return; // P4.1-C : règles masquées par défaut — rien à dessiner
     const pr = page.getBoundingClientRect(), ar = area.getBoundingClientRect(), s = scale();
     const dpr = window.devicePixelRatio || 1;
     const unitPx = toPx(1, unit); // px page par unité d'affichage
@@ -591,6 +609,9 @@ export function installP3Interactions() {
   window.addEventListener('resize', () => { reposition(); drawRulers(); });
   document.addEventListener('readox:flyer:format-changed', () => setTimeout(() => { reposition(); drawRulers(); }, 30));
   document.addEventListener('readox:flyer:model-opened', () => setTimeout(() => { reposition(); drawRulers(); }, 60));
+  document.addEventListener('readox:flyer:zoom-changed', () => { reposition(); drawRulers(); }); // Phase 4.1 : zoom via API unifiée
+  applyRulersVisibility(); // P4.1-C : état initial = préférence persistée (masqué par défaut)
+  rulersToggle.setAttribute('aria-pressed', String(rulersVisible));
   new MutationObserver(() => { if (!gesture) reposition(); drawRulers(); }).observe(page, { attributes: true, attributeFilter: ['style'] });
 
   window.ReadoxP3 = {

@@ -5,7 +5,7 @@
 import {createFabricCanvas} from './fabric-adapter.mjs';
 const state=window.__readoxGF011State;
 const page=document.getElementById('page');
-let instance=null, mounted=null, pending=0, busy=false, lastSignature='', active=false;
+let instance=null, mounted=null, pending=0, busy=false, lastSignature='', active=false, editBackup=null;
 const emit=(status,detail='')=>{window.__readoxGF011Status={status,detail};document.dispatchEvent(new CustomEvent('readox:gf011:status',{detail:{status,detail}}));};
 function read(){return state.read();}
 function source(){const s=read();return {format:'readox-flyer',version:3,page:{width:page.clientWidth||510,height:page.clientHeight||660,background:s.pageBg},items:s.items};}
@@ -37,12 +37,20 @@ async function setup(fabric,s){
  try{created=await createFabricCanvas(fabric,canvas,s,{interactive:true,externalCommit:true});}
  catch(e){host.remove();throw e;}
  const c=created.canvas;
+ // Le miroir vient de construire cet état : il ne doit PAS être reconstruit par ses
+ // propres commits (anti-vibration P4.1-F). Après chaque patch origine-miroir, la
+ // signature de référence est alignée sur l'état canonique fraîchement écrit.
+ const markSelf=()=>{try{lastSignature=signature(source());}catch{}};
  // Un objet verrouillé absorbe le pointage : pas de rectangle de sélection depuis lui.
  c.on('mouse:down',ev=>{c.selection=!(ev.target&&ev.target.selectable===false);});
  c.on('selection:created',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:updated',ev=>{const id=ev.selected?.[0]?.readoxId;if(id)state.choose(id);});
  c.on('selection:cleared',()=>{ /* Preserve legacy panel until next explicit selection. */ });
- c.on('object:modified',ev=>{const ob=ev.target,id=ob?.readoxId;if(!id)return;
+ // P4.1-E : mémoriser le texte d'origine à l'entrée en édition (annulation Échap).
+ // Fabric 6 : les événements côté canevas sont text:editing:entered / text:editing:exited.
+ c.on('text:editing:entered',ev=>{const o=ev?.target||c.getActiveObject?.();if(o)editBackup={id:o.readoxId,text:String(o.text??'')};});
+ c.on('text:editing:exited',()=>{editBackup=null;});
+ c.on('object:modified',ev=>{if(instance?.canvas&&instance.canvas!==c)return;const ob=ev.target,id=ob?.readoxId;if(!id)return;
   // Inverse de l'ajustement de l'adaptateur : Fabric pivote autour de (left,top),
   // le document canonique pivote au centre. centre = (left,top) + R_θ(w/2,h/2).
   // À angle 0 : x=left, y=top, strictement identique à l'historique.
@@ -50,13 +58,18 @@ async function setup(fabric,s){
   const tM=(ob.angle||0)*Math.PI/180;
   const cxM=ob.left+Math.cos(tM)*w2/2-Math.sin(tM)*h2/2,cyM=ob.top+Math.sin(tM)*w2/2+Math.cos(tM)*h2/2;
   busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(id,{x:Math.round(cxM-w2/2),y:Math.round(cyM-h2/2),w:w2,h:h2,rotation:ob.angle||0});}finally{busy=false;}
+  markSelf();
   schedule();
  });
- c.on('text:changed',ev=>{const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}schedule();});
+ c.on('text:changed',ev=>{if(instance?.canvas&&instance.canvas!==c)return;const ob=ev.target;if(!ob?.readoxId)return;busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(ob.readoxId,{text:ob.text});}finally{busy=false;}markSelf();schedule();});
  return {host,...created};
 }
 let fabric;
-async function update(){if(busy||!fabric||!page)return;const s=source(),sig=signature(s);if(sig===lastSignature&&instance){
+async function update(){if(busy||!fabric||!page)return;
+ // P4.1-E/F : jamais de reconstruction du miroir pendant une édition de texte active —
+ // une reconstruction détruirait le champ de saisie (perte de focus, vibration).
+ if(instance?.canvas?.getActiveObject?.()?.isEditing){schedule();return;}
+ const s=source(),sig=signature(s);if(sig===lastSignature&&instance){
   // Le rendu legacy vide #page (replaceChildren) et peut détacher l'hôte Fabric :
   // le ré-ancrer plutôt que de laisser le miroir hors du DOM.
   if(!instance.host.isConnected)page.append(instance.host);return;}
@@ -82,6 +95,39 @@ async function start(){if(!page||!state)return emit('fallback','Éditeur ou éta
   if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1&&n.classList?.contains('element'))))schedule();
  });
  observer.observe(page,{childList:true});
+ // P4.1-E — sortie propre de l'édition : un appui/clic hors du miroir pendant la saisie
+ // termine l'édition (le texte courant est déjà commité caractère par caractère).
+ document.addEventListener('pointerdown',e=>{
+  const c=instance?.canvas;const o=c?.getActiveObject?.();
+  if(o?.isEditing&&!e.target.closest?.('.canvas-container'))o.exitEditing();
+  // P4.1-E — alignement de sélection : un clic dans la marge de la zone de défilement
+  // désélectionne côté legacy (handler historique) ; sans cela Fabric garderait son objet
+  // actif et un clic ultérieur sur CE MÊME objet entrerait en édition au lieu de le
+  // sélectionner (divergence d'état miroir/canonique — défaut P41-17).
+  // Les clics barre d'outils/panneaux ne sont pas concernés (hors .scrollcanvas).
+  if(o&&!e.target.closest?.('#page')&&e.target.closest?.('.scrollcanvas')){c.discardActiveObject();c.requestRenderAll();}
+ },true);
+ // P4.1-E — Échap annule l'édition : le texte d'origine (mémorisé à editing:entered)
+ // est restauré AVANT la sortie Fabric, puis réécrit dans le canonique si besoin.
+ document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  const o=instance?.canvas?.getActiveObject?.();
+  if(!o?.isEditing||!editBackup)return;
+  const bk={...editBackup};
+  o.text=bk.text;
+  if(o.hiddenTextarea){try{o.hiddenTextarea.value=bk.text;}catch{}}
+  o.dirty=true;instance.canvas.requestRenderAll();
+  setTimeout(()=>{try{
+   const it=state.read().items.find(i=>i.id===bk.id);
+   if(it&&String(it.text??'')!==bk.text){busy=true;try{(window.__readoxGF05D1?.patch||window.__readoxGF05DTransactions?.patch||state.commit)(bk.id,{text:bk.text});}finally{busy=false;}}
+   lastSignature=signature(source());schedule();
+   // Alignement de sélection : le handler legacy Échap efface la sélection canonique ;
+   // sans cela Fabric garderait son objet actif (un clic ultérieur sur CE MÊME objet
+   // entrerait en édition au lieu de le sélectionner — défaut P41-17).
+   const c=instance?.canvas,sel=state.read().selected,act=c?.getActiveObject?.();
+   if(c&&act&&act.readoxId!==sel){c.discardActiveObject();c.requestRenderAll();}
+  }catch{}},0);
+ },true);
  try{fabric=await sdk();emit('sdk-ready','Fabric.js chargé');schedule();}
  catch(e){emit('fallback',e.message);console.warn('[GF-01.1] Le moteur historique reste disponible.',e);}
  window.__readoxGF011={get status(){return window.__readoxGF011Status},get canvas(){return instance?.canvas||null},refresh:schedule,exportPNG:()=>instance?.toPNG(2),exportJPG:()=>instance?.toJPG(2),exportSVG:()=>instance?.toSVG()};
